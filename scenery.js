@@ -1979,7 +1979,7 @@ const ambient=(function(){
     wing(dl>dr? 1 : -1);
   }
   /* ---- a pair of eastern bluebirds carrying a silk ribbon between them with the countdown on it (only when the host page asks for it with SceneryHost.banner) ---- */
-  let ban=null, nextBan=rnd(45,90); const bncv=document.createElement("canvas"), bncx=bncv.getContext("2d"), btex=document.createElement("canvas");
+  let ban=null, nextBan=rnd(3,5), banFirst=true; const bncv=document.createElement("canvas"), bncx=bncv.getContext("2d"), btex=document.createElement("canvas");
   /* a bluebird in true 3D: lofted body, blue back and wings, rusty breast and white belly, the wings feathered at the tips. Returns where its bill is, in the world. */
   function blueBird3D(x,P,f,flap,glide,proj,Kw,sunL){
     const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
@@ -2031,7 +2031,7 @@ const ambient=(function(){
   function startBanner(){ const dir=Math.random()<.5?1:-1; ban={t:0,dir,dur:rnd(19,23),ph:[rnd(0,6),rnd(0,6)],fy:rnd(.12,.17),z0:rnd(1.75,2.05)}; }
   function drawBanner(dt,dark){
     const host=window.SceneryHost; if(!host||typeof host.banner!=="function") return;
-    nextBan-=dt; if(!ban&&nextBan<=0){ if(stageBusy()) nextBan=rnd(15,30); else startBanner(); } if(!ban) return;
+    nextBan-=dt; if(!ban&&nextBan<=0){ if(stageBusy()&&!banFirst) nextBan=rnd(15,30); else { banFirst=false; startBanner(); } } if(!ban) return;
     const B=ban; B.t+=dt; const u=B.t/B.dur; if(u>=1){ ban=null; nextBan=rnd(200,360); return; }
     let text=""; try{ text=String(host.banner()||""); }catch(e){} if(!text){ ban=null; nextBan=rnd(200,360); return; }
     const F=H*.5, cx=W/2, cy=H*.52, proj=(X,Y,Z)=>[cx+X*F/Math.max(.05,Z),cy+Y*F/Math.max(.05,Z)];
@@ -2056,11 +2056,16 @@ const ambient=(function(){
     /* the lettering, set once per text and size into a strip that's wrapped onto the cloth */
     const sx0=Math.min(pts[0].top[0],pts[N].top[0]), sx1=Math.max(pts[0].top[0],pts[N].top[0]), texW=Math.max(200,Math.round(Math.abs(sx1-sx0)*1.15)), texH=Math.max(30,Math.round(Math.hypot(pts[N>>1].bot[0]-pts[N>>1].top[0],pts[N>>1].bot[1]-pts[N>>1].top[1])*1.4));
     const key=text+"|"+texW+"|"+texH; if(btex._k!==key){ btex._k=key; btex.width=texW; btex.height=texH; const tx=btex.getContext("2d");
-      const g=tx.createLinearGradient(0,0,0,texH); g.addColorStop(0,"#f6eedd"); g.addColorStop(.5,"#fbf5e8"); g.addColorStop(1,"#e9dcc2"); tx.fillStyle=g; tx.fillRect(0,0,texW,texH);
-      tx.strokeStyle="rgba(122,35,24,.55)"; tx.lineWidth=Math.max(1,texH*.025); for(const yy of [texH*.12,texH*.88]){ tx.beginPath(); tx.moveTo(texW*.04,yy); tx.lineTo(texW*.96,yy); tx.stroke(); }   /* a fine woven border */
+      { const g=tx.createLinearGradient(0,0,0,texH); g.addColorStop(0,"#fbf4e4"); g.addColorStop(.18,"#fffaf0"); g.addColorStop(.55,"#f1e6d0"); g.addColorStop(.86,"#e2d3b6"); g.addColorStop(1,"#cdbb98"); tx.fillStyle=g; tx.fillRect(0,0,texW,texH); }   /* the cloth cups a little: bright along the top, shaded underneath */
+      tx.globalAlpha=.06; for(let yy=0;yy<texH;yy+=2){ tx.fillStyle=yy%4? "#7a6648" : "#ffffff"; tx.fillRect(0,yy,texW,1); } for(let xx2=0;xx2<texW;xx2+=3){ tx.fillStyle="#6a5638"; tx.fillRect(xx2,0,1,texH); } tx.globalAlpha=1;   /* the weave */
+      for(let k=0;k<texW/18;k++){ const xx2=Math.random()*texW; tx.fillStyle=`rgba(${Math.random()<.5?"255,255,255":"110,90,60"},${(.04+Math.random()*.05).toFixed(3)})`; tx.fillRect(xx2,0,1+Math.random()*3,texH); }   /* slubs in the silk */
+      tx.strokeStyle="rgba(122,35,24,.6)"; tx.lineWidth=Math.max(1,texH*.025); for(const yy of [texH*.13,texH*.87]){ tx.beginPath(); tx.moveTo(texW*.03,yy); tx.lineTo(texW*.97,yy); tx.stroke(); }   /* a fine woven border */
+      tx.setLineDash([Math.max(2,texH*.05),Math.max(2,texH*.04)]); tx.strokeStyle="rgba(150,120,80,.45)"; tx.lineWidth=Math.max(.6,texH*.012); for(const yy of [texH*.05,texH*.95]){ tx.beginPath(); tx.moveTo(0,yy); tx.lineTo(texW,yy); tx.stroke(); } tx.setLineDash([]);   /* the stitched hem */
       const caps=(getComputedStyle(document.documentElement).getPropertyValue("--caps")||"").trim()||'"Cormorant Garamond",Georgia,serif';
       let fs=texH*.5; tx.font=`600 ${fs}px ${caps}`; const sp2=.22, wid=()=>tx.measureText(text.toUpperCase()).width+text.length*fs*sp2; while(wid()>texW*.84&&fs>8){ fs*=.94; tx.font=`600 ${fs}px ${caps}`; }
-      tx.fillStyle="#6e2216"; tx.textBaseline="middle"; let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toUpperCase()){ tx.fillText(ch,xx,texH*.53); xx+=tx.measureText(ch).width+fs*sp2; } }
+      tx.textBaseline="middle"; const put=(col,dy)=>{ tx.fillStyle=col; let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toUpperCase()){ tx.fillText(ch,xx,texH*.53+dy); xx+=tx.measureText(ch).width+fs*sp2; } };
+      put("rgba(255,255,255,.55)",Math.max(.6,fs*.03)); put("#6a1f14",0); tx.globalAlpha=.25; put("#2a0a04",-Math.max(.4,fs*.015)); tx.globalAlpha=1; }   /* the lettering, pressed into the silk */
+    { const th=Math.max(1.2,hgt*F/z*.05); x.fillStyle="#a8916c"; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].bot[0],pts[i].bot[1]+th) : x.moveTo(pts[i].bot[0],pts[i].bot[1]+th); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]-.5); x.closePath(); x.fill(); }   /* the cloth has a thickness: its rolled lower hem */
     const lr=pts[0].top[0]<=pts[N].top[0];   /* read left to right whichever way they fly */
     for(let i=0;i<N;i++){ const p0=pts[i], p1=pts[i+1], s0=lr? i/N : 1-i/N, s1=lr? (i+1)/N : 1-(i+1)/N;
       const u0=(.075+.85*s0)*texW, u1=(.075+.85*s1)*texW;
@@ -2072,10 +2077,21 @@ const ambient=(function(){
     }
     { const xa=pts[0].top[0], xb=pts[N].top[0]; if(Math.abs(xb-xa)>2){ const g=x.createLinearGradient(xa,0,xb,0);   /* the folds catch the light and fall into shadow along its length */
         for(let i=0;i<=N;i+=2){ const sh=pts[i].shade; g.addColorStop(i/N, sh<1? `rgba(40,22,10,${Math.min(.5,(1-sh)*1.1).toFixed(3)})` : `rgba(255,232,196,${Math.min(.35,(sh-1)*1.4).toFixed(3)})`); }
-        x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=g; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].top[0],pts[i].top[1]) : x.moveTo(pts[i].top[0],pts[i].top[1]); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]); x.closePath(); x.fill(); x.restore(); } }
-    /* swallow-tailed ends trailing from each bill */
+        x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=g; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].top[0],pts[i].top[1]) : x.moveTo(pts[i].top[0],pts[i].top[1]); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]); x.closePath(); x.fill();
+        { const rr=Math.max(W,H)*.32, gl=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,rr); gl.addColorStop(0,"rgba(255,196,110,.42)"); gl.addColorStop(.5,"rgba(255,180,100,.14)"); gl.addColorStop(1,"rgba(255,170,90,0)"); x.fillStyle=gl; x.fill(); }   /* where the sun is behind it, the silk glows */
+        x.restore(); } }
+    /* pinch wrinkles fanning out from where each bill grips the cloth */
+    for(const [i0,dirn] of [[0,1],[N,-1]]){ const P0=pts[i0], ht=Math.hypot(P0.bot[0]-P0.top[0],P0.bot[1]-P0.top[1]);
+      for(let k=0;k<4;k++){ const j=Math.min(N,Math.max(0,i0+dirn*(3+k*2))), Q=pts[j], fy=.25+k*.17, tx0=P0.top[0]+(P0.bot[0]-P0.top[0])*.15, ty0=P0.top[1]+(P0.bot[1]-P0.top[1])*.15, tx1=Q.top[0]+(Q.bot[0]-Q.top[0])*fy, ty1=Q.top[1]+(Q.bot[1]-Q.top[1])*fy;
+        x.strokeStyle="rgba(90,62,30,.22)"; x.lineWidth=Math.max(.6,ht*.035); x.beginPath(); x.moveTo(tx0,ty0); x.quadraticCurveTo((tx0+tx1)/2,(ty0+ty1)/2-ht*.08,tx1,ty1); x.stroke();
+        x.strokeStyle="rgba(255,250,236,.35)"; x.lineWidth=Math.max(.4,ht*.02); x.beginPath(); x.moveTo(tx0,ty0+ht*.04); x.quadraticCurveTo((tx0+tx1)/2,(ty0+ty1)/2-ht*.04,tx1,ty1+ht*.04); x.stroke(); } }
+    /* swallow-tailed ends trailing from each bill: folded under, the inside of the fold in shadow */
     for(const [i,dirn] of [[0,-1],[N,1]]){ const p=pts[i], q=pts[i+(dirn<0?1:-1)], ox=(p.top[0]-q.top[0])*4.5, oy=(p.top[1]-q.top[1])*4.5+Math.abs(p.bot[1]-p.top[1])*.6, mid=[(p.top[0]+p.bot[0])/2+ox*.55,(p.top[1]+p.bot[1])/2+oy*.55];
-      x.fillStyle="#e2d2b2"; x.beginPath(); x.moveTo(p.top[0],p.top[1]); x.lineTo(p.top[0]+ox,p.top[1]+oy); x.lineTo(mid[0],mid[1]); x.lineTo(p.bot[0]+ox,p.bot[1]+oy); x.lineTo(p.bot[0],p.bot[1]); x.closePath(); x.fill(); }
+      const T1=[p.top[0]+ox,p.top[1]+oy], B1=[p.bot[0]+ox,p.bot[1]+oy];
+      x.fillStyle="#b9a27c"; x.beginPath(); x.moveTo(p.top[0],p.top[1]); x.lineTo(p.top[0]+ox*.35,p.top[1]+oy*.35+(p.bot[1]-p.top[1])*.1); x.lineTo(p.bot[0]+ox*.35,p.bot[1]+oy*.35); x.lineTo(p.bot[0],p.bot[1]); x.closePath(); x.fill();   /* the shaded fold */
+      const g=x.createLinearGradient(p.top[0],p.top[1],T1[0],T1[1]); g.addColorStop(0,"#d9c7a4"); g.addColorStop(1,"#efe2c8"); x.fillStyle=g;
+      x.beginPath(); x.moveTo(p.top[0]+ox*.3,p.top[1]+oy*.3); x.lineTo(T1[0],T1[1]); x.lineTo(mid[0],mid[1]); x.lineTo(B1[0],B1[1]); x.lineTo(p.bot[0]+ox*.3,p.bot[1]+oy*.3); x.closePath(); x.fill();
+      x.strokeStyle="rgba(122,35,24,.4)"; x.lineWidth=Math.max(.6,Math.abs(p.bot[1]-p.top[1])*.025); x.beginPath(); x.moveTo(p.top[0]+ox*.3+(p.bot[0]-p.top[0])*.13,p.top[1]+oy*.3+(p.bot[1]-p.top[1])*.13); x.lineTo(T1[0]+(B1[0]-T1[0])*.13,T1[1]+(B1[1]-T1[1])*.13); x.stroke(); }
     for(const b of birds) blueBird3D(x,b.P,(()=>{ const l=Math.hypot(b.V[0],b.V[1]*.5,b.V[2])||1; return [b.V[0]/l,b.V[1]*.5/l,b.V[2]/l]; })(),b.flap,b.glide,proj,Kw,sunL);
     /* light and air, over the whole group */
     let xs=[], ys=[]; for(const p of pts){ xs.push(p.top[0],p.bot[0]); ys.push(p.top[1],p.bot[1]); } for(const b of birds){ const q=proj(...b.P); xs.push(q[0]-60,q[0]+60); ys.push(q[1]-60,q[1]+60); }
@@ -2085,11 +2101,11 @@ const ambient=(function(){
     x.fillStyle="rgba(44,26,12,.2)"; x.fillRect(RX,RY,RW,RH); x.fillStyle="rgba(255,164,84,.14)"; x.fillRect(RX,RY,RW,RH);              /* in the shade of the evening, warmed by it */
     { const rl=x.createLinearGradient(RX,0,RX+RW,0), k=sp.x>mx?1:0; rl.addColorStop(k,"rgba(255,196,120,.16)"); rl.addColorStop(1-k,"rgba(20,12,8,.12)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH); }
     if(!B.skyC||(B.skyT=(B.skyT||0)-1)<=0){ B.skyT=8; const ip=toImg(mx,my); B.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
-    x.fillStyle=rgb(B.skyC,.16); x.fillRect(RX,RY,RW,RH);                                                                         /* a little of the sky's air between us */
+    x.fillStyle=rgb(B.skyC,.2); x.fillRect(RX,RY,RW,RH);                                                                         /* a little of the sky's air between us */
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=Math.min(1,B.t/1.2,(B.dur-B.t)/1.2); ctx.filter="blur(.4px)"; ctx.drawImage(bncv,RX,RY,RW,RH,X0,Y0b,X1-X0,Y1-Y0b); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=Math.min(1,B.t/1.2,(B.dur-B.t)/1.2); ctx.filter="blur(.55px)"; ctx.drawImage(bncv,RX,RY,RW,RH,X0,Y0b,X1-X0,Y1-Y0b); ctx.restore(); ctx.filter="none";
     B.sx=mx; B.sy=my;
   }
   function drawFlock(dt,dark){
