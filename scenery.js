@@ -1824,7 +1824,7 @@ const ambient=(function(){
     x.fillStyle=rgb(mixv(p.bg,[214,176,130],.4),(p.wing==null?.12:.2)*Math.min(1,1.4/p.m)); x.fillRect(0,0,sz,sz);                     /* the haze of the air between you and the tree */
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; if(p.state==="cling"||p.state==="hop"){ ctx.shadowColor="rgba(255,214,150,.85)"; ctx.shadowBlur=Math.max(3,4*sc); }   /* rim-lit against the dark bark */ { const bl=Math.max(0,p.m-3)*.32; ctx.filter=bl>.4? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; { const bl=Math.max(0,p.m-3)*.32; ctx.filter=bl>.4? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
   }
   /* ---- fireflies blinking low over the lawn and along the edge of the field ---- */
   const flies=[], flyGlow=(()=>{ const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d"), g=x.createRadialGradient(24,24,0,24,24,24); g.addColorStop(0,"rgba(244,255,160,1)"); g.addColorStop(.3,"rgba(190,250,90,.5)"); g.addColorStop(1,"rgba(160,230,60,0)"); x.fillStyle=g; x.fillRect(0,0,48,48); return c; })();
