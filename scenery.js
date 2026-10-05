@@ -55,6 +55,15 @@ var natureSfx=(function(){
     out.disconnect && setTimeout(()=>{ try{ lp.disconnect(); }catch(e){} },6000);
   }
   function birds(){ if(live&&ctx&&ctx.state!=="running") ctx.resume().catch(()=>{}); bird(); birdT=setTimeout(birds,R(.9,4)*1000); }
+  /* a woodpecker drumming on a dead limb: a fast run of hollow knocks that trails off */
+  function drum(xf){ if(!ctx||!live) return; const out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(700,950); bp.Q.value=3; bp.connect(out);
+    let at=ctx.currentTime+.05; const n=Math.floor(R(14,20));
+    for(let i=0;i<n;i++){ const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=.55*(i<n-5?1:(n-i)/5);
+      g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.035); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.05);
+      at+=.062-i*.0012; } }
+  /* eastern bluebirds: a soft, low, burbling tu-a-wee as the flock goes over */
+  function bluebird(){ if(!ctx||!live) return; let at=ctx.currentTime+.3; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=5000; lp.connect(master);
+    for(let k=0;k<3;k++){ const out=voice(lp,R(-.5,.5)), v=.06; tone(at,2100,2500,.16,v,out); tone(at+.18,2600,2200,.14,v*.9,out); tone(at+.34,2300,2900,.22,v*.8,out); at+=R(.9,1.6); } }
   /* a red-tailed hawk circling high: a hoarse, falling keee-arrr */
   let hawkT=null, coyT=null;
   function hawk(){
@@ -130,7 +139,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } } };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, bluebird };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -1563,6 +1572,98 @@ const ambient=(function(){
     ctx.save(); ctx.globalAlpha=a*.82; ctx.filter=`blur(${(z<.9? (.9-z)*9+.5 : .5+haze*.6).toFixed(1)}px)`; ctx.drawImage(mcv,0,0,sz,sz,sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
     if(near>.05){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*near*.35; const gl=ctx.createRadialGradient(sx,sy,0,sx,sy,sz*.45); gl.addColorStop(0,"rgba(255,200,130,.5)"); gl.addColorStop(1,"rgba(255,200,130,0)"); ctx.fillStyle=gl; ctx.fillRect(sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); }   /* a soft halo when it passes in front of the light */
   }
+  /* ---- once in a while a little bbFlock of eastern bluebirds comes over your shoulder from behind and flies off over the field ---- */
+  let bbFlock=null, nextBB=38; const fcv=document.createElement("canvas"), fcx=fcv.getContext("2d");
+  function startFlock(){ const n=5+Math.floor(Math.random()*4), sd=Math.random()<.5?-1:1;
+    bbFlock={t:0,X0:sd*rnd(.05,.2),Y0:-rnd(.28,.4),tx:rnd(.15,.85),ty:rnd(.05,.18),birds:Array.from({length:n},(_,i)=>({ox:rnd(-.22,.22),oy:rnd(-.1,.1),oz:rnd(-.1,.35)+i*.04,ph:rnd(0,6),f:rnd(10,13),glide:rnd(0,6)}))};
+    natureSfx.bluebird&&natureSfx.bluebird(); }
+  function bluebird(x,flap,glide){
+    /* seen from behind and above as it flies away: swept, pointed wings beating up and down, blue back, rusty flanks */
+    const BL=[52,104,204], BL2=[112,164,232], RU=[200,116,60], DK=[34,54,112];
+    const up=glide? -.15 : Math.sin(flap), sp=glide? 1 : .82+.18*Math.abs(Math.cos(flap));
+    for(const sd of [-1,1]){
+      const sh=[sd*2,-1.5], wr=[sd*9*sp,-2.5-up*5], tp=[sd*18*sp,-.5-up*10], tr=[sd*11*sp,3.2-up*4.5], rt=[sd*2,3.5];
+      const wg=x.createLinearGradient(0,0,sd*18,0); wg.addColorStop(0,rgb(up>0?BL2:BL)); wg.addColorStop(.7,rgb(BL)); wg.addColorStop(1,rgb(DK)); x.fillStyle=wg;
+      x.beginPath(); x.moveTo(sh[0],sh[1]); x.quadraticCurveTo((sh[0]+wr[0])/2,wr[1]-1.5,wr[0],wr[1]); x.quadraticCurveTo((wr[0]+tp[0])/2,tp[1]-1,tp[0],tp[1]);
+      x.quadraticCurveTo((tp[0]+tr[0])/2+sd*.5,(tp[1]+tr[1])/2+1.5,tr[0],tr[1]); x.quadraticCurveTo((tr[0]+rt[0])/2,tr[1]+1.2,rt[0],rt[1]); x.closePath(); x.fill(); }
+    x.fillStyle=rgb(RU); x.beginPath(); x.ellipse(0,1.2,3.3,5.4,0,0,6.283); x.fill();                       /* rusty breast showing at the sides */
+    const bg=x.createLinearGradient(-3,0,3,0); bg.addColorStop(0,rgb(BL)); bg.addColorStop(.5,rgb(BL2)); bg.addColorStop(1,rgb(BL)); x.fillStyle=bg;
+    x.beginPath(); x.ellipse(0,-.4,2.6,5.6,0,0,6.283); x.fill(); x.beginPath(); x.arc(0,-5.8,2.3,0,6.283); x.fill();   /* blue back and crown */
+    x.fillStyle=rgb(BL); x.beginPath(); x.moveTo(-1.6,4.4); x.quadraticCurveTo(0,9.5,1.6,4.4); x.closePath(); x.fill();   /* short notched tail */
+  }
+  function drawFlock(dt,dark){
+    nextBB-=dt; if(!bbFlock&&nextBB<=0) startFlock(); if(!bbFlock) return;
+    const f=bbFlock; f.t+=dt; const T=f.t, sp=sun(), F=H*.5, cx=W/2, cy=H*.52;
+    const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(fcv.width!==cw||fcv.height!==ch){ fcv.width=cw; fcv.height=ch; }
+    const x=fcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
+    let zc=0, n=0, any=false, sxC=0, syC=0;
+    for(const b of f.birds){
+      const z=Math.max(.18,(.3+b.oz)*Math.exp(T*.4)), pull=ease(T/4.5), tX=(f.tx*W-cx)*z/F, tY=(f.ty*H+(gnd().vy-H*.1)-cy)*z/F;
+      const X=lerp(f.X0+b.ox,tX+b.ox*.6,pull), Y=lerp(f.Y0+b.oy,tY+b.oy*.5,pull)+Math.sin(T*2.6+b.ph)*.025*Math.min(1.5,z);   /* the bluebird's gentle bounding flight */
+      const sx=cx+X*F/z, sy=cy+Y*F/z, s=.0042*F/z; if(z>14) continue; any=true;
+      const glide=Math.sin(T*1.7+b.glide)>.55, flap=T*b.f+b.ph, hd=Math.atan2(cx-sx,(sy-cy)+H)*-.3;
+      x.save(); x.translate(sx,sy); x.rotate(hd); x.scale(s,s); bluebird(x,flap,glide); x.restore();
+      zc+=z; n++; sxC+=sx; syC+=sy; }
+    if(!any&&T>3){ bbFlock=null; nextBB=rnd(120,240); return; }
+    if(!n) return; zc/=n; sxC/=n; syC/=n;
+    x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
+    x.fillStyle="rgba(40,26,18,.32)"; x.fillRect(0,0,cw,ch); x.fillStyle="rgba(255,168,84,.2)"; x.fillRect(0,0,cw,ch);        /* backlit, in the orange evening light */
+    if(!f.skyC||(f.skyT=(f.skyT||0)-1)<=0){ f.skyT=6; const ip=toImg(sxC,syC); f.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
+    const haze=Math.min(.8,Math.max(0,(zc-1)/7)); if(haze>0){ x.fillStyle=rgb(f.skyC,haze); x.fillRect(0,0,cw,ch); }
+    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
+    if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(0,0,cw,ch); }
+    x.globalCompositeOperation="source-over";
+    const a=Math.min(1,T/.5)*(zc>9? Math.max(0,1-(zc-9)/4) : 1);
+    ctx.save(); ctx.globalAlpha=a; ctx.filter=`blur(${(zc<1? (1-zc)*5+.4 : .4).toFixed(1)}px)`; ctx.drawImage(fcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+  }
+  /* ---- a pileated woodpecker: bounds in from the woods on the left, lands on the lone tree, hitches up the trunk, drums, and flies off ---- */
+  let pecker=null, nextPecker=55; const TRUNK=[[.187,.666],[.188,.612]];
+  function startPecker(){ const a=scr(TRUNK[0][0],TRUNK[0][1]); pecker={t:0,x:-30,y:a[1]-rnd(60,110),state:"fly",hops:2+Math.floor(Math.random()*2),drums:0,st:0,fl:0,face:1,tgt:0}; }
+  function drawPecker(dt,dark){
+    nextPecker-=dt; if(!pecker&&nextPecker<=0) startPecker(); if(!pecker) return;
+    const p=pecker; p.t+=dt; p.st+=dt; const A=scr(TRUNK[0][0],TRUNK[0][1]), B=scr(TRUNK[1][0],TRUNK[1][1]), L=Math.hypot(B[0]-A[0],B[1]-A[1]), sc=Math.max(.6,L/60);
+    const at=u=>[lerp(A[0],B[0],u)-3*sc,lerp(A[1],B[1],u)];
+    let peck=0;
+    if(p.state==="fly"||p.state==="leave"){
+      const tg= p.state==="fly"? at(p.tgt) : [p.lx,p.ly], dx=tg[0]-p.x, dy=tg[1]-p.y, d=Math.hypot(dx,dy), v=170*sc*(p.state==="leave"?1.1:1)*Math.min(1,.3+d/(60*sc));
+      p.fl+=dt; const burst=(p.fl%1.1)<.55;                                                                    /* flaps hard, then folds and swoops: the woodpecker's bounding flight */
+      p.x+=dx/d*Math.min(d,v*dt); p.y+=dy/d*Math.min(d,v*dt)+(burst? -14 : 18)*sc*dt*(d>20*sc?1:0); p.face=dx>=0?1:-1; p.wing=burst? Math.sin(p.t*30) : -.2;
+      if(p.state==="fly"&&d<2){ p.state="cling"; p.st=0; p.x=tg[0]; p.y=tg[1]; }
+      if(p.state==="leave"&&(p.x<-40||p.x>W+40||p.y<-40)){ pecker=null; nextPecker=rnd(150,300); return; } }
+    else if(p.state==="cling"){ p.face=1; p.wing=null;
+      if(p.st>.6&&p.st<.6+1.4){ peck=Math.max(0,Math.sin((p.st-.6)*Math.PI*10)); if(!p.drummed){ p.drummed=true; natureSfx.drum&&natureSfx.drum(A[0]/W); } }   /* rat-a-tat-tat */
+      if(p.st>2.6){ if(p.hops>0){ p.hops--; p.state="hop"; p.st=0; p.h0=p.tgt; p.tgt=Math.min(.95,p.tgt+rnd(.12,.22)); p.drummed=false; } else { p.state="leave"; p.lx=-60; p.ly=p.y-rnd(80,160); p.fl=0; } } }
+    else if(p.state==="hop"){ const u=Math.min(1,p.st/.35); const q=at(lerp(p.h0,p.tgt,u)); p.x=q[0]; p.y=q[1]-Math.sin(u*Math.PI)*2*sc; p.wing=null; if(u>=1){ p.state="cling"; p.st=0; } }
+    /* paint: a big black crow-sized bird, flaming red crest, white stripe down the neck */
+    const k=sc*1.3, lt=dark?.45:.62, C=c=>rgb(mulv(c,lt)), x=ctx;
+    x.save(); x.translate(p.x,p.y); x.scale(k*p.face,k);
+    if(p.wing==null){ x.rotate(-.12);                                                                         /* clinging upright against the bark, braced on its tail */
+      x.fillStyle=C([28,24,24]); x.beginPath(); x.ellipse(0,0,2.6,6.5,0,0,6.283); x.fill(); x.beginPath(); x.moveTo(-1,5); x.lineTo(-2.4,11); x.lineTo(.6,11); x.closePath(); x.fill();
+      x.save(); x.translate(peck*1.4,-7); x.fillStyle=C([30,26,26]); x.beginPath(); x.arc(0,0,2.3,0,6.283); x.fill();
+      x.fillStyle=C([214,40,32]); x.beginPath(); x.moveTo(-2,-1); x.quadraticCurveTo(-1,-5,2.4,-2.2); x.lineTo(1,0); x.closePath(); x.fill();
+      x.strokeStyle=C([230,226,214]); x.lineWidth=.8; x.beginPath(); x.moveTo(1.6,.4); x.lineTo(-.4,3.2); x.lineTo(-1.2,6); x.stroke();
+      x.strokeStyle=C([60,56,52]); x.lineWidth=1; x.beginPath(); x.moveTo(1.8,-.4); x.lineTo(4.6,-.2); x.stroke(); x.restore(); }
+    else { const w=p.wing;                                                                                    /* in flight: black wings with white flashes */
+      x.fillStyle=C([26,22,22]); x.beginPath(); x.ellipse(0,0,6.5,2.2,0,0,6.283); x.fill();
+      x.beginPath(); x.moveTo(-6,0); x.lineTo(-10,-1); x.lineTo(-10,1.4); x.closePath(); x.fill();
+      x.fillStyle=C([214,40,32]); x.beginPath(); x.arc(6.6,-1.6,1.5,0,6.283); x.fill();
+      for(const s2 of [-1,1]){ x.fillStyle=C([24,20,20]); x.beginPath(); x.moveTo(-2,0); x.quadraticCurveTo(0,s2*(4+w*5),3,s2*(2+w*8)); x.lineTo(4,0); x.closePath(); x.fill();
+        x.fillStyle=C([222,218,206]); x.beginPath(); x.ellipse(1.6,s2*(1.6+w*3.4),1.2,.9,0,0,6.283); x.fill(); } }
+    x.restore();
+  }
+  /* ---- fireflies blinking low over the lawn and along the edge of the field ---- */
+  const flies=[];
+  function drawFireflies(dt,dark){
+    const g=gnd(); if(!flies.length) for(let i=0;i<14;i++) flies.push({x:rnd(0,W),y:g.vy+rnd(30,H-g.vy-10),vx:0,vy:0,per:rnd(3,6.5),ph:rnd(0,6),wan:rnd(0,6)});
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    for(const f of flies){ f.wan+=dt*.6; f.vx+=(Math.sin(f.wan*1.3)*8-f.vx*.8)*dt; f.vy+=(Math.cos(f.wan)*5-f.vy*.8)*dt; f.x+=f.vx*dt; f.y+=f.vy*dt;
+      if(f.x<-20) f.x=W+20; if(f.x>W+20) f.x=-20; f.y=Math.max(g.vy+20,Math.min(H-8,f.y));
+      const c=((t+f.ph*f.per/6.283)%f.per), on=c<.55? Math.sin(c/.55*Math.PI) : 0; if(on<=.01) continue;
+      const near=(f.y-g.vy)/(H-g.vy), r=(3+near*7)*(dark?1.2:1), yy=f.y-c*10*near;                               /* a little rising flash, the eastern firefly's J */
+      const gl=ctx.createRadialGradient(f.x,yy,0,f.x,yy,r*3.2); gl.addColorStop(0,`rgba(236,255,140,${(on*.9).toFixed(2)})`); gl.addColorStop(.25,`rgba(190,250,90,${(on*.45).toFixed(2)})`); gl.addColorStop(1,"rgba(160,230,60,0)");
+      ctx.fillStyle=gl; ctx.fillRect(f.x-r*3.2,yy-r*3.2,r*6.4,r*6.4); }
+    ctx.restore();
+  }
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
   let lab=null, nextLab=130;
   function startLab(){
@@ -1734,11 +1835,11 @@ const ambient=(function(){
       if(lab) L.push({y:toScreen(lab.Xw,lab.Dw).y,fn:()=>drawLab(dt,dark)}); else drawLab(dt,dark);
       for(const bn of buns) L.push({y:bn.y||0,fn:()=>drawRabbit(bn,dt,dark)});
       turkeyQueue(dt,dark,L);
-      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); }
+      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawPecker(dt,dark); drawFireflies(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
-    ctx.globalAlpha=1; if(img){ drawGreet(dt,dark); drawMoths(dt,dark,"near"); } ctx.globalAlpha=1;
+    ctx.globalAlpha=1; if(img){ drawGreet(dt,dark); drawMoths(dt,dark,"near"); drawFlock(dt,dark); } ctx.globalAlpha=1;
     raf=requestAnimationFrame(frame);
   }
   const running=()=>on && !reduce.matches && !document.hidden;
@@ -1748,5 +1849,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
