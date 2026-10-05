@@ -207,8 +207,8 @@ var natureSfx=(function(){
       const n=ctx.createBufferSource(); n.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=pts[1][1]; bp.Q.value=4; const ng=ctx.createGain();   /* the breath */
       ng.gain.setValueAtTime(0,t0); ng.gain.linearRampToValueAtTime(vol*.5,t0+.03); ng.gain.exponentialRampToValueAtTime(.0001,end+.03); n.connect(bp); bp.connect(ng); ng.connect(out); n.start(t0,R(0,2),end-t0+.08); };
     const k=R(.94,1.06);
-    note(at,[[0,1700*k],[.16,2750*k]],.07);                                    /* wheet */
-    note(at+.24,[[0,2450*k],[.1,2950*k],[.42,2150*k]],.075); }                 /* whee-oo */
+    note(at,[[0,2050*k],[.17,2150*k]],.065);                                   /* whee */
+    note(at+.26,[[0,1950*k],[.24,2100*k],[.46,3300*k]],.075); }                /* wheeEET: the classic call to the dogs, swooping up at the end */
   function honk(xFrac,near){
     if(!ctx||!live||Math.random()<.15) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=950; bp.Q.value=1.6; bp.connect(o);
     const v=.075*Math.max(.35,near); let at=now; const n=1+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ const f=R(310,380); tone(at,f*.82,f,.05,v*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,v,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,v*.35,bp,"square"); at+=R(.24,.42); }   /* the two-part a-honk of a Canada goose */
@@ -3472,7 +3472,7 @@ const ambient=(function(){
         const T=grainT[i%4], step=T.width*2.2/2, ox=-Math.random()*step, oy=-Math.random()*step; fx.globalAlpha=.04; fx.imageSmoothingEnabled=true;
         for(let y=oy;y<ph;y+=step) for(let x=ox;x<pw;x+=step) fx.drawImage(T,x,y,step,step); filmC.push(c); } }
     ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true; { let i=Math.floor(Math.random()*filmC.length); if(i===filmLast) i=(i+1)%filmC.length; filmLast=i; ctx.drawImage(filmC[i],0,0,W,H); }   /* darkened edges and a fresh pattern of coarse, soft grain every frame */
-    if(Math.random()<.035) scratches.push({x:Math.random()*W, life:rnd(.08,.7), w:rnd(.5,1.4), a:rnd(.04,.1), lt:Math.random()<.6, y0:Math.random()<.5?0:rnd(0,H*.6), y1:Math.random()<.5?H:rnd(H*.4,H)});
+    if(false) scratches.push({x:Math.random()*W, life:rnd(.08,.7), w:rnd(.5,1.4), a:rnd(.04,.1), lt:Math.random()<.6, y0:Math.random()<.5?0:rnd(0,H*.6), y1:Math.random()<.5?H:rnd(H*.4,H)});
     ctx.globalAlpha=1;
     for(let i=scratches.length-1;i>=0;i--){ const q=scratches[i]; q.life-=1/30; if(q.life<=0||q.y1-q.y0<20){ scratches.splice(i,1); continue; } q.x+=rnd(-1.2,1.2);     /* a thin scratch running down the film, wandering a little as it goes */
       const g=ctx.createLinearGradient(0,q.y0,0,q.y1), c=q.lt?"255,246,226":"20,12,6", a=q.a*(.6+.4*Math.random()); g.addColorStop(0,`rgba(${c},0)`); g.addColorStop(.15,`rgba(${c},${a.toFixed(3)})`); g.addColorStop(.85,`rgba(${c},${(a*.7).toFixed(3)})`); g.addColorStop(1,`rgba(${c},0)`);
