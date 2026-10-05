@@ -2145,12 +2145,14 @@ const ambient=(function(){
       return [0,1,2].map(i=>b.P[i]+(f[i]*8.4+uu[i]*.8)*Kw); };
     const A=beak(birds[1]), Bk=beak(birds[0]);   /* the trailing bird's bill to the leader's */
     /* the ribbon: hangs between the two bills, sags in the middle, ripples in the wind of their flight */
-    const N=64, E=.13, hgt=span*.12, sag=span*.07, pts=[];
+    const N=64, E=.13, hgt=span*.12, sag=span*.1, pts=[];
     for(let i=0;i<=N;i++){ const s=-E+(1+2*E)*i/N, sc=Math.max(0,Math.min(1,s)), out=s<0? -s/E : s>1? (s-1)/E : 0, inn=Math.sin(sc*Math.PI);
       const w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*inn, tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*inn+out*(.34*Math.sin(B.t*3.6-out*3.2+(s<0?0:2))+.14*Math.sin(B.t*6.1-out*5));   /* the free ends twist and flutter */
       const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],sc)+sag*4*sc*(1-sc)+w+out*out*hgt*.55+Math.sin(B.t*3.1-out*3.6+(s<0?1:3))*hgt*.4*out+Math.sin(B.t*5.3-out*6)*hgt*.1*out, lerp(A[2],Bk[2],sc)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*inn+out*hgt*.3+Math.sin(B.t*2.6-out*3+(s<0?2:0))*hgt*.6*out];   /* the loose ends hang and stream, a wave running out along each one */
       const dn=[Math.sin(tw)*.0,Math.cos(tw),Math.sin(tw)];   /* the cloth's width hangs down, twisting a little toward and away from you */
-      pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hgt,c[1]+dn[1]*hgt,c[2]+dn[2]*hgt), shade:.9+.2*Math.cos(tw*2.2)+Math.sin(s*Math.PI*2.2-B.t*4.6)*.07+.5*Math.pow(Math.max(0,Math.sin(s*Math.PI*2.6-B.t*1.7+Math.sin(tw)*2)),12)}   /* a band of sheen slides along the silk as it turns to the sun */); }
+      const sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x), gath=out>0? .5+.35*sm(out) : .5+.5*sm(Math.min(sc,1-sc)/.2), belly=1+.08*inn;   /* gathered and bunched where each bill grips it, opening out to full width as it droops between them */
+      const hw=hgt*gath*belly;
+      pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hw,c[1]+dn[1]*hw,c[2]+dn[2]*hw), shade:.9+.2*Math.cos(tw*2.2)-(1-gath)*.35+Math.sin(s*Math.PI*2.2-B.t*4.6)*.07+.5*Math.pow(Math.max(0,Math.sin(s*Math.PI*2.6-B.t*1.7+Math.sin(tw)*2)),12)}   /* a band of sheen slides along the silk as it turns to the sun */); }
     /* the lettering, set once per text and size into a strip that's wrapped onto the cloth */
     const texW=1400, texH=Math.round(texW*.85*hgt/span);   /* a fixed size, set once: the lettering belongs to the cloth and moves only with it */
     const key=text+"|"+texW+"|"+texH; if(btex._k!==key){ btex._k=key; btex.width=texW; btex.height=texH; const tx=btex.getContext("2d");
