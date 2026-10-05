@@ -1500,7 +1500,7 @@ const ambient=(function(){
   let rompAt=1.2;
   let cur=null, callDist=0, lastCall=-99; const trail=[], puffs=[];
   document.addEventListener("pointermove",e=>{ if(!on) return; const x=(e.clientX-(1-camZ)*W/2-camX)/camZ, y=(e.clientY-(1-camZ)*H/2-camY)/camZ;
-    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) trail.push(Object.assign({x,y,t,r:rnd(4.5,7),rot:rnd(0,6.28),spin:rnd(-3,3),vx:rnd(-12,12),ph:rnd(0,6)},pick(WILD)())); if(trail.length>50) trail.shift();
+    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) { const dz=Math.random()**1.4; trail.push(Object.assign({x,y,t,dz,r:rnd(4.5,7)*(.55+.75*dz),rot:rnd(0,6.28),spin:rnd(-3,3)*(.5+.6*dz),vx:rnd(-12,12),ph:rnd(0,6)},pick(WILD)())); } if(trail.length>50) trail.shift();
     if(!dog&&!lab&&rompAt==null){ if(prev) callDist+=Math.hypot(x-prev.x,y-prev.y); if(callDist>W*1.2&&t-lastCall>6){ callDist=0; lastCall=t; startRomp(); } } else callDist=0; },{passive:true});   /* wave the cursor around a bit and the dogs come running back */
   const chasing=()=>cur&&t-cur.t<2.6;
   /* each dog has a mind of its own: it notices the cursor late (or not at all this time), and follows a lagging, smoothed idea of where it is */
@@ -1572,9 +1572,11 @@ const ambient=(function(){
   }
   function drawTrail(dt,dark){                                                                    /* the cursor's trail: little motes of light that drift and fade */
     for(let i=trail.length-1;i>=0;i--){ const p=trail[i], age=t-p.t, a=Math.min(1,(2.6-age)/1.1); if(a<=0){ trail.splice(i,1); continue; }   /* petals shaken loose: they flutter up off the air toward you, growing, going soft and fading as they pass */
-      const k=1+age*age*.9, ex=dt*.55*age; p.x+=(p.x-W/2)*ex+dt*(p.vx+Math.sin(t*3+p.ph)*16); p.y+=(p.y-H*.45)*ex+dt*(6+Math.sin(t*2.2+p.ph)*10); p.rot+=dt*p.spin; const flip=Math.cos(t*4+p.ph);
+      const dz=p.dz??.6, k=1+age*age*(.25+1.1*dz), ex=dt*(.15+.65*dz)*age; p.x+=(p.x-W/2)*ex+dt*(p.vx+Math.sin(t*3+p.ph)*16); p.y+=(p.y-H*.45)*ex+dt*(6+Math.sin(t*2.2+p.ph)*10); p.rot+=dt*p.spin; const flip=Math.cos(t*4+p.ph);
       const lt=dark?.8:.95; if(!p.c) Object.assign(p,pick(WILD)());
-      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(k,k*Math.max(.15,Math.abs(flip))); ctx.globalAlpha=a*.9/Math.max(1,k*.55);
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(k,k*Math.max(.15,Math.abs(flip))); ctx.globalAlpha=a*(.35+.6*dz)/Math.max(1,k*.5);
+      if(!p.air){ const ip=toImg(p.x,p.y); p.air=mixv((ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[220,190,150],[255,214,170],.3); p.c0=p.c; }
+      const hz=Math.max(0,.8-dz)*.7; p.c=hz>0? mixv(p.c0,p.air,hz) : p.c0;                                                      /* the farther ones take on the color of the air behind them */
       drawWild(p,lt,flip); ctx.restore(); }
     for(let i=puffs.length-1;i>=0;i--){ const p=puffs[i], a=1-(t-p.t)/.7; if(a<=0){ puffs.splice(i,1); continue; } p.r+=dt*14*p.k; p.y-=dt*5*p.k;      /* dust and bits of grass kicked up behind the running dogs */
       ctx.fillStyle=rgb(dark?[90,80,60]:[196,176,130],.22*a); ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*.55,0,0,6.283); ctx.fill(); }
