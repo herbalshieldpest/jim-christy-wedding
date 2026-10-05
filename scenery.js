@@ -3190,6 +3190,23 @@ const ambient=(function(){
     for(let k=0;k<a.length;k+=4){ const v=(Math.random()+Math.random()+Math.random()-1.5)*2; const w=v>0?255:0; a[k]=a[k+1]=a[k+2]=w; a[k+3]=Math.min(255,Math.abs(v)*70); }
     x.putImageData(D,0,0); return c; });
   let vigC=null, vigK=""; const scratches=[];
+  /* ---- sun beams: soft shafts of light fanning out from the sun through the gaps in the clouds, each slowly brightening and fading on its own ---- */
+  let rayC=null, rayT=0; const RAYS=Array.from({length:13},(_,i)=>({a:(i+Math.random()*.6)/13*6.283,w:.035+Math.random()*.06,ph:Math.random()*6.283,sp:.06+Math.random()*.1,pk:.5+Math.random()*.5,dr:(Math.random()-.5)*.01}));
+  function drawRays(dt,dark){
+    if(dark) return; let st=0; try{ const h=SC.sun(); st=h&&SC.shown()? h.strength : 0; }catch(e){} if(!(st>=.08)) return;
+    rayT+=dt; const sp=sun(), cw=Math.max(1,Math.ceil(W/4)), ch=Math.max(1,Math.ceil(H/4));
+    if(!rayC) rayC=document.createElement("canvas"); if(rayC.width!==cw||rayC.height!==ch){ rayC.width=cw; rayC.height=ch; }
+    const x=rayC.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch); x.setTransform(.25,0,0,.25,0,0); x.globalCompositeOperation="lighter";
+    const L=Math.hypot(W,H)*1.15;
+    for(const r of RAYS){ const k=Math.pow(.5+.5*Math.sin(rayT*r.sp+r.ph),1.6); if(k<.02) continue;                          /* each beam comes and goes over half a minute or so */
+      const a=r.a+Math.sin(rayT*.03+r.ph)*.05+rayT*r.dr, amt=.19*r.pk*k*Math.min(1,st*1.6);
+      for(const [wm,am] of [[2.2,.25],[1.4,.35],[.8,.4]]){ const w=r.w*wm, g=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,L);
+        g.addColorStop(0,"rgba(255,214,150,0)"); g.addColorStop(.05,`rgba(255,212,148,${(amt*am).toFixed(3)})`); g.addColorStop(.35,`rgba(255,200,130,${(amt*am*.55).toFixed(3)})`); g.addColorStop(1,"rgba(255,190,120,0)");
+        x.fillStyle=g; x.beginPath(); x.moveTo(sp.x,sp.y); x.lineTo(sp.x+Math.cos(a-w)*L,sp.y+Math.sin(a-w)*L); x.lineTo(sp.x+Math.cos(a+w)*L,sp.y+Math.sin(a+w)*L); x.closePath(); x.fill(); } }
+    { const vy=gnd().vy, g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(Math.min(.95,vy/H),"rgba(0,0,0,.85)"); g.addColorStop(Math.min(.99,vy/H+.25),"rgba(0,0,0,.25)"); g.addColorStop(1,"rgba(0,0,0,.15)");
+      x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,W,H); x.globalCompositeOperation="source-over"; }   /* strongest in the sky, softening down over the fields */
+    ctx.save(); ctx.globalCompositeOperation="screen"; ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true; ctx.drawImage(rayC,0,0,cw,ch,0,0,cw*4,ch*4); ctx.restore();
+  }
   function filmPass(){
     ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation="source-over";
     const k=W+"|"+H; if(vigK!==k){ vigK=k; vigC=document.createElement("canvas"); vigC.width=Math.max(1,Math.round(W/4)); vigC.height=Math.max(1,Math.round(H/4)); const vx=vigC.getContext("2d"), w=vigC.width, h=vigC.height;
@@ -3232,7 +3249,7 @@ const ambient=(function(){
       if(m.L===1){ ctx.globalAlpha=Math.min(1,a*.28); ctx.fillStyle=dark?"#ffe7b0":"#fff1c8"; ctx.beginPath(); ctx.arc(m.x,m.y,m.r*(2.4+2.2*k),0,6.283); ctx.fill(); }
       ctx.globalAlpha=Math.min(1,a); ctx.fillStyle=k>.35?"#fff6dc":"#fffaf0"; ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,6.283); ctx.fill();
     };
-    if(img){ drawScene(dark); stepDusk(dt); drawDusk(dark); drawMist(dark); }
+    if(img){ drawScene(dark); stepDusk(dt); drawDusk(dark); drawMist(dark); drawRays(dt,dark); }
     for(const l of leaves) step3D(l,dt);
     leaves.sort((a,b)=>b.D-a.D);
     for(const l of leaves) if(l.D>=5) leaf(l, dark?.7:1);         /* far ones drift among the hills, behind the animals */
