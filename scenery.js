@@ -198,17 +198,21 @@ var natureSfx=(function(){
     const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09*v,at+.05); g.gain.setValueAtTime(.085*v,at+d*.6); g.gain.exponentialRampToValueAtTime(.0001,at+d);
     o.connect(am); am.connect(bp); am.connect(bp2); bp.connect(g); bp2.connect(g2); g2.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); }
   /* someone calling the dogs: a bright two-note finger whistle, wheet, whee-oo, with a little breath in it */
+  /* a person whistling the dogs in, lips pursed: breathy and human, lower than any bird, a short note and then a long one that sweeps right up at the end */
   function whistle(pan){ if(!ctx||!live) return; const at=ctx.currentTime+.02, out=voice(master,pan||0);
-    const note=(t0,pts,vol)=>{ const o=ctx.createOscillator(), g=ctx.createGain(), vib=ctx.createOscillator(), vg=ctx.createGain(); o.type="sine";
-      o.frequency.setValueAtTime(pts[0][1],t0); for(const [dt2,f] of pts.slice(1)) o.frequency.exponentialRampToValueAtTime(f,t0+dt2);
-      vib.frequency.value=R(5.5,7); vg.gain.value=R(18,30); vib.connect(vg); vg.connect(o.frequency);
-      const end=t0+pts[pts.length-1][0]; g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol,t0+.03); g.gain.setValueAtTime(vol*.9,end-.06); g.gain.exponentialRampToValueAtTime(.0001,end+.04);
-      o.connect(g); g.connect(out); o.start(t0); vib.start(t0); o.stop(end+.06); vib.stop(end+.06);
-      const n=ctx.createBufferSource(); n.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=pts[1][1]; bp.Q.value=4; const ng=ctx.createGain();   /* the breath */
-      ng.gain.setValueAtTime(0,t0); ng.gain.linearRampToValueAtTime(vol*.5,t0+.03); ng.gain.exponentialRampToValueAtTime(.0001,end+.03); n.connect(bp); bp.connect(ng); ng.connect(out); n.start(t0,R(0,2),end-t0+.08); };
-    const k=R(.94,1.06);
-    note(at,[[0,2050*k],[.17,2150*k]],.065);                                   /* whee */
-    note(at+.26,[[0,1950*k],[.24,2100*k],[.46,3300*k]],.075); }                /* wheeEET: the classic call to the dogs, swooping up at the end */
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=5200; lp.connect(out);
+    const note=(t0,pts,vol)=>{ const end=t0+pts[pts.length-1][0];
+      for(const [mul,v] of [[1,1],[2,.12],[3,.04]]){ const o=ctx.createOscillator(), g=ctx.createGain(); o.type="sine";      /* a little body in the tone, as a mouth gives it */
+        o.frequency.setValueAtTime(pts[0][1]*mul,t0); for(const [dt2,f] of pts.slice(1)) o.frequency.exponentialRampToValueAtTime(f*mul,t0+dt2);
+        const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=4.2; vg.gain.value=6*mul; vib.connect(vg); vg.connect(o.frequency);
+        g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol*v,t0+.06); g.gain.setValueAtTime(vol*v*.95,end-.08); g.gain.exponentialRampToValueAtTime(.0001,end+.06);
+        o.connect(g); g.connect(lp); o.start(t0); vib.start(t0); o.stop(end+.08); vib.stop(end+.08); }
+      const n=ctx.createBufferSource(); n.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.Q.value=1.6;   /* the breath around the note, following its pitch */
+      bp.frequency.setValueAtTime(pts[0][1],t0); for(const [dt2,f] of pts.slice(1)) bp.frequency.exponentialRampToValueAtTime(f,t0+dt2);
+      const ng=ctx.createGain(); ng.gain.setValueAtTime(0,t0); ng.gain.linearRampToValueAtTime(vol*.9,t0+.05); ng.gain.exponentialRampToValueAtTime(.0001,end+.05); n.connect(bp); bp.connect(ng); ng.connect(lp); n.start(t0,R(0,2),end-t0+.1); };
+    const k=R(.95,1.05);
+    note(at,[[0,1180*k],[.2,1260*k]],.06);                                                  /* whee */
+    note(at+.3,[[0,1120*k],[.22,1180*k],[.6,2950*k]],.07); }                                /* wheeeEEET, rising more than an octave */
   function honk(xFrac,near){
     if(!ctx||!live||Math.random()<.15) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=950; bp.Q.value=1.6; bp.connect(o);
     const v=.075*Math.max(.35,near); let at=now; const n=1+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ const f=R(310,380); tone(at,f*.82,f,.05,v*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,v,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,v*.35,bp,"square"); at+=R(.24,.42); }   /* the two-part a-honk of a Canada goose */
