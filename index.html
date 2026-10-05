@@ -65,7 +65,7 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 <script>
 const b=document.getElementById("snd");
 /* the label says what a press will do, based on whether sound is actually playing right now */
-const lab=()=>{ b.textContent=natureSfx.playing?"Turn Sound Off":"Turn Sound On"; };
+const lab=()=>{ b.textContent=natureSfx.playing?"Turn Sound Off":natureSfx.blocked?"Tap for Sound":"Turn Sound On"; };   /* browsers hold sound back until the first tap; say so rather than look switched off */
 b.onclick=()=>{ if(natureSfx.playing) natureSfx.set(false); else natureSfx.set(true); setTimeout(lab,150); }; lab(); setInterval(lab,600);
 </script>
 
