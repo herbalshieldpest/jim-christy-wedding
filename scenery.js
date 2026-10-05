@@ -1609,7 +1609,7 @@ const ambient=(function(){
   /* ---- once in a while a little bbFlock of eastern bluebirds comes over your shoulder from behind and flies off over the field ---- */
   let bbFlock=null, nextBB=38; const fcv=document.createElement("canvas"), fcx=fcv.getContext("2d");
   function startFlock(){ const n=5+Math.floor(Math.random()*4), sd=Math.random()<.5?-1:1;
-    bbFlock={t:0,X0:sd*rnd(.05,.2),Y0:-rnd(.28,.4),tx:rnd(.15,.85),ty:rnd(.05,.18),birds:Array.from({length:n},(_,i)=>({ox:rnd(-.22,.22),oy:rnd(-.1,.1),oz:rnd(-.1,.35)+i*.04,ph:rnd(0,6),f:rnd(10,13),glide:rnd(0,6)}))};
+    bbFlock={t:0,X0:sd*rnd(.05,.2),Y0:-rnd(.2,.3),wx:rnd(-1.6,1.6),wy:-rnd(.25,.6),birds:Array.from({length:n},(_,i)=>({ox:rnd(-.22,.22),oy:rnd(-.1,.1),oz:rnd(-.1,.35)+i*.04,ph:rnd(0,6),f:rnd(10,13),glide:rnd(0,6)}))};
     natureSfx.bluebird&&natureSfx.bluebird(); }
   function bluebird(x,flap,glide){
     /* seen from behind and above as it flies away: swept, pointed wings beating up and down, blue back, rusty flanks */
@@ -1625,6 +1625,33 @@ const ambient=(function(){
     x.beginPath(); x.ellipse(0,-.4,2.6,5.6,0,0,6.283); x.fill(); x.beginPath(); x.arc(0,-5.8,2.3,0,6.283); x.fill();   /* blue back and crown */
     x.fillStyle=rgb(BL); x.beginPath(); x.moveTo(-1.6,4.4); x.quadraticCurveTo(0,9.5,1.6,4.4); x.closePath(); x.fill();   /* short notched tail */
   }
+  /* a bluebird in true perspective: built in 3D around its own heading, so as the flock flies away from you, you see them from behind and below,
+     rusty breasts and pale undersides showing while they're above you, blue backs as they drop toward the horizon */
+  function bluebird3D(x,P,V,flap,glide,proj){
+    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+    const f=nrm(V), r=nrm(crs(f,[0,-1,0])), u=crs(r,f);                                                     /* forward, right, up (screen y points down) */
+    const pt=(a,b,c)=>proj(P[0]+f[0]*a+r[0]*b+u[0]*c, P[1]+f[1]*a+r[1]*b+u[1]*c, P[2]+f[2]*a+r[2]*b+u[2]*c);
+    const under=-(P[0]*u[0]+P[1]*u[1]+P[2]*u[2])<0;                                                         /* is the camera below the wing plane? then we see the underside */
+    const BL=[52,104,206], BL2=[110,160,230], DK=[34,54,112], UND=[150,166,192], RU=[204,118,60], WH=[232,226,214];
+    const fl=glide? .22 : Math.sin(flap)*.95+.12, S=.14;
+    const wing=sd=>{ const sh=pt(.02,sd*.012,0), wr=pt(.016,sd*S*.5,S*.32*fl), tp=pt(-.03,sd*S*.95,S*.62*fl), tr=pt(-.07,sd*S*.6,S*.28*fl), rt=pt(-.04,sd*.012,0);
+      x.beginPath(); x.moveTo(sh[0],sh[1]); x.quadraticCurveTo(wr[0],wr[1],tp[0],tp[1]); x.quadraticCurveTo(tr[0],tr[1],rt[0],rt[1]); x.closePath();
+      x.fillStyle=rgb(under? UND : (fl>0? BL2 : BL)); x.fill();
+      const tq=pt(-.042,sd*S*.82,S*.5*fl); x.beginPath(); x.moveTo(tp[0],tp[1]); x.lineTo(tq[0],tq[1]); x.lineTo(wr[0]*.15+tp[0]*.85,wr[1]*.15+tp[1]*.85); x.closePath(); x.fillStyle=rgb(under? mulv(UND,.75) : DK); x.fill(); };
+    /* the farther wing first */
+    const wl=pt(0,-S*.6,0), wr2=pt(0,S*.6,0), lFar=Math.hypot(...[0,1].map(i=>0))||0;
+    const dl=(P[0]-r[0]*.07)**2+(P[1]-r[1]*.07)**2+(P[2]-r[2]*.07)**2, dr=(P[0]+r[0]*.07)**2+(P[1]+r[1]*.07)**2+(P[2]+r[2]*.07)**2;
+    wing(dl>dr? -1 : 1);
+    /* the body: head first (it's the far end), then one rounded body with the blue back on top and the rusty breast below, then the short tail toward you */
+    const tail=pt(-.085,0,-.004), mid=pt(-.01,0,0), head=pt(.05,0,.006), up2=pt(-.01,0,.02), w0=Math.max(.8,Math.abs(proj(P[0]+r[0]*.022,P[1]+r[1]*.022,P[2]+r[2]*.022)[0]-mid[0]));
+    const ang=Math.atan2(head[1]-tail[1],head[0]-tail[0]), len=Math.hypot(head[0]-tail[0],head[1]-tail[1]), ux=up2[0]-mid[0], uy=up2[1]-mid[1];
+    x.fillStyle=rgb(BL); x.beginPath(); x.arc(head[0],head[1],w0*.8,0,6.283); x.fill();
+    x.fillStyle=rgb(under? RU : BL); x.beginPath(); x.ellipse(mid[0],mid[1],Math.max(w0,len*.42),w0,ang,0,6.283); x.fill();
+    if(under){ x.fillStyle=rgb(WH); x.beginPath(); x.ellipse((mid[0]+tail[0])/2-ux*.3,(mid[1]+tail[1])/2-uy*.3,Math.max(w0*.6,len*.18),w0*.6,ang,0,6.283); x.fill(); }
+    x.fillStyle=rgb(BL2); x.beginPath(); x.ellipse(mid[0]+ux*.5,mid[1]+uy*.5,Math.max(w0*.8,len*.36),w0*.62,ang,0,6.283); x.fill();      /* the blue back, catching the light above */
+    const t1=pt(-.06,-.012,0), t2=pt(-.06,.012,0), tt=pt(-.1,0,-.003); x.fillStyle=rgb(DK); x.beginPath(); x.moveTo(t1[0],t1[1]); x.lineTo(tt[0],tt[1]); x.lineTo(t2[0],t2[1]); x.closePath(); x.fill();
+    wing(dl>dr? 1 : -1);
+  }
   function drawFlock(dt,dark){
     nextBB-=dt; if(!bbFlock&&nextBB<=0) startFlock(); if(!bbFlock) return;
     const f=bbFlock; f.t+=dt; const T=f.t, sp=sun(), F=H*.5, cx=W/2, cy=H*.52;
@@ -1632,11 +1659,12 @@ const ambient=(function(){
     const x=fcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
     let zc=0, n=0, any=false, sxC=0, syC=0;
     for(const b of f.birds){
-      const z=Math.max(.18,(.3+b.oz)*Math.exp(T*.4)), pull=ease(T/4.5), tX=(f.tx*W-cx)*z/F, tY=(f.ty*H+(gnd().vy-H*.1)-cy)*z/F;
-      const X=lerp(f.X0+b.ox,tX+b.ox*.6,pull), Y=lerp(f.Y0+b.oy,tY+b.oy*.5,pull)+Math.sin(T*2.6+b.ph)*.025*Math.min(1.5,z);   /* the bluebird's gentle bounding flight */
-      const sx=cx+X*F/z, sy=cy+Y*F/z, s=.0042*F/z; if(z>14) continue; any=true;
-      const glide=Math.sin(T*1.7+b.glide)>.55, flap=T*b.f+b.ph, hd=Math.atan2(cx-sx,(sy-cy)+H)*-.3;
-      x.save(); x.translate(sx,sy); x.rotate(hd); x.scale(s,s); bluebird(x,flap,glide); x.restore();
+      const z=Math.max(.18,(.3+b.oz)*Math.exp(T*.4)), pull=ease(T/3.5), tX=f.wx, tY=f.wy;   /* they hold their height above you and level off toward the horizon */
+      const X=lerp(f.X0+b.ox,tX+b.ox*1.5,pull), Y=lerp(f.Y0+b.oy,tY+b.oy*1.2,pull)+Math.sin(T*2.6+b.ph)*.03;   /* the bluebird's gentle bounding flight */
+      const sx=cx+X*F/z, sy=cy+Y*F/z; if(z>14) continue; any=true;
+      const glide=Math.sin(T*1.7+b.glide)>.55, flap=T*b.f+b.ph, Pn=[X,Y,z], V=b.pp? [Pn[0]-b.pp[0],Pn[1]-b.pp[1],Pn[2]-b.pp[2]] : [0,.1,1]; b.pp=Pn;
+      if(Math.hypot(...V)>1e-6) b.V=b.V? b.V.map((v,i)=>lerp(v,V[i],.25)) : V;
+      bluebird3D(x,Pn,b.V||V,flap,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)]);
       zc+=z; n++; sxC+=sx; syC+=sy; }
     if(!any&&T>3){ bbFlock=null; nextBB=rnd(120,240); return; }
     if(!n) return; zc/=n; sxC/=n; syC/=n;
@@ -1857,7 +1885,7 @@ const ambient=(function(){
     for(const l of leaves) if(l.D>=5) leaf(l, dark?.7:1);         /* far ones drift among the hills, behind the animals */
     for(const m of motes) if(m.L===0) drawMote(m);
     if(img){ ctx.globalAlpha=1; drawGeese(dt,dark); drawRaptors(dt,dark); ctx.globalAlpha=1;
-      drawDeer(dt,dark,"front"); ctx.globalAlpha=1;                  /* the deer stay behind every other animal on the lawn */
+      drawDeer(dt,dark,"front"); ctx.globalAlpha=1; drawPecker(dt,dark); ctx.globalAlpha=1;   /* the woodpecker on its tree sits behind the animals on the lawn too */                  /* the deer stay behind every other animal on the lawn */
       const L=[]; if(fox) L.push({y:toScreen(fox.Xw,fox.Dw).y,fn:()=>drawFox(dt,dark)}); else drawFox(dt,dark);
       if(skunk) L.push({y:toScreen(skunk.Xw,skunk.Dw).y,fn:()=>drawSkunk(dt,dark)}); else drawSkunk(dt,dark);
       if(cub) L.push({y:toScreen(cub.Xw,cub.Dw).y,fn:()=>drawCub(dt,dark)}); else drawCub(dt,dark);
@@ -1869,7 +1897,7 @@ const ambient=(function(){
       if(lab) L.push({y:toScreen(lab.Xw,lab.Dw).y,fn:()=>drawLab(dt,dark)}); else drawLab(dt,dark);
       for(const bn of buns) L.push({y:bn.y||0,fn:()=>drawRabbit(bn,dt,dark)});
       turkeyQueue(dt,dark,L);
-      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawPecker(dt,dark); drawFireflies(dt,dark); }
+      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
