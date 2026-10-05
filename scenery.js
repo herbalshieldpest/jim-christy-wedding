@@ -2250,7 +2250,7 @@ const ambient=(function(){
     /* little brass weights hanging on short cords from the lower edge, swinging as the birds fly and the cloth ripples */
     const wts=[]; for(const [k,sw,cl] of [[.04,0,.55],[.27,1,.95],[.5,2,.4],[.73,3,.75],[.96,4,.5]]){ const i=Math.round((k+E)/(1+2*E)*N), P=pts[i], ht=Math.hypot(P.bot[0]-P.top[0],P.bot[1]-P.top[1]);
       const th=-B.dir*.16+Math.sin(B.t*(3.4-cl*1.2)+sw*1.9)*.22+Math.sin(B.t*4.6+sw)*.06, L=ht*cl, r=Math.max(1.4,ht*.085), ex=P.bot[0]+Math.sin(th)*L, ey=P.bot[1]+Math.cos(th)*L;
-      x.strokeStyle="rgba(70,52,30,.9)"; x.lineWidth=Math.max(.6,ht*.025); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+Math.sin(th)*L*.45,P.bot[1]+Math.cos(th)*L*.55,ex,ey); x.stroke();   /* the cord */
+      x.strokeStyle="rgba(70,52,30,.85)"; x.lineWidth=Math.max(.35,ht*.011); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+Math.sin(th)*L*.45,P.bot[1]+Math.cos(th)*L*.55,ex,ey); x.stroke();   /* the cord */
       x.fillStyle="#7a5a24"; x.beginPath(); x.ellipse(ex,ey+r*.15,r*.42,r*.3,th,0,6.283); x.fill();                                                      /* the cap */
       const cxw=ex+Math.sin(th)*r*1.1, cyw=ey+Math.cos(th)*r*1.1, g=x.createRadialGradient(cxw-r*.4,cyw-r*.45,r*.1,cxw,cyw,r*1.15);
       g.addColorStop(0,"#ffe6a6"); g.addColorStop(.35,"#d6a44c"); g.addColorStop(.8,"#8a5f22"); g.addColorStop(1,"#4a3210"); x.fillStyle=g;
@@ -3337,8 +3337,8 @@ const ambient=(function(){
   }
   /* ---- a side-by-side (a farm UTV) coming out of the gap in the brush, down the mown trail toward us, then swinging off across the field to the left.
      Built in 3D from its panels, roll cage, seats, two riders and four turning wheels, lit by the low sun, kicking up golden dust, with haze by distance ---- */
-  let utv=null, nextUtv=rnd(70,130); const utcv=document.createElement("canvas"), utcx=utcv.getContext("2d");
-  const UTV_PATH=[[.287,.643],[.272,.652],[.252,.668],[.232,.69],[.215,.716],[.19,.745],[.14,.77],[.07,.79],[-.05,.805],[-.25,.815]];
+  let utv=null, utvFirst=true, nextUtv=rnd(3,5);   /* TESTING: comes right away (normally rnd(70,130)) */ const utcv=document.createElement("canvas"), utcx=utcv.getContext("2d");
+  const UTV_PATH=[[.289,.642],[.268,.647],[.238,.654],[.207,.661],[.177,.667],[.13,.673],[.08,.677],[.02,.68],[-.08,.683],[-.25,.686]];   /* out of the gap and along the foot of the brush, behind the apple tree */
   function startUtv(){
     const pts=UTV_PATH.map(([ix,iy])=>{ const s0=scr(ix,iy), g=toGround(s0[0],s0[1]); return [g.Xw,trueZ(g.Dw)]; });
     const cr=(a,b,c,d,t)=>{ const t2=t*t, t3=t2*t; return .5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t2+(-a+3*b-3*c+d)*t3); }, P=[];
@@ -3349,11 +3349,11 @@ const ambient=(function(){
   function utvAt(u,d){ const c=u.cum; let lo=0, hi=c.length-1; d=Math.max(0,Math.min(u.len,d)); while(hi-lo>1){ const m=(lo+hi)>>1; if(c[m]<d) lo=m; else hi=m; }
     const k=(d-c[lo])/Math.max(1e-6,c[hi]-c[lo]); return [lerp(u.P[lo][0],u.P[hi][0],k),lerp(u.P[lo][1],u.P[hi][1],k)]; }
   function drawUtv(dt,dark){
-    if(!utv){ nextUtv-=dt; if(nextUtv<=0){ if(groundBusy&&groundBusy()) nextUtv=20; else startUtv(); } if(typeof natureSfx!=="undefined"&&natureSfx.utv) natureSfx.utv(0,0,0); return; }
+    if(!utv){ nextUtv-=dt; if(nextUtv<=0){ if(groundBusy&&groundBusy()&&!utvFirst) nextUtv=20; else { utvFirst=false; startUtv(); } } if(typeof natureSfx!=="undefined"&&natureSfx.utv) natureSfx.utv(0,0,0); return; }
     const u=utv; u.t+=dt;
     /* speed: idles out of the gap, rolls down the trail, slows for the turn, then accelerates away across the field */
-    const frac=u.d/u.len, V0=u.len/13, target= u.t<1.2? 0 : frac<.45? V0 : frac<.62? V0*.7 : V0*1.7;   /* sized to the scene: the whole run takes ten or twelve seconds */ u.v+=(target-u.v)*Math.min(1,dt*(target>u.v?.7:1.4)); u.d+=u.v*dt;
-    const S=.33, p=utvAt(u,u.d), q=utvAt(u,u.d+.15), hd=Math.atan2(q[0]-p[0],q[1]-p[1]);
+    const frac=u.d/u.len, V0=u.len/15, target= u.t<1.2? 0 : frac<.45? V0 : frac<.62? V0*.7 : V0*1.7;   /* sized to the scene: the whole run takes ten or twelve seconds */ u.v+=(target-u.v)*Math.min(1,dt*(target>u.v?.7:1.4)); u.d+=u.v*dt;
+    const S=.27, p=utvAt(u,u.d), q=utvAt(u,u.d+.15), hd=Math.atan2(q[0]-p[0],q[1]-p[1]);
     if(u.yaw==null) u.yaw=hd; let dy=hd-u.yaw; while(dy>Math.PI) dy-=6.283; while(dy<-Math.PI) dy+=6.283; u.yaw+=dy*Math.min(1,dt*3);
     u.roll+=((-dy*1.8*Math.min(1,u.v/V0))-u.roll)*Math.min(1,dt*3);                                                            /* leans out in the turn */
     u.pitch=Math.sin(u.t*5.3)*.012*u.v/V0+Math.sin(u.t*2.1)*.008;                                                                /* bumps in the field */
@@ -3478,7 +3478,9 @@ const ambient=(function(){
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
     { const rl=x.createLinearGradient(RX,0,RX+RW,0), kk=sp.x>c0[0]?1:0; rl.addColorStop(kk,"rgba(255,190,110,.2)"); rl.addColorStop(1-kk,"rgba(20,12,8,.1)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH); }   /* warm rim light from the sun's side */
     if(!u.skyC||(u.skyT=(u.skyT||0)-1)<=0){ u.skyT=10; const ip=toImg(c0[0],c0[1]-gS*.6); u.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,130,90]; }
-    x.fillStyle=rgb(u.skyC,Math.min(.5,Math.max(.04,(p[1]-3)/22))); x.fillRect(RX,RY,RW,RH);                                    /* far off it melts into the field's haze */
+    x.fillStyle=rgb(u.skyC,Math.min(.5,Math.max(.16,(p[1]-3)/16))); x.fillRect(RX,RY,RW,RH);                                    /* far off it melts into the field's haze */
+    { if(!u.locC||(u.locT=(u.locT||0)-1)<=0){ u.locT=10; const ip=toImg(c0[0],c0[1]); u.locC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[90,70,40]; }
+      x.fillStyle=rgb(mulv(u.locC,.8),.32); x.fillRect(RX,RY,RW,RH); }   /* in the shade at the foot of the brush, taking its colour */
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
@@ -3487,7 +3489,9 @@ const ambient=(function(){
       for(const d of u.dust){ if((d.Z<p[1])!==front) continue; const c=proj(d.X,d.Y,d.Z), r=d.r*f/d.Z, a=Math.sin(Math.PI*d.t/d.life)*.16*(dark?.5:1); if(r<.5) continue;
         const g=ctx.createRadialGradient(c[0],c[1],0,c[0],c[1],r); const dc=mixv(u.dC,[255,206,140],.45); g.addColorStop(0,rgb(dc,a)); g.addColorStop(1,rgb(dc,0)); ctx.fillStyle=g; ctx.fillRect(c[0]-r,c[1]-r,r*2,r*2); } };
     ctx.save(); dustDraw(false); ctx.restore();
-    blitRegion(utcv,c0[0],c0[1],rad,.35+Math.max(0,p[1]-10)*.04,Math.min(1,u.t/1.2));
+    blitRegion(utcv,c0[0],c0[1],rad,.75+Math.max(0,p[1]-10)*.04,Math.min(1,u.t/1.2));
+    { const tb=scr(.188,.692), gy=proj(p[0],0,p[1])[1]; if(gy<tb[1]&&Math.abs(c0[0]-tb[0])<rad){ const m=cover(), a0=scr(.183,.6), a1=scr(.195,.692);   /* passing behind the apple tree: its trunk stays in front */
+        ctx.drawImage(photo,.183*m.iw,.6*m.ih,.012*m.iw,.092*m.ih,a0[0],a0[1],a1[0]-a0[0],a1[1]-a0[1]); } }
     ctx.save(); dustDraw(true); ctx.restore();
     u.sx=c0[0]; u.sy=c0[1]; u.sr=gS*.9;
   }
