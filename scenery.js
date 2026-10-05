@@ -3341,6 +3341,95 @@ const ambient=(function(){
     if(under){ wing(farS); wing(-farS); tail(); body(); head(); }
     else { wing(farS); tail(); body(); wing(-farS); head(); }
   }
+  function raven3D(x,e,P,f,proj,Kw,sunL){
+    const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+    const r0=nrm(crs(f,[0,-1,0])), u0=crs(r0,f), cb=Math.cos(e.bank), sb=Math.sin(e.bank);
+    const r=[0,1,2].map(i=>r0[i]*cb+u0[i]*sb), u=[0,1,2].map(i=>u0[i]*cb-r0[i]*sb);                                     /* banked about its own long axis */
+    const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw];
+    const pt=(a,b,c)=>{ const w=W3(a,b,c); return proj(w[0],w[1],w[2]); };
+    const sc=a=>{ const p0=pt(a,0,0), p1=pt(a+1,0,0), p2=pt(a,1,0), p3=pt(a,0,1); return Math.max(Math.hypot(p1[0]-p0[0],p1[1]-p0[1]),Math.hypot(p2[0]-p0[0],p2[1]-p0[1]),Math.hypot(p3[0]-p0[0],p3[1]-p0[1])); };
+    const toEye=nrm([-P[0],-P[1],-P[2]]), under=dot(u,toEye)<=0;                                                    /* mostly we look up at its underside */
+    const sTop=dot(u,sunL), lit=Math.max(0,Math.min(1,(under? -sTop : sTop)*1.6+.08));                               /* how much of the low sun the side we see is catching */
+    const glow=Math.max(0,Math.min(1,(dot(nrm(P),sunL)-.55)/.4))*(1-lit*.7);                                         /* the sun behind the feathers: they glow at the edges */
+    const L=(c,k)=>{ k=k??1; const l=lit*k; return [c[0]*(.6+.95*l)+7*(1-l), c[1]*(.6+.66*l)+8*(1-l), c[2]*(.6+.38*l)+13*(1-l)]; };
+    const smooth=(pts,col)=>{ x.fillStyle=col; x.beginPath(); const n=pts.length, m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2]; let q=m(pts[n-1],pts[0]); x.moveTo(q[0],q[1]); for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n], mm=m(a,b); x.quadraticCurveTo(a[0],a[1],mm[0],mm[1]); } x.closePath(); x.fill(); };
+    const poly=(pts,col)=>{ x.fillStyle=col; x.beginPath(); x.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) x.lineTo(pts[i][0],pts[i][1]); x.closePath(); x.fill(); };
+    const line=(a,b,col,w)=>{ x.strokeStyle=col; x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
+    const px=sc(0); x.lineCap="round"; x.lineJoin="round";
+    const BR=[24,24,31], BRD=[16,16,22], COV=[30,31,42], TAWNY=[74,86,150], REMU=[46,47,56], REMT=[20,20,27], FING=[16,16,21], WH=[26,26,34], BILL=[22,22,27], FEET=[30,30,34];   /* glossy black all over, the wings and back shot with blue and violet */
+    /* the wing: a broad plank of an arm out to the wrist, then the hand, its primaries splayed into seven long slotted fingers, tips curling up under load */
+    const A0=.07+Math.sin(e.t*1.7)*.012, A1=A0+e.amp*Math.cos(e.ph), A2=A1+e.amp*.5*Math.cos(e.ph-.75), up=Math.max(0,-Math.sin(e.ph))*Math.min(1,e.amp/.5);   /* the hand lags the arm and tucks a little on the upstroke */
+    const WR=18;
+    const wp=(sd,a,s,c)=>{ let ss=s, aa=a; if(s>WR){ const h=s-WR; ss=WR+h*(1-.22*up); aa=a-h*.3*up; }
+      const ang=ss<=WR? A1 : A2, y=ss<=WR? ss*Math.cos(A1) : WR*Math.cos(A1)+(ss-WR)*Math.cos(A2), z=ss<=WR? ss*Math.sin(A1) : WR*Math.sin(A1)+(ss-WR)*Math.sin(A2);
+      return pt(aa, sd*(y-c*Math.sin(ang)), z+c*Math.cos(ang)); };
+    const LE=[[3.6,2.6],[5.4,8],[6.1,13],[5.9,18],[4.6,22],[2.4,26]], TE=[[-7.2,2.6],[-10.6,7],[-11.4,12],[-11,17],[-9.9,21],[-7.8,24.6]];
+    const FINGERS=[[.46,8.4],[.3,10.4],[.16,11.6],[.02,11.8],[-.13,10.9],[-.28,9.6],[-.42,8.1]];
+    const wing=sd=>{
+      const curl=e.curl*(1-up*.6);
+      const fingerPts=FINGERS.map(([ang,len],i)=>{ const t=(i+.5)/7, ba=lerp(2.2,-7.3,t), bs=lerp(26.2,24.9,t), fw=.72;
+        const P0=[ba+fw*Math.cos(ang)*.9, bs-fw*Math.sin(ang)*.9], P1=[ba-fw*Math.cos(ang)*.9, bs+fw*Math.sin(ang)*.9];
+        const at=(k,off)=>{ const da=Math.sin(ang)*len*k, ds=Math.cos(ang)*len*k, w=off*(1-k*.62); return wp(sd, ba+da+w*Math.cos(ang), bs+ds-w*Math.sin(ang), curl*(k*k)*2.6*(1+i*.05)); };
+        return {i, pts:[wp(sd,P0[0],P0[1],0),at(.45,fw*1.35),at(.8,fw*1.05),at(1,fw*.35),at(1.03,0),at(1,-fw*.35),at(.8,-fw*1.05),at(.45,-fw*1.35),wp(sd,P1[0],P1[1],0)], tip:at(1.03,0), mid:at(.5,0), base:wp(sd,ba,bs,0)}; });
+      /* each finger, the dark primaries — drawn first so the hand covers their roots */
+      for(const F of fingerPts){ const c=under? mixv(L(FING,.8),[240,160,90],glow*.16) : L(FING,1.2); smooth(F.pts,rgb(c)); if(px>.5) line(F.base,F.mid,rgb(under? [150,128,110] : [80,64,50],.35),Math.max(.4,px*.18)); }
+      /* the wing itself, with the scalloped trailing edge of its secondaries */
+      const out=[]; for(const [a,s] of LE) out.push(wp(sd,a,s,0));
+      const te=[]; for(let i=TE.length-1;i>0;i--){ const [a0,s0]=TE[i], [a1,s1]=TE[i-1]; const n=Math.max(1,Math.round(Math.abs(s1-s0)/1.7)); for(let k=0;k<n;k++){ const t=k/n, a=lerp(a0,a1,t)-(k%2? .0 : .42), s=lerp(s0,s1,t); te.push(wp(sd,a,s,0)); } } te.push(wp(sd,TE[0][0],TE[0][1],0));
+      const base=under? L(BRD,1) : L(COV,1.15); { const r0=wp(sd,0,3,0), r1=wp(sd,0,34,0), g=x.createLinearGradient(r0[0],r0[1],r1[0],r1[1]); g.addColorStop(0,rgb(mixv(base,[255,214,170],lit*.12))); g.addColorStop(1,rgb(mulv(base,.82))); poly(out.concat(te),g); }
+      /* the flight feathers: the back half of the wing, paler underneath and glowing where the sun shines through */
+      const remCol=under? mixv(L(REMU,.6),[236,160,96],glow*.14) : L(REMT,1.1);
+      const band=[]; for(let i=0;i<TE.length;i++){ const [a,s]=TE[i]; band.push(wp(sd,lerp(LE[i][0],a,.48),lerp(LE[i][1],s,.48),0)); }
+      { const g=x.createLinearGradient(band[0][0],band[0][1],te[0][0],te[0][1]); g.addColorStop(0,rgb(remCol)); g.addColorStop(1,rgb(mixv(remCol,under?[250,180,112]:remCol,glow*.16))); poly(band.concat(te),g); }
+      /* the feather shafts and separations across the secondaries */
+      if(px>.35){ x.globalAlpha*=.55; for(let i=0;i<14;i++){ const t=(i+.5)/14, s=lerp(3.4,24,t), k=Math.min(TE.length-2,Math.floor(t*(TE.length-1))), kk=t*(TE.length-1)-k;
+          const a0=lerp(lerp(LE[k][0],TE[k][0],.5),lerp(LE[k+1][0],TE[k+1][0],.5),kk), a1=lerp(TE[k][0],TE[k+1][0],kk)+.25; line(wp(sd,a0,s,0),wp(sd,a1,s,0),rgb(under? mulv(remCol,.72) : [20,14,10]),Math.max(.35,px*.16)); }
+        x.globalAlpha/=.55; }
+      /* coverts: on top the paler tawny shoulders, underneath the darker lining with a pale mottled band (axillaries) */
+      if(!under){ const cv=[wp(sd,3.6,3,0),wp(sd,4.3,10,0),wp(sd,4.2,16,0),wp(sd,1.2,15.5,0),wp(sd,-.6,9,0),wp(sd,-1.4,3,0)]; smooth(cv,rgb(L(TAWNY,1.3),.22+.25*lit)); }   /* the iridescent sheen across the coverts */
+      else { const cv=[wp(sd,1.2,3,0),wp(sd,1.6,10,0),wp(sd,1,16,0),wp(sd,-.6,15,0),wp(sd,-1,9,0),wp(sd,-1.4,3,0)]; smooth(cv,rgb(mixv(L(BRD,1),[70,76,104],.18),.8)); }
+      /* the leading edge catches the light */
+      { const le=LE.map(([a,s])=>wp(sd,a+.2,s,.1)); x.strokeStyle=rgb(mixv(L(COV,1.6),[255,200,140],lit*.4),.55); x.lineWidth=Math.max(.5,px*.5); x.beginPath(); x.moveTo(le[0][0],le[0][1]); for(const q of le) x.lineTo(q[0],q[1]); x.stroke(); }
+      /* backlit: the trailing edge and the finger tips rim with gold */
+      if(glow>.05){ x.strokeStyle=rgb([255,196,124],glow*.55); x.lineWidth=Math.max(.5,px*.35); x.beginPath(); x.moveTo(te[0][0],te[0][1]); for(const q of te) x.lineTo(q[0],q[1]); x.stroke();
+        for(const F of fingerPts){ x.beginPath(); x.moveTo(F.mid[0],F.mid[1]); x.lineTo(F.tip[0],F.tip[1]); x.stroke(); } }
+    };
+    /* the white tail: a short broad wedge of twelve feathers, fanned wider in the turns, twisting a little to steer */
+    const tail=()=>{ const sp=1+Math.min(.45,Math.abs(e.bank)*.55), tw=-e.bank*.22, fe=[];
+      for(let j=0;j<12;j++){ const th=lerp(-.3,.3,j/11)*sp, len=13.6-Math.abs(th)*14; fe.push({th,len}); }   /* the raven's long wedge-shaped tail */
+      const rootL=pt(-7.2,-1.8,-.2), rootR=pt(-7.2,1.8,-.2), tipAt=(th,len)=>{ const a=-7.2-Math.cos(th)*len, b=Math.sin(th)*len*1.15; return pt(a,b,-.5-len*.03+b*tw); };
+      const edge=[rootL]; for(const F of fe) edge.push(tipAt(F.th,F.len)); edge.push(rootR);
+      const tc=under? mixv(L(WH,.9),[255,196,130],glow*.25) : L(WH,1); smooth(edge,rgb(tc));
+      if(px>.35){ for(let j=1;j<12;j++){ const th=(fe[j-1].th+fe[j].th)/2, len=(fe[j-1].len+fe[j].len)/2; const a=pt(-7.2-Math.cos(th)*2,Math.sin(th)*2,-.25), b=tipAt(th,len*.98); line(a,b,rgb(mulv(tc,.78),.5),Math.max(.3,px*.12)); } }
+      const g=x.createLinearGradient(...pt(-7.2,0,0),...pt(-18.5,0,-.6)); g.addColorStop(0,rgb(mulv(tc,.72),.6)); g.addColorStop(.5,rgb(tc,0)); x.fillStyle=g; x.beginPath(); x.moveTo(edge[0][0],edge[0][1]); edge.forEach(q=>x.lineTo(q[0],q[1])); x.fill(); };   /* shadowed where it meets the body */
+    /* the body: lofted from real sections, heavy through the chest */
+    const SECT=[[-8.6,1.8,1.3,.2],[-6.6,3.0,2.5,.1],[-4,3.9,3.4,-.1],[-1,4.3,4.0,-.3],[2,4.0,4.0,-.3],[4.6,3.2,3.3,0],[6.4,2.5,2.7,.4]];
+    const hPt=(a,b,c)=>{ const da=a-6.2, ch=Math.cos(e.hy), sh=Math.sin(e.hy), x1=da*ch-b*sh, y1=da*sh+b*ch, cp=Math.cos(e.hp), sp=Math.sin(e.hp), cz=c-.5;   /* the head turns on its neck */
+      return pt(6.2+x1*cp+cz*sp, y1, .5+cz*cp-x1*sp); };
+    const HEAD=[[6.2,2.9,3.2,.2],[7.6,2.8,3.05,.6],[9.4,2.5,2.6,.95],[11,1.9,2.1,.95],[12,1.3,1.6,.75]];   /* the shaggy throat makes the head look heavy */
+    const BILLS=[[11.4,1.25,1.55,.55],[13,1.0,1.3,.45],[14.6,.7,.95,.3],[15.8,.4,.6,0],[16.4,.18,.3,-.45]];   /* the huge, deep, arched raven bill */
+    const loft=(S,path,map)=>{ map=map||pt; const ring=(a,w,h,zc)=>{ for(let j=0;j<18;j++){ const th=j/18*6.283, q=map(a,w*Math.cos(th),zc+h*Math.sin(th)); j? path.lineTo(q[0],q[1]) : path.moveTo(q[0],q[1]); } path.closePath(); };
+      for(let i=0;i<S.length-1;i++){ const A=S[i], B=S[i+1]; for(let k=0;k<3;k++){ const t=k/3; ring(A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, A[2]+(B[2]-A[2])*t, A[3]+(B[3]-A[3])*t); } } const Z=S[S.length-1]; ring(Z[0],Z[1],Z[2],Z[3]); };
+    const shadeIn=(path,topC,botC,a0,a1)=>{ x.save(); x.clip(path); const tp=pt(0,0,5), bt=pt(0,0,-5), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]); g.addColorStop(0,topC); g.addColorStop(.5,"rgba(0,0,0,0)"); g.addColorStop(1,botC); x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); x.restore(); };
+    const body=()=>{ const b=new Path2D(); loft(SECT,b); x.fillStyle=rgb(L(BR,1)); x.fill(b);
+      shadeIn(b,rgb([255,200,140],.16+lit*.2),"rgba(14,8,6,.38)");
+      if(under){ for(const sd of [-1,1]){ const k0=pt(-4.6,sd*1.5,-2.9), k1=pt(-6.4,sd*1.3,-2.6); line(k0,k1,rgb(L(BRD,1)),Math.max(.8,px*1.6));   /* feathered legs drawn up, the yellow feet tucked back under the tail */
+          const ft=pt(-6.9,sd*1.25,-2.4); x.fillStyle=rgb(L(FEET,1.1)); x.beginPath(); x.ellipse(ft[0],ft[1],Math.max(.6,px*.95),Math.max(.5,px*.6),0,0,6.283); x.fill();
+          const tl=pt(-7.6,sd*1.1,-2.2); x.fillStyle="rgba(20,16,12,.85)"; x.beginPath(); x.arc(tl[0],tl[1],Math.max(.35,px*.28),0,6.283); x.fill(); } } };
+    const head=()=>{ const hd=new Path2D(); loft(HEAD,hd,hPt); const hc=L(WH,.95); x.fillStyle=rgb(hc); x.fill(hd);
+      { x.save(); x.clip(hd); const c=hPt(9,0,2.2), rr=Math.max(1,px*4.2), g=x.createRadialGradient(c[0],c[1],rr*.15,c[0],c[1],rr); g.addColorStop(0,`rgba(120,140,210,${(.12+.25*lit).toFixed(2)})`); g.addColorStop(1,"rgba(6,6,10,.35)"); x.fillStyle=g; x.fillRect(c[0]-rr*1.5,c[1]-rr*1.5,rr*3,rr*3);
+        const n0=pt(6.4,0,0), g2=x.createRadialGradient(n0[0],n0[1],0,n0[0],n0[1],Math.max(1,px*2.6)); g2.addColorStop(0,rgb(L(BR,1),.55)); g2.addColorStop(1,rgb(L(BR,1),0)); x.fillStyle=g2; x.fillRect(n0[0]-px*3,n0[1]-px*3,px*6,px*6); x.restore(); }   /* the white hood shades into the dark body at the neck */
+      const bl=new Path2D(); loft(BILLS,bl,hPt); x.fillStyle=rgb(L(BILL,1.15)); x.fill(bl);                                  /* the heavy yellow hooked bill */
+      { const t0=hPt(15.2,0,-.2), t1=hPt(15.9,0,-1.05); line(t0,t1,rgb(L([214,160,40],1)),Math.max(.5,px*.5)); }
+      const gp0=hPt(11.8,0,.05), gp1=hPt(14.6,0,-.05); line(gp0,gp1,rgb([120,84,30],.45),Math.max(.3,px*.16));               /* the gape line */
+      for(const sd of [-1,1]){ const side=[0,1,2].map(i=>r[i]*sd), facing=dot(side,toEye); if(facing<-.15) continue;   /* the pale yellow eye under its heavy brow, on the side that faces us */
+        const ey=hPt(10.4,sd*2.0,1.45), er=Math.max(.45,px*.52)*Math.min(1,.4+facing); x.fillStyle=rgb([44,36,32]); x.beginPath(); x.arc(ey[0],ey[1],er,0,6.283); x.fill();
+        x.fillStyle="rgba(4,4,6,.95)"; x.beginPath(); x.arc(ey[0],ey[1],er*.55,0,6.283); x.fill(); x.fillStyle="rgba(255,248,236,.7)"; x.beginPath(); x.arc(ey[0]-er*.3,ey[1]-er*.3,er*.22,0,6.283); x.fill();
+        const b0=hPt(9.6,sd*2.15,2.1), b1=hPt(11.2,sd*1.8,1.95); line(b0,b1,rgb(mulv(hc,.72),.7),Math.max(.4,px*.32)); } };
+    const near=sd=>{ const w=W3(0,sd*12,0); return w[0]*w[0]+w[1]*w[1]+w[2]*w[2]; }, farS=near(-1)>near(1)? -1 : 1;
+    if(under){ wing(farS); wing(-farS); tail(); body(); head(); }
+    else { wing(farS); tail(); body(); wing(-farS); head(); }
+  }
   function drawEagle(dt,dark){
     nextEagle-=dt; if(!eag&&nextEagle<=0){ if(stageBusy()) nextEagle=rnd(15,30); else startEagle(); } if(!eag) return;
     const e=eag; e.t+=dt; const u=e.t/e.dur; if(u>=1){ eag=null; nextEagle=rnd(260,440); return; }
@@ -3434,17 +3523,40 @@ const ambient=(function(){
   /* a pair of common ravens: they fly close together in step, rowing slowly then gliding, croaking back and forth;
      now and then one flips right over onto its back and rolls out again, and sometimes they tumble together, just for the fun of it */
   let nextRaven=rnd(50,100);
+  const rvcv=document.createElement("canvas"), rvcx=rvcv.getContext("2d");
+  function drawRavens3D(list,dark){
+    if(!list.length) return; const v=vanish(), k0=FOC(), sp=sun();
+    const proj=(X,Yd,Z)=>{ const c=w2s(X,1-Yd,Z); return [c.x,c.y]; };
+    const sunL=(()=>{ const q=[(sp.x-v[0])/k0,(sp.y-v[1])/k0,1], l=Math.hypot(...q); return q.map(c=>c/l); })();
+    const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(rvcv.width!==cw||rvcv.height!==ch){ rvcv.width=cw; rvcv.height=ch; }
+    for(const b of list){ const c0=w2s(b.X,b.Y,b.Z); if(c0.x<-150||c0.x>W+150) continue;
+      const x=rvcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0); x.globalAlpha=1;
+      const vy=Math.max(-.3,Math.min(.3,(b.vy||0))), f=(()=>{ const q=[Math.cos(b.hd),-vy*.4,Math.sin(b.hd)], l=Math.hypot(...q); return q.map(c=>c/l); })();
+      const e={t:b.t,bank:-b.bank,amp:b.amp||0,ph:b.wph||0,curl:b.curl??.55,hy:b.hy||0,hp:.12};
+      raven3D(x,e,[b.X,1-b.Y,b.Z],f,proj,.0082,sunL);
+      const sx=c0.x, sy=c0.y, rad=34*.0082*k0/b.Z+30, RR=rad*.6, RX=Math.max(0,sx*.6-RR), RY=Math.max(0,sy*.6-RR);
+      x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
+      x.fillStyle="rgba(255,160,80,.06)"; x.fillRect(RX,RY,RR*2,RR*2);
+      { const rl=x.createLinearGradient(RX,0,RX+RR*2,0), kk=sp.x>sx?1:0; rl.addColorStop(kk,"rgba(255,190,120,.22)"); rl.addColorStop(1-kk,"rgba(0,0,0,0)"); x.fillStyle=rl; x.fillRect(RX,RY,RR*2,RR*2); }   /* a warm rim on the sun side of the black plumage */
+      if(!b.skyC||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=8; const ip=toImg(sx,sy); b.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[190,170,140]; }
+      x.fillStyle=rgb(b.skyC,Math.min(.45,Math.max(.05,(b.Z-3.5)/18))); x.fillRect(RX,RY,RR*2,RR*2);                       /* the air between: black softens to the sky's colour with distance */
+      if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RR*2,RR*2); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RR*2,RR*2); x.globalAlpha=1; } }
+      if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RR*2,RR*2); }
+      x.globalCompositeOperation="source-over";
+      blitRegion(rvcv,sx,sy,rad,.45+Math.max(0,b.Z-6)*.08,b.alpha); }
+  }
   function startRavens(){ const ltr=Math.random()<.5, Z=rnd(4.2,5.4), v=vanish(), X0=((ltr?-80:W+80)-v[0])*Z/FOC(), hd=ltr? -rnd(.02,.12) : Math.PI+rnd(.02,.12), Y=rnd(2.1,2.6);
     const pair={rollAt:rnd(4,8),tumbleAt:rnd(10,16),callAt:rnd(1,3)};
     for(let i=0;i<2;i++) soarers.push(soarBird("raven",{X:X0-Math.cos(hd)*i*.55,Z:Z+i*.25,Y:Y+i*.12,hd,sp:rnd(.55,.7),life:40,pair,lead:i===0,roll:null,ph:i*1.3})); }
   function stepRaven(b,dt){ const p=b.pair;
     b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.Y+=Math.sin(b.t*.5+b.ph)*.03*dt;
-    const cyc=(b.t+b.ph*.4)%5.5, row=cyc<2.2; b.ph+=dt*(row? Math.PI*2*1.4 : 0); b.flap+=((row? Math.sin(b.ph)*.6 : -.06)-b.flap)*Math.min(1,dt*(row?12:3));   /* slow, deep rowing beats, then a glide on flat wings */
+    const cyc=(b.t+b.ph*.4)%5.5, row=cyc<2.2; b.wph=(b.wph||0)+dt*(row||Math.cos(b.wph||0)<.97? Math.PI*2*1.5 : 0); b.amp=(b.amp||0)+((row? .6 : 0)-(b.amp||0))*Math.min(1,dt*(row?4:2)); b.curl=row? .3 : .6;   /* slow, deep rowing beats, then a glide on flat wings */
+    const y0=b.Y; b.hy=Math.sin(b.t*.7+b.ph)*.4;
     let bank=Math.sin(b.t*.45+b.ph)*.12;
     if(b.lead&&b.t>p.rollAt){ p.rollAt=b.t+rnd(6,11); b.roll={t:0,dur:rnd(.9,1.3),turns:Math.random()<.3?2:1,dir:Math.random()<.5?1:-1}; if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,"knock"); }
     if(!b.lead&&b.t>p.tumbleAt){ p.tumbleAt=b.t+rnd(12,20); b.roll={t:0,dur:1.6,turns:1,dir:-1,drop:.5}; }     /* the follower tumbles and drops, then catches up */
-    if(b.roll){ const r=b.roll; r.t+=dt; const u=Math.min(1,r.t/r.dur), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u); bank+=r.dir*e*Math.PI*2*r.turns; b.flap*=.3; if(r.drop) b.Y-=Math.sin(u*Math.PI)*r.drop*dt*2.2; if(u>=1) b.roll=null; }   /* flipped right over onto its back, wings folding, and out again */
-    b.bank=bank;
+    if(b.roll){ const r=b.roll; r.t+=dt; const u=Math.min(1,r.t/r.dur), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u); bank+=r.dir*e*Math.PI*2*r.turns; b.amp*=.85; b.curl=.9; if(r.drop) b.Y-=Math.sin(u*Math.PI)*r.drop*dt*2.2; if(u>=1) b.roll=null; }   /* flipped right over onto its back, wings folding, and out again */
+    b.bank=bank; b.vy=(b.Y-y0)/Math.max(dt,1e-3);
     if(b.lead&&b.t>p.callAt){ p.callAt=b.t+rnd(2.5,6); if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,Math.random()<.75?"croak":"knock"); }
   }
   function drawRaptors(dt,dark){
@@ -3465,9 +3577,10 @@ const ambient=(function(){
       else if(b.kind==="raven"){ stepRaven(b,dt); const c=w2s(b.X,b.Y,b.Z); b._pan=Math.max(-1,Math.min(1,c.x/W*2-1)); }
       else { b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.ph+=dt*2.3*Math.PI*2/2.3; b.flap=Math.sin(b.ph)*.55; b.Y+=Math.sin(b.t*.6)*.02*dt; b.bank=Math.sin(b.t*.5)*.08; }
       b.alpha= b.t>b.life? Math.max(0,b.alpha-dt*.25) : Math.min(1,b.alpha+dt*.5);
-      const on=drawSoarer(b,dark); if((b.t>b.life&&b.alpha<=0) || (!b.kettle && !on && b.t>3)) b.done=true;
+      const on=b.kind==="raven"? (()=>{ const c=w2s(b.X,b.Y,b.Z); return c.x>-150&&c.x<W+150; })() : drawSoarer(b,dark); if((b.t>b.life&&b.alpha<=0) || (!b.kettle && !on && b.t>3)) b.done=true;
     }
     soarers=soarers.filter(b=>!b.done);
+    drawRavens3D(soarers.filter(b=>b.kind==="raven"),dark);
   }
   /* ---- a cock pheasant strutting through the grass: walks with a bob, stops to peck, stretches up to look, then slips away ---- */
   let pheasW=null, nextPheasW=75;
