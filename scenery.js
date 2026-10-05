@@ -482,7 +482,7 @@ const ambient=(function(){
     return {tier:ti, X:X0, Y, Z, hx, hz, px, pz, sp, birds, bob:rnd(0,6.28), honk:rnd(1,4)};
   }
   function drawGeese(dt,dark){
-    nextFlock-=dt; if(nextFlock<=0 && !flocks.length){ if(stageBusy()) nextFlock=rnd(15,30); else { flocks.push(newFlock()); nextFlock=rnd(60,130); } }
+    nextFlock-=dt; if(nextFlock<=0 && flocks.length<2){ flocks.push(newFlock()); nextFlock=rnd(14,40); }
     const sun0=sun();
     for(const f of flocks){
       f.X+=f.hx*f.sp*dt; f.Z+=f.hz*f.sp*dt; f.bob+=dt*.5;
@@ -1639,9 +1639,10 @@ const ambient=(function(){
     if(!chasing()) { d.csess=null; d.led=false; return false; }
     /* a dog only takes up the lead when the cursor comes close to it, and lets it go if the cursor wanders well off, so the rest of the scene can be explored in peace */
     { const s0=toScreen(d.Xw,d.Dw), dist=Math.hypot(cur.x-s0.x,(cur.y-s0.y)*1.3);
-      if(!d.led){ if(dist>Math.max(110,W*.09)) return false; d.led=true; d.csess=null; d.fx=s0.x; d.fy=s0.y; }
+      if(!d.led){ const o=d===dog?lab:dog, tag=o&&o.led&&o.chase&&!o.gone&&!o.hidden;   /* once one dog is following, the other tags along a beat behind */
+        if(dist>Math.max(110,W*.09)&&!tag) return false; d.led=true; d.late=tag&&dist>Math.max(110,W*.09); d.csess=null; d.fx=s0.x; d.fy=s0.y; }
       else if(dist>Math.max(320,W*.3)){ d.led=false; return false; } }
-    if(d.csess!==cur.sess){ d.csess=cur.sess; d.react=rnd(.1,.5)*(d.lab?1.3:1); d.ignore=Math.random()<.08; d.lagK=rnd(.6,2.2); d.fx=d.fx??cur.x; d.fy=d.fy??cur.y; }
+    if(d.csess!==cur.sess){ d.csess=cur.sess; d.react=rnd(.25,1.8)*(d.lab?1.3:1)+(d.late?rnd(.6,1.6):0); d.ignore=Math.random()<.08; d.lagK=rnd(.6,2.2); d.fx=d.fx??cur.x; d.fy=d.fy??cur.y; }
     if(d.ignore) return false; d.react-=dt; if(d.react>0) return false;
     if(!d.chase&&d.fx==null){ d.fx=cur.x; d.fy=cur.y; }
     const k=Math.min(1,dt*d.lagK); d.fx+=(cur.x-d.fx)*k; d.fy+=(cur.y-d.fy)*k; return true; }
@@ -2183,7 +2184,7 @@ const ambient=(function(){
   function startBanner(){ const dir=Math.random()<.5?1:-1; ban={t:0,dir,dur:rnd(19,23),ph:[rnd(0,6),rnd(0,6)],fy:rnd(.12,.17),z0:rnd(1.75,2.05)}; }
   function drawBanner(dt,dark){
     const host=window.SceneryHost; if(!host||typeof host.banner!=="function") return;
-    nextBan-=dt; if(!ban&&nextBan<=0){ if(stageBusy()&&!(banFirst&&!utv)) nextBan=rnd(15,30); else { banFirst=false; startBanner(); } } if(!ban) return;
+    nextBan-=dt; if(!ban&&nextBan<=0){ if(stageBusy()&&!banFirst) nextBan=rnd(15,30); else { banFirst=false; startBanner(); } } if(!ban) return;
     const B=ban; B.t+=dt; const u=B.t/B.dur; if(u>=1){ ban=null; nextBan=rnd(200,360); return; }
     let text=""; try{ text=String(host.banner()||""); }catch(e){} if(!text){ ban=null; nextBan=rnd(200,360); return; }
     const F=H*.5, cx=W/2, cy=H*.52, proj=(X,Y,Z)=>[cx+X*F/Math.max(.05,Z),cy+Y*F/Math.max(.05,Z)];
@@ -2517,7 +2518,7 @@ const ambient=(function(){
   let bbChase=null, nextChase=rnd(35,70); const bccv=document.createElement("canvas"), bccx=bccv.getContext("2d");
   function drawChase(dt,dark){
     const F=H*.5, cx=W/2, cy=H*.52;
-    nextChase-=dt; if(!bbChase&&nextChase<=0&&stageBusy()) nextChase=rnd(15,30); if(!bbChase&&nextChase<=0){ nextChase=rnd(100,200); const m=mons.find(m=>m.t>1.5&&m.t<m.life-8&&m.sx>W*.04&&m.sx<W*.96);
+    nextChase-=dt; if(!bbChase&&nextChase<=0){ nextChase=rnd(60,130); const m=mons.find(m=>m.t>1.5&&m.t<m.life-8&&m.sx>W*.04&&m.sx<W*.96);
       if(m){ const z=m.z+.5, sx0=Math.max(-40,Math.min(W+40,m.sx-m.dir*W*.3)); bbChase={m,t:0,dur:rnd(6,9),P:[(sx0-cx)*z/F,(-50-cy)*z/F,z],V:[m.dir*.6,1.2,0],ph:0,lunge:0}; } }   /* drops in from above, on the butterfly's tail */
     if(!bbChase) return; const B=bbChase, m=B.m; B.t+=dt;
     const gone=!mons.includes(m), leave=B.t>B.dur||gone;
@@ -2546,7 +2547,7 @@ const ambient=(function(){
   }
   function drawMonarchs(dt,dark){
     const F=H*.5, cx=W/2, cy=H*.52, g=gnd();
-    nextMon-=dt; if(nextMon<=0&&mons.length<(MOBILE()?1:2)){ nextMon=rnd(20,45); const side=Math.random()<.5?-1:1;
+    nextMon-=dt; if(nextMon<=0&&mons.length<(MOBILE()?2:3)){ nextMon=rnd(12,28); const side=Math.random()<.5?-1:1;
       mons.push({t:0,life:rnd(22,40),sx:side<0? -30 : W+30,sy:g.vy+rnd(-30,90),z:rnd(2.2,6.5),dir:-side,ph:rnd(0,6),flapT:0,glide:0,ang:.4,tz:rnd(2,6),wy:rnd(0,6)}); }
     if(!mons.length) return;
     const x=ctx; x.save(); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high";                 /* straight onto the scene: no full-screen pass every frame */
@@ -3155,7 +3156,7 @@ const ambient=(function(){
   /* ---- a ruby-throated hummingbird, in true 3D: it shoots in out of the evening toward you, stops dead and hovers an arm's length away,
      body tilted up, wings a blur, turning to look you over, then darts off back into the distance ---- */
   /* the close-up visitors take turns: only one at a time comes past the camera */
-  function stageBusy(){ return !!(cmon||ban||eag||hero||bbFlock||(pecker&&pecker.state==="approach")||jays||pf||hum||(hawkG&&hawkG.state==="approach")||bbChase||utv||flocks.length||soarers.some(b=>b.kind!=="vult")); }   /* keep it calm: one main visitor at a time */
+  function stageBusy(){ return !!(cmon||ban||eag||hero||bbFlock||(pecker&&pecker.state==="approach")||jays||pf||hum||(hawkG&&hawkG.state==="approach")); }
   let hum=null, nextHum=45; const hcv=document.createElement("canvas"), hcx=hcv.getContext("2d");
   function hum3D(x,P,f0,beat,proj,C){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -4171,13 +4172,13 @@ const ambient=(function(){
     else { b.vy=Math.sin(b.wph)*.08; b.Y+=b.vy*dt*.6; b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; }
     if(b.t>b.callAt){ b.callAt=b.t+rnd(5,10); natureSfx.heron&&natureSfx.heron(b._pan||0); } }
   function drawRaptors(dt,dark){
-    nextFalcon-=dt; if(nextFalcon<=0){ if(stageBusy()) nextFalcon=rnd(15,30); else { nextFalcon=rnd(280,520); startFalcon(); } }
-    nextHeron-=dt; if(nextHeron<=0){ if(stageBusy()) nextHeron=rnd(15,30); else { nextHeron=rnd(240,460); startHeron(); } }
-    nextRaven-=dt; if(nextRaven<=0){ if(stageBusy()) nextRaven=rnd(15,30); else { nextRaven=rnd(220,420); startRavens(); } }
+    nextFalcon-=dt; if(nextFalcon<=0){ nextFalcon=rnd(200,380); if(!soarers.some(b=>b.kind==="falcon")) startFalcon(); }
+    nextHeron-=dt; if(nextHeron<=0){ nextHeron=rnd(170,320); if(!soarers.some(b=>b.kind==="heron")) startHeron(); }
+    nextRaven-=dt; if(nextRaven<=0){ nextRaven=rnd(150,300); if(!soarers.some(b=>b.kind==="raven")) startRavens(); }
     nextVult-=dt; nextHawkV-=dt; nextOwlV-=dt;
     /* turkey vultures retired */
-    if(nextHawkV<=0){ if(stageBusy()) nextHawkV=rnd(15,30); else { nextHawkV=rnd(200,380); startHawk(); } }
-    if(nextOwlV<=0){ if(stageBusy()) nextOwlV=rnd(15,30); else { nextOwlV=rnd(240,460); startOwl(); } }
+    if(nextHawkV<=0){ nextHawkV=rnd(120,260); if(!soarers.some(b=>b.kind==="hawk")) startHawk(); }
+    if(nextOwlV<=0){ nextOwlV=rnd(160,340); if(!soarers.some(b=>b.kind==="owl")) startOwl(); }
     for(const b of soarers){
       b.t+=dt;
       if(b.kettle){ const K=b.kettle; if(b.kind==="vult"||b.kind==="hawk"){ K.cx+=K.drift*dt*(b===soarers.find(o=>o.kettle===K)?1:0); }
