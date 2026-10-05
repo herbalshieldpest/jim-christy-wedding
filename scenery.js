@@ -2605,6 +2605,20 @@ const ambient=(function(){
     if(!f.blades) f.blades=Array.from({length:9},()=>({ox:rnd(-16,16),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
     critterBlit(null,null,f,s,k,f.pal,()=>pheasWParts(f,f.pal,moving||f.turning),f.yaw,30,64,12,f.blades,f.alpha);
   }
+  /* the film pass: a whisper of 16mm grain that dances frame to frame, and the edges of the lens falling gently darker */
+  const grainT=[0,1,2,3].map(()=>{ const c=document.createElement("canvas"), N=160; c.width=c.height=N; const x=c.getContext("2d"), D=x.createImageData(N,N), a=D.data;
+    for(let k=0;k<a.length;k+=4){ const v=(Math.random()+Math.random()+Math.random()-1.5)*2; const w=v>0?255:0; a[k]=a[k+1]=a[k+2]=w; a[k+3]=Math.min(255,Math.abs(v)*70); }
+    x.putImageData(D,0,0); return c; });
+  let vigC=null, vigK="";
+  function filmPass(){
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation="source-over";
+    const k=W+"|"+H; if(vigK!==k){ vigK=k; vigC=document.createElement("canvas"); vigC.width=Math.max(1,Math.round(W/4)); vigC.height=Math.max(1,Math.round(H/4)); const vx=vigC.getContext("2d"), w=vigC.width, h=vigC.height;
+      vx.translate(w/2,h/2); vx.scale(w/2,h/2); const g=vx.createRadialGradient(0,0,.55,0,0,1.42); g.addColorStop(0,"rgba(14,9,4,0)"); g.addColorStop(.5,"rgba(14,9,4,.1)"); g.addColorStop(1,"rgba(14,9,4,.38)"); vx.fillStyle=g; vx.fillRect(-1,-1,2,2); }
+    ctx.globalAlpha=1; ctx.drawImage(vigC,0,0,W,H);                                                            /* the corners and edges darken a little */
+    const T=grainT[Math.floor(Math.random()*4)], S=2.2, step=T.width*S, ox=-Math.random()*step, oy=-Math.random()*step;   /* coarse, soft clumps, a fresh pattern every frame */
+    ctx.globalAlpha=.075; ctx.imageSmoothingEnabled=true;
+    for(let y=oy;y<H;y+=step) for(let x=ox;x<W;x+=step) ctx.drawImage(T,x,y,step,step);
+    ctx.restore(); }
   function frame(ts){
     raf=0; if(!running()) { ctx.clearRect(0,0,W,H); return; }
     if(last && ts-last<30){ raf=requestAnimationFrame(frame); return; }   /* ~30 frames a second is plenty for drifting things */
@@ -2659,7 +2673,7 @@ const ambient=(function(){
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
     ctx.globalAlpha=1; if(img){ dogScare(dt); drawGreet(dt,dark); drawTrail(dt,dark); drawBats(dt,dark); drawMoths(dt,dark,"near"); drawFlock(dt,dark); drawHawkG(dt,dark,"near"); drawHum(dt,dark); collectTags(); } ctx.globalAlpha=1;
-    ctx.setTransform(1,0,0,1,0,0);
+    ctx.setTransform(1,0,0,1,0,0); if(img) filmPass();
     raf=requestAnimationFrame(frame);
   }
   const running=()=>on && !reduce.matches && !document.hidden;
