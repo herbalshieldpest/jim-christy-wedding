@@ -391,12 +391,13 @@ const ambient=(function(){
     x.fillStyle="rgba(150,146,140,.28)"; for(const [a,b,r] of [[-.3,-.35,.22],[.1,-.1,.28],[.35,.25,.18],[-.2,.3,.16],[.42,-.36,.12],[-.48,.05,.1]]){ x.beginPath(); x.ellipse(o+a*R,o+b*R,r*R,r*R*.85,a,0,6.283); x.fill(); }   /* the maria */
     x.globalCompositeOperation="destination-out"; const sh=x.createRadialGradient(o-R*1.55,o,R*.4,o-R*1.55,o,R*1.25); sh.addColorStop(0,"rgba(0,0,0,.9)"); sh.addColorStop(.75,"rgba(0,0,0,.75)"); sh.addColorStop(1,"rgba(0,0,0,0)");   /* the unlit sliver on the side away from the sun */
     x.fillStyle=sh; x.fillRect(0,0,c.width,c.height); return c; })();
+  const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
   function drawMoon(){
-    const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.03, d=Math.min(1,duskV/.62), a=.55+.4*d;
+    const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.04, d=Math.min(1,duskV/.62), a=.55+.4*d;
     const veil=.25+.35*Math.max(0,Math.sin(t*.045+1)*.5+Math.sin(t*.11)*.5);                                           /* thin cloud drifting across it */
     ctx.save(); ctx.globalAlpha=a*(1-veil*.55);
     const gl=ctx.createRadialGradient(p[0],p[1],R*.8,p[0],p[1],R*4); gl.addColorStop(0,`rgba(255,246,226,${(.22*a).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* glow in the haze */
-    ctx.globalCompositeOperation="screen"; ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);
+    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ ctx.globalAlpha=Math.min(1,a*1.25*(1-veil*.35)); ctx.drawImage(moonImg,p[0]-R,p[1]-R,R*2,R*2); ctx.globalAlpha*=.6; ctx.drawImage(moonImg,p[0]-R,p[1]-R,R*2,R*2); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
     ctx.restore();
     if(skyTile){ const ip=toImg(p[0],p[1]); const c=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[120,110,110];
       const v=ctx.createRadialGradient(p[0]+Math.sin(t*.07)*R,p[1],0,p[0],p[1],R*2.2); v.addColorStop(0,rgb(c,.4*veil)); v.addColorStop(1,rgb(c,0)); ctx.fillStyle=v; ctx.fillRect(p[0]-R*2.5,p[1]-R*2.5,R*5,R*5); }   /* the veil itself */
@@ -1372,10 +1373,10 @@ const ambient=(function(){
   }
   /* ---- when the page opens, the Brittany and the Lab tear in together and chase each other around the lawn, taking turns being "it" ---- */
   let rompAt=1.2;
-  let cur=null; const trail=[], puffs=[];
+  let cur=null, callDist=0, lastCall=-99; const trail=[], puffs=[];
   document.addEventListener("pointermove",e=>{ if(!on) return; const x=(e.clientX-(1-camZ)*W/2-camX)/camZ, y=(e.clientY-(1-camZ)*H/2-camY)/camZ;
-    const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) trail.push({x,y,t,r:rnd(4.5,7),rot:rnd(0,6.28),spin:rnd(-3,3),vx:rnd(-12,12),hue:Math.random(),ph:rnd(0,6)}); if(trail.length>50) trail.shift();
-    if(!dog&&!lab&&rompAt==null&&t-(cur.callT||-99)>0&&(window.__lastCall||0)<t-60){ window.__lastCall=t; startRomp(); } },{passive:true});
+    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) trail.push({x,y,t,r:rnd(4.5,7),rot:rnd(0,6.28),spin:rnd(-3,3),vx:rnd(-12,12),hue:Math.random(),ph:rnd(0,6)}); if(trail.length>50) trail.shift();
+    if(!dog&&!lab&&rompAt==null){ if(prev) callDist+=Math.hypot(x-prev.x,y-prev.y); if(callDist>W*1.2&&t-lastCall>6){ callDist=0; lastCall=t; startRomp(); } } else callDist=0; },{passive:true});   /* wave the cursor around a bit and the dogs come running back */
   const chasing=()=>cur&&t-cur.t<2.6;
   /* each dog has a mind of its own: it notices the cursor late (or not at all this time), and follows a lagging, smoothed idea of where it is */
   function dogWantsChase(d,dt){
