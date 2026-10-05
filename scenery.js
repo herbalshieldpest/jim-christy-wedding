@@ -2056,13 +2056,13 @@ const ambient=(function(){
     const sc=a=>{ const p0=pt(a,0,0), p1=pt(a+1,0,0), p2=pt(a,1,0); return Math.max(Math.hypot(p1[0]-p0[0],p1[1]-p0[1]),Math.hypot(p2[0]-p0[0],p2[1]-p0[1])); };
     const toEye=nrm([-P[0],-P[1],-P[2]]), glow=Math.max(0,Math.min(1,(dot(nrm(P),sunL)-.45)/.45));
     const litOf=n=>Math.max(0,Math.min(1,dot(n,sunL)*1.4+.25));
-    const L=(c,l)=>[c[0]*(.5+.75*l)+10*(1-l), c[1]*(.5+.62*l)+12*(1-l), c[2]*(.52+.5*l)+20*(1-l)];        /* lit warm, shaded toward the cool sky */
+    const L=(c,l)=>[c[0]*(.62+.55*l)+6*(1-l), c[1]*(.64+.5*l)+8*(1-l), c[2]*(.72+.42*l)+18*(1-l)];        /* lit warm, shaded toward the cool sky, keeping their colour in shade */
     const smooth=(pts,col)=>{ x.fillStyle=col; x.beginPath(); const n=pts.length, m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2]; let q=m(pts[n-1],pts[0]); x.moveTo(q[0],q[1]); for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n], mm=m(a,b); x.quadraticCurveTo(a[0],a[1],mm[0],mm[1]); } x.closePath(); x.fill(); };
     const line=(a,b,col,w)=>{ x.strokeStyle=col; x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
     const px=sc(0); x.lineCap="round"; x.lineJoin="round";
     /* an eastern bluebird: sky-blue back, wings and tail with dusky flight feathers, a warm rust throat and breast, white belly and vent;
        underneath, the wings are pale silver-grey with darker grey flight feathers */
-    const BLU=[46,104,214], BLU2=[104,164,238], DEEP=[26,50,120], TIPS=[22,28,52], RUST=[198,108,52], RUST2=[220,140,80], BELLY=[238,234,226], ULIN=[214,214,220], UFLT=[136,140,154];
+    const BLU=[30,104,246], BLU2=[96,176,255], DEEP=[22,58,170], TIPS=[18,30,74], RUST=[204,106,46], RUST2=[226,140,74], BELLY=[240,236,228], ULIN=[196,208,236], UFLT=[120,136,178];   /* that vivid, almost electric eastern-bluebird blue */
     const wing=(sd,fl,ghost)=>{ const h=k=>fl*k, bend=Math.abs(fl)*.3;
       const wa=Math.atan2(fl*9.4,15), sw=[0,1,2].map(i=>r[i]*sd*Math.cos(wa)+u[i]*Math.sin(wa)), tn=crs(sw,f).map(c=>c*sd), under=dot(tn,toEye)<0, lit=litOf(under? tn.map(c=>-c) : tn);
       const P_=(a,s)=>pt(a,sd*s,h(s*.62)+bend*Math.min(1,s/8));   /* a point on the wing, by distance back from the leading edge (a) and out along the span (s) */
