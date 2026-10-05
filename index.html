@@ -14,12 +14,19 @@ html,body{height:100%}
 body{margin:0;background:var(--ground) url("scene.jpg") center/cover no-repeat fixed;color:var(--ink);font-family:var(--body);overflow-x:hidden}
 /* a faint pool of shade behind the names so the fine script holds up against the bright sky */
 .veil{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 60% 34% at 50% 50%,rgba(20,13,6,.32) 0%,rgba(20,13,6,.12) 55%,rgba(20,13,6,0) 100%)}
-main{position:relative;z-index:2;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-inline:16px;padding-block:12vh 18vh;box-sizing:border-box}
-.kicker{--kf:clamp(15px,2.3vw,30px);margin:0;position:relative;top:20px;left:calc(-120px - var(--kf)*.88);font:500 calc(var(--kf)*.82)/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 12px rgba(0,0,0,.35)}
-h1{margin:.05em 0 0;font:400 clamp(44px,9.6vw,168px)/1.15 var(--script);letter-spacing:0;white-space:nowrap;text-shadow:0 2px 18px rgba(0,0,0,.28);padding-inline:.15em}
+/* ===== the title lockup: three lines that size and move as one piece =====
+   --size   how big the whole lockup is (it's the size of the names; everything else scales with it)
+   --x, --y nudge the whole lockup from the centre of the screen, in the same scaled units
+   Inside the lockup every measurement is a multiple of --size, so it keeps its exact shape on any screen. */
+.lockup{ --size:min(9.6vw,168px); --x:0; --y:-.158;
+  position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;
+  transform:translate(calc(var(--size)*var(--x)),calc(var(--size)*var(--y))) }
+main{position:relative;z-index:2;min-height:100%;display:flex;align-items:center;justify-content:center;padding-inline:16px;box-sizing:border-box}
+.kicker{margin:0;position:relative;top:calc(var(--size)*.073);left:calc(var(--size)*-.877);font:500 calc(var(--size)*.178)/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 12px rgba(0,0,0,.35)}
+h1{position:relative;top:calc(var(--size)*-.181);margin:calc(var(--size)*.05) 0 0;font:400 var(--size)/1.15 var(--script);letter-spacing:0;white-space:nowrap;text-shadow:0 2px 18px rgba(0,0,0,.28);padding-inline:.15em}
 h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42em;padding-inline:.12em;position:relative;top:-.12em}
-.line{--lf:clamp(14px,1.9vw,24px);margin:1.6em 0 0;position:relative;left:calc(15px + var(--lf)*1.72);font:500 calc(var(--lf)*.82)/1.5 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);text-shadow:0 1px 10px rgba(0,0,0,.4)}
-.snd{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:3;font:500 11px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink);background:var(--shade);border:1px solid var(--edge);border-radius:99px;padding:8px 14px;cursor:pointer}
+.line{margin:calc(var(--size)*.228) 0 0;position:relative;top:calc(var(--size)*-.181);left:calc(var(--size)*.986);font:500 calc(var(--size)*.1424)/1.5 var(--caps);letter-spacing:.06em;color:var(--ink-soft);text-shadow:0 1px 10px rgba(0,0,0,.4)}
+.snd{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:3;font:500 13px var(--body);letter-spacing:.03em;color:var(--ink);background:var(--shade);border:1px solid var(--edge);border-radius:99px;padding:8px 14px;cursor:pointer}
 .snd:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 </style>
@@ -27,27 +34,31 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 </head>
 <body>
 <div class="veil" aria-hidden="true"></div>
-<button type="button" class="snd" id="snd">Sound off</button>
+<button type="button" class="snd" id="snd" data-sound-toggle>Turn Sound On</button>
 <main>
-  <p class="kicker">The wedding of</p>
-  <h1>Jim <span class="amp">&amp;</span> Christy</h1>
-  <p class="line">June 19, 2027 <span class="dot" aria-hidden="true">&middot;</span> Grantsville, MD</p>
+  <div class="lockup">
+    <p class="kicker">The wedding of</p>
+    <h1>Jim <span class="amp">&amp;</span> Christy</h1>
+    <p class="line">June 19, 2027 <span class="dot" aria-hidden="true">&middot;</span> Grantsville, MD</p>
+  </div>
 </main>
 <script>
 /* centre the names by their actual ink, not their text box: the script's swashes reach well outside the letters */
-(function(){ const h=document.querySelector("h1"); if(!h) return;
-  function fit(){ h.style.transform=""; const r=document.createRange(); r.selectNodeContents(h);
+(function(){ const h=document.querySelector("h1"), lk=document.querySelector(".lockup"); if(!h||!lk) return;
+  function fit(){ lk.style.marginLeft=""; const r=document.createRange(); r.selectNodeContents(h);
     const c=document.createElement("canvas").getContext("2d"), cs=getComputedStyle(h); let L=Infinity, R=-Infinity, x=h.getBoundingClientRect().left+parseFloat(cs.paddingLeft);
     for(const node of h.childNodes){ const el=node.nodeType===1?node:h, st=getComputedStyle(el); c.font=st.fontStyle+" "+st.fontWeight+" "+st.fontSize+" "+st.fontFamily;
       const txt=node.textContent, m=c.measureText(txt); L=Math.min(L,x-m.actualBoundingBoxLeft); R=Math.max(R,x+m.actualBoundingBoxRight); x+=(node.nodeType===1? node.getBoundingClientRect().width : (()=>{ const rr=document.createRange(); rr.selectNodeContents(node); return rr.getBoundingClientRect().width; })()); }
-    const shift=innerWidth/2-(L+R)/2; if(Math.abs(shift)<200) h.style.transform=`translateX(${shift.toFixed(1)}px)`; }
+    const shift=innerWidth/2-(L+R)/2; if(Math.abs(shift)<200) lk.style.marginLeft=`${(2*shift).toFixed(1)}px`; }
   (document.fonts?document.fonts.ready:Promise.resolve()).then(fit); addEventListener("resize",fit); })();
 </script>
 <script>window.SceneryHost={photo:()=>"scene.jpg",fade:()=>0,key:"wed"};</script>
 <script src="scenery.js"></script>
 <script>
-const b=document.getElementById("snd"); const lab=()=>{ b.textContent=natureSfx.on?"Sound off":"Sound on"; };
-b.onclick=()=>{ natureSfx.set(!natureSfx.on); lab(); }; lab();
+const b=document.getElementById("snd");
+/* the label says what a press will do, based on whether sound is actually playing right now */
+const lab=()=>{ b.textContent=natureSfx.playing?"Turn Sound Off":"Turn Sound On"; };
+b.onclick=()=>{ if(natureSfx.playing) natureSfx.set(false); else natureSfx.set(true); setTimeout(lab,150); }; lab(); setInterval(lab,600);
 </script>
 
 </body>

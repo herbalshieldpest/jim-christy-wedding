@@ -8,7 +8,7 @@ var SceneryHost=window.SceneryHost||{};
 const SC={
   photo:()=>{ try{ return SceneryHost.photo? SceneryHost.photo() : "scene.jpg"; }catch(e){ return null; } },          /* the photo the scene is painted over */
   fade:()=>{ try{ return SceneryHost.fade? SceneryHost.fade() : 0; }catch(e){ return 0; } },                        /* how much the page tints the photo, 0-100 */
-  sun:()=>{ try{ return SceneryHost.sun? SceneryHost.sun() : {x:.711,y:.344,iw:1366,ih:1024,strength:.33}; }catch(e){ return null; } },
+  sun:()=>{ try{ return SceneryHost.sun? SceneryHost.sun() : {x:.711,y:.344,iw:1364,ih:1024,strength:.33}; }catch(e){ return null; } },
   dim:()=>{ try{ return SceneryHost.dim? !!SceneryHost.dim() : false; }catch(e){ return false; } },                 /* a darker "welcome" look */
   shown:()=>{ try{ return SceneryHost.shown? !!SceneryHost.shown() : true; }catch(e){ return true; } },
   key:SceneryHost.key||"scene", sounds:SceneryHost.sounds||"" };
@@ -31,7 +31,7 @@ var natureSfx=(function(){
     return true;
   }
   function gust(){
-    if(!ctx) return; const now=ctx.currentTime, up=R(1.5,3.5), hold=R(.5,2.5), down=R(2,4.5), peak=R(.05,.16);
+    if(!ctx) return; const now=ctx.currentTime, up=R(1.5,3.5), hold=R(.5,2.5), down=R(2,4.5), peak=R(.04,.11);
     breezeG.gain.cancelScheduledValues(now); breezeG.gain.setTargetAtTime(peak,now,up/3); breezeG.gain.setTargetAtTime(R(.008,.025),now+up+hold,down/3);
     breezeF.frequency.cancelScheduledValues(now); breezeF.frequency.setTargetAtTime(R(700,1300),now,up/3); breezeF.frequency.setTargetAtTime(R(320,520),now+up+hold,down/3);
     gustT=setTimeout(gust,(up+hold+down+R(1,6))*1000);
@@ -46,7 +46,7 @@ var natureSfx=(function(){
   function bird(){
     if(!ctx||!live){ return; }
     const now=ctx.currentTime+.05, far=Math.random(), lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=9000-far*5000; lp.connect(master);
-    const out=voice(lp,R(-.9,.9)), v=.05*(1-far*.65), kind=Math.random();
+    const out=voice(lp,R(-.9,.9)), v=.085*(1-far*.55), kind=Math.random();
     if(kind<.25){ tone(now,4100,3900,.32,v,out); tone(now+.38,3500,3350,.36,v*.9,out); }                                   /* fee-bee */
     else if(kind<.45){ let at=now; const base=R(2600,3400); for(let i=0;i<3;i++){ tone(at,base*1.3,base*.75,.2,v,out); at+=.24; } for(let i=0;i<4;i++){ tone(at,base*1.1,base*.9,.08,v*.8,out); at+=.1; } }   /* cheer cheer cheer, chew chew */
     else if(kind<.7){ const n=Math.floor(R(8,16)), base=R(4200,5600); let at=now; for(let i=0;i<n;i++){ tone(at,base*R(1,1.08),base*R(.86,.95),.045,v*.7,out); at+=R(.055,.075); } }   /* a dry trill */
@@ -54,7 +54,7 @@ var natureSfx=(function(){
     else { let at=now; for(let i=0;i<3;i++){ tone(at,2500,3600,.12,v*.8,out); tone(at+.13,3600,2900,.1,v*.7,out); at+=.32; } }    /* a rising whistle */
     out.disconnect && setTimeout(()=>{ try{ lp.disconnect(); }catch(e){} },6000);
   }
-  function birds(){ bird(); birdT=setTimeout(birds,R(1.2,5.5)*1000); }
+  function birds(){ if(live&&ctx&&ctx.state!=="running") ctx.resume().catch(()=>{}); bird(); birdT=setTimeout(birds,R(.9,4)*1000); }
   /* a red-tailed hawk circling high: a hoarse, falling keee-arrr */
   let hawkT=null, coyT=null;
   function hawk(){
@@ -123,11 +123,14 @@ var natureSfx=(function(){
     else if(ctx){ if(want) return; master.gain.setTargetAtTime(0,ctx.currentTime,.3); live=false; clearTimeout(birdT); clearTimeout(gustT); clearTimeout(owlT); clearTimeout(hawkT); clearTimeout(coyT); }
   }
   /* browsers only allow sound after a tap or key press */
-  function arm(){ if(armed) return; armed=true; const go=()=>{ ["pointerdown","keydown","touchstart"].forEach(ev=>document.removeEventListener(ev,go,true)); if(wanted()&&init()) apply(); else armed=false; };
+  /* a press on the page's own sound button is left to that button, so it can't start the sound and then have the same press turn it off */
+  const skip=e=>!!(e&&e.target&&e.target.closest&&e.target.closest("[data-sound-toggle]"));
+  function arm(){ if(armed) return; armed=true; const go=e=>{ if(skip(e)) return; ["pointerdown","keydown","touchstart"].forEach(ev=>document.removeEventListener(ev,go,true)); if(wanted()&&init()) apply(); else armed=false; };
     ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,go,true)); }
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
+  ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } } };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -155,7 +158,7 @@ const ambient=(function(){
     return {birch,maple,oak};
   })();
   function newLeaf(top){
-    const r=Math.random(), kind= r<.3?"maple" : r<.55?"oak" : r<.72?"milkweed" : "birch";
+    const r=Math.random(), kind= r<.36?"maple" : r<.66?"oak" : r<.74?"milkweed" : "birch";
     const z=rnd(.45,1.15);                                   /* depth: small and slow far away, larger and quicker up close */
     const base={kind, z, x:rnd(-.1*W,W*1.02), y:top? rnd(-80,-20) : rnd(-40,H), ph:rnd(0,6.28), rot:rnd(0,6.28), flip:rnd(0,6.28)};
     if(kind==="milkweed") return Object.assign(base,{s:rnd(11,18)*z, vy:rnd(5,11)*z, sw:rnd(18,40)*z, fr:rnd(.25,.5), vr:rnd(-.25,.25), vf:0, wind:rnd(8,20)*z, a:rnd(.55,.85)});
@@ -203,7 +206,7 @@ const ambient=(function(){
   }
   function seed(){
     const k=Math.max(.45,Math.min(1.5,W*H/(1440*900)));
-    leaves=Array.from({length:Math.round(20*k)},()=>place3D(newLeaf(false),true));
+    leaves=Array.from({length:Math.round(12*k)},()=>place3D(newLeaf(false),true));
     motes=[...Array.from({length:Math.round(70*k)},()=>newMote(0)),...Array.from({length:Math.round(34*k)},()=>newMote(1)),...Array.from({length:Math.round(7*k)},()=>newMote(2))];
   }
   function sun(){
@@ -541,7 +544,7 @@ const ambient=(function(){
     /* contact shadow, tinted by the grass */
     x.save(); x.globalAlpha=.5*(1-lift/(12*sc)); const sg=x.createRadialGradient(0,1,0,0,1,14*sc); sg.addColorStop(0,rgb(P.shadow,.9)); sg.addColorStop(1,rgb(P.shadow,0)); x.fillStyle=sg; x.scale(1,.22); x.beginPath(); x.arc(0,4,14*sc,0,6.283); x.fill(); x.restore();
     x.save(); x.translate(0,-lift);
-    { if(bun.yo==null){ bun.yo=0; bun.yoT=0; } if(bun.ys!==bun.state){ bun.ys=bun.state; bun.yoT= bun.state==="hop"? rnd(-.45,.45) : (Math.random()<.5?-1:1)*rnd(.5,1.35); }
+    { if(bun.yo==null){ bun.yo=0; bun.yoT=0; } if(bun.ys!==bun.state){ bun.ys=bun.state; if(bun.state==="hop") bun.yoT=(Math.random()<.5?-1:1)*rnd(.2,1.2); }      /* rabbits only change direction with a hop, never by spinning in place */
       bun.yo+=(bun.yoT-bun.yo)*Math.min(1,dt*(bun.state==="hop"?8:1.8));
       const yaw=(bun.face>0?0:Math.PI)+bun.yo, far=z=>z*Math.cos(yaw)>0, st=stretch;
       const fur=rgb(P.fur), furFar=rgb(mulv(P.fur,.8)), belly=rgb(P.belly), dk="rgba(15,10,6,.9)";
@@ -821,7 +824,9 @@ const ambient=(function(){
     const a=LAWN[i], b=LAWN[i+1], iy=a[1]+(b[1]-a[1])*(ix-a[0])/(b[0]-a[0]), y=scr(ix,iy)[1]; return Math.min(y-gnd().vy+14, foxBounds().gmax-45); }
   function keepOnLawn(o){ const s=toScreen(o.Xw,o.Dw), m=lawnMinG(s.x), M=foxBounds().gmax; if(s.g<m){ const p=toGround(s.x,gnd().vy+m); o.Xw=p.Xw; o.Dw=p.Dw; } else if(s.g>M){ const p=toGround(s.x,gnd().vy+M); o.Xw=p.Xw; o.Dw=p.Dw; } }
   function idleYawFor(y){ const r=Math.random(); return r<.38? -Math.PI/2+rnd(-.7,.7) : r<.66? Math.PI/2+rnd(-.7,.7) : y+rnd(-1.3,1.3); }
-  function idleTurn(f,dt,moving){ if(!moving&&f.idleYaw!=null) f.yaw=angTo(f.yaw,f.idleYaw,dt*1.6); }
+  function idleTurn(f,dt,moving){ f.turning=false;
+    if(!moving&&f.idleYaw!=null){ const dlt=Math.atan2(Math.sin(f.idleYaw-f.yaw),Math.cos(f.idleYaw-f.yaw));
+      if(Math.abs(dlt)>.06){ f.yaw=angTo(f.yaw,f.idleYaw,dt*1.1); f.turning=true; f.ph+=dt*3.2*(f.cad||1); f.head+=(0-f.head)*Math.min(1,dt*6); } } }
   function foxTarget(f){
     const b=foxBounds(); let tries=0, Xw, Dw, ang;
     const cur=toScreen(f.Xw,f.Dw), mid=(b.gmin+b.gmax)/2, nearNow=cur.g>mid;
@@ -917,7 +922,7 @@ const ambient=(function(){
     const x=fsx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,fsp.width,fsp.height);
     const ax=w*.5, ay=h*.9; x.translate(ax,ay); x.scale(k*R,k*R);
     x.save(); const sg=x.createRadialGradient(0,0,0,0,0,22); sg.addColorStop(0,rgb(P.shadow,.5)); sg.addColorStop(1,rgb(P.shadow,0)); x.fillStyle=sg; x.scale(1,.16); x.beginPath(); x.arc(0,4,22,0,6.283); x.fill(); x.restore();
-    rigDraw(x,foxParts(f,P,running),rigView(f.yaw,viewPitch(f.Dw)),1);
+    rigDraw(x,foxParts(f,P,running||f.turning),rigView(f.yaw,viewPitch(f.Dw)),1);
     x.setTransform(1,0,0,1,0,0); rigLight(x,ax,ay-26*k*R,ay,30*k*R,sun().x-s.x,0);
     x.setTransform(1,0,0,1,0,0); x.translate(ax,ay); x.scale(k*R,k*R); x.lineCap="round";
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-22,22),h:rnd(3,7),lean:rnd(-.5,.5),c:Math.random()}));
@@ -1003,7 +1008,7 @@ const ambient=(function(){
     f.ct=(f.ct||0)-dt;
     if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, black:mixv(mulv([34,30,30],lit/.68),mulv(G.g,.3),.12), white:mixv(mulv([232,228,218],lit),mulv(G.g,.5),.15)}; }
     if(!f.blades) f.blades=Array.from({length:9},()=>({ox:rnd(-16,16),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(ksp,ksx,f,s,k,f.pal,()=>skunkParts(f,f.pal,walking),f.yaw,34,60,14,f.blades,f.alpha);
+    critterBlit(ksp,ksx,f,s,k,f.pal,()=>skunkParts(f,f.pal,walking||f.turning),f.yaw,34,60,14,f.blades,f.alpha);
   }
 
   /* ---- wild turkeys: a flock drifts across the lawn now and then, pecking, milling, a tom fanning out, then they hustle off ---- */
@@ -1041,7 +1046,7 @@ const ambient=(function(){
       b.mv=moving; b.run=run;
       b.head+=((!moving&&b.state==="peck"? 1 : b.state==="look"&&!moving? -.3 : 0)-b.head)*Math.min(1,dt*(b.state==="peck"?6:8));
       b.fan+=(((b.fanT&&!moving)?1:0)-b.fan)*Math.min(1,dt*2.5);
-      if(b.pw){ const mX=dX, mZ=trueZ(tD)-trueZ(b.Dw); if(moving&&Math.hypot(mX,mZ)>1e-5) b.yaw=angTo(b.yaw,Math.atan2(mZ,mX),dt*5); else if(!moving&&b.idleYaw!=null) b.yaw=angTo(b.yaw,b.idleYaw,dt*1.4); } keepOnLawn(b); b.pw=[b.Xw,trueZ(b.Dw)];
+      if(b.pw){ const mX=dX, mZ=trueZ(tD)-trueZ(b.Dw); if(moving&&Math.hypot(mX,mZ)>1e-5) b.yaw=angTo(b.yaw,Math.atan2(mZ,mX),dt*5); else if(!moving&&b.idleYaw!=null){ const dl=Math.atan2(Math.sin(b.idleYaw-b.yaw),Math.cos(b.idleYaw-b.yaw)); if(Math.abs(dl)>.06){ b.yaw=angTo(b.yaw,b.idleYaw,dt*1.2); b.mv=true; b.ph+=dt*3; b.head+=(0-b.head)*Math.min(1,dt*6); } } } keepOnLawn(b); b.pw=[b.Xw,trueZ(b.Dw)];
       if(T.mode==="leave"){ const mv2=b.lx==null? 1 : Math.abs(b.Xw-b.lx)+Math.abs(b.Dw-b.lD)*.25; b.lx=b.Xw; b.lD=b.Dw; b.still= mv2<1e-4? (b.still||0)+dt : 0; if(b.still>1.5) b.gone=true; }
       if(b.gone){ b.ga=Math.max(0,(b.ga??1)-dt*2); continue; }
       const sx=toScreen(b.Xw,b.Dw).x; if(sx>-80&&sx<W+80) allOut=false;
@@ -1133,7 +1138,7 @@ const ambient=(function(){
     f.ct=(f.ct||0)-dt;
     if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, fur:mixv(mulv([42,30,22],lit/.68),mulv(G.g,.3),.06), muzzle:mulv([168,128,88],lit)}; }
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-20,20),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking),f.yaw,40,64,18,f.blades,f.alpha);
+    critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha);
   }
   /* only one of the ground hunters and wanderers is out at a time */
   /* a newcomer scares off whoever is already out: they bolt away from it, off the far side */
@@ -1141,6 +1146,7 @@ const ambient=(function(){
   const groundBusy=()=>t-lastArrive<25;
   function arrive(x,self){ lastArrive=t; const away=sx=>sx<x? -150 : W+150;
     for(const f of [fox,skunk,cub,bobcat,pheasW]) if(f&&f!==self&&!f.gone){ const s=toScreen(f.Xw,f.Dw), p=toGround(away(s.x),gnd().vy+s.g); f.state="leave"; f.tX=p.Xw; f.tD=p.Dw; f.ang=null; f.spd=Math.max(f.spd||1,1.3); f.cad=Math.max(f.cad||1,1); f.head=0; }
+    for(const dd of [lab]) if(dd&&dd!==self){ const s=toScreen(dd.Xw,dd.Dw), p=toGround(away(s.x),gnd().vy+s.g); dd.state="leave"; dd.tX=p.Xw; dd.tD=p.Dw; }
     if(dog&&dog!==self){ const s=toScreen(dog.Xw,dog.Dw), p=toGround(away(s.x),gnd().vy+s.g); dog.state="leave"; dog.tX=p.Xw; dog.tD=p.Dw; }
     if(turks&&turks!==self&&turks.mode!=="leave"){ const s=toScreen(turks.cX,turks.cD), p=toGround(away(s.x),gnd().vy+s.g); turks.mode="leave"; turks.gX=p.Xw; turks.gD=p.Dw; turks.dir=s.x<x?-1:1; turks.birds.forEach(b=>{ b.state="walk"; b.fanT=0; }); }
     for(const bn of buns) if(bn.init){ bn.state="hop"; bn.hops=3+Math.floor(Math.random()*3); bn.face=bn.x<x?-1:1; bn.hx=bn.x; bn.tx=Math.max(W*.06,Math.min(W*.94,bn.x+bn.face*rnd(14,26))); bn.hop=0; }
@@ -1199,7 +1205,7 @@ const ambient=(function(){
     f.ct=(f.ct||0)-dt;
     if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.48:.62; f.pal={...G, coat:mixv(mulv([156,122,88],lit),mulv(G.g,.5),.12), pale:mulv([222,210,188],lit), dark:mulv([34,26,20],lit)}; }
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-20,20),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>bobcatParts(f,f.pal,moving),f.yaw,40,64,18,f.blades,f.alpha);
+    critterBlit(null,null,f,s,k,f.pal,()=>bobcatParts(f,f.pal,moving||f.turning),f.yaw,40,64,18,f.blades,f.alpha);
   }
 
   /* ---- a Brittany: tears in at a gallop, quarters back and forth with its nose down, locks up on point, a bird flushes, and off it goes ---- */
@@ -1216,17 +1222,17 @@ const ambient=(function(){
   function stepDog(d,dt){
     d.t+=dt;
     if(d.state==="run"||d.state==="leave"){
-      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=d.state==="leave"?2.2:1.8;
+      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=(d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
       const pr=d.lp? Math.hypot(d.Xw-d.lp[0],(d.Dw-d.lp[1])*.25) : 1; d.lp=[d.Xw,d.Dw]; d.stl= pr<sp*dt*.2? (d.stl||0)+dt : 0;
       if(d.stl>.8){ d.stl=0; if(d.state==="leave") d.fade=true; else { d.tX=d.Xw; d.tD=d.Dw; } }
       if(d.fade){ d.alpha-=dt*2.5; if(d.alpha<=0){ d.gone=true; return; } }
       if(dist<=sp*dt){ d.Xw=d.tX; d.Dw=d.tD; } else { d.Xw+=dX/dist*sp*dt; const sD=dD/dist*sp*dt*4; d.Dw+=Math.sign(sD)*Math.min(Math.abs(sD),Math.abs(dD)); }
-      d.ph+=dt*7.5; d.head+=((d.state==="run"? .45 : 0)-d.head)*Math.min(1,dt*6);               /* nose down, working the scent */
+      d.ph+=dt*(d.lab?4.6:4.2); d.head+=((d.state==="run"? (d.lab?.25:.45) : 0)-d.head)*Math.min(1,dt*6);               /* nose down, working the scent */
       if(d.state==="leave"){ const s=toScreen(d.Xw,d.Dw); if(s.x<-90||s.x>W+90||dist<.02){ d.alpha-=dt*3; if(d.alpha<=0) d.gone=true; } return; }
       if(dist<.02){ d.legs--;
-        if(!d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
+        if(!d.lab && !d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
         else if(d.legs<=0){ d.state="leave"; const s=toScreen(d.Xw,d.Dw), p=toGround(d.dir>0? W+140 : -140, gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
-        else if(Math.random()<.3){ d.state="sniff"; d.t=0; d.st=rnd(.8,1.6); }
+        else if(Math.random()<(d.lab?.5:.3)){ d.state="sniff"; d.t=0; d.st=d.lab?rnd(1.4,3):rnd(.8,1.6); }
         else dogTarget(d); }
       return;
     }
@@ -1245,29 +1251,47 @@ const ambient=(function(){
       const segs=hind? [[5.8,.35+.75*sw,1.7],[5.6,-.6+.75*sw-lift*.5,1.15],[4.2,.08+.75*sw+lift*.5,.95]] : up? [[5.8,.5,1.5],[5.4,-1.6,1.05],[1.4,-2.2,.95]] : [[5.8,-.12+.8*sw,1.5],[6.2,.05+.8*sw-lift*1.5,1.05],[1.4,.3+.8*sw-lift*1.8,.95]];
       const ch=legChain(top[0],top[1],z,hind?2.9:2.4,segs); parts.push({p:ch,c:far(z)?whF:wh,sh:far(z)?null:sh});
     }
-    const tor=[[-8.6,15.6,4.2],[-4,15.8,4.6],[1,15.9,5.0],[5.6,16.6,4.8]];
+    const tor=d.lab? [[-8.8,15.4,4.8],[-4,15.6,5.3],[1,15.7,5.6],[5.6,16.4,5.3]] : [[-8.6,15.6,4.2],[-4,15.8,4.6],[1,15.9,5.0],[5.6,16.6,4.8]];
     parts.push({p:tor.map(([a,b,r])=>B(a,b,0,r)),c:wh,sh});
-    parts.push({p:[[-6.4,17.6,2.6],[-2,18.4,2.8],[2.6,18.6,2.6]].map(([a,b,r])=>B(a,b,0,r)),c:or,bias:-.02});      /* orange saddle */
+    if(d.lab){ const wag=Math.sin(t*(moving?9:6))*.5; parts.push({p:[B(-11.6,17.2,0,1.6),B(-14.6,16.4,1.6*wag,1.2),B(-17.4,15.2,3.4*wag,.7)],c:wh,bias:.1}); }   /* thick otter tail, wagging */
+    else { parts.push({p:[[-6.4,17.6,2.6],[-2,18.4,2.8],[2.6,18.6,2.6]].map(([a,b,r])=>B(a,b,0,r)),c:or,bias:-.02});      /* orange saddle */
     parts.push({p:[B(-9,16.6,0,2.4)],c:or,bias:-.02});
-    parts.push({p:[B(-12.4,17.4,0,1.2),B(-14.2,point?20.4:18.8,0,.95)],c:or,bias:.1});                            /* short docked tail, straight up on point */
+    parts.push({p:[B(-12.4,17.4,0,1.2),B(-14.2,point?20.4:18.8,0,.95)],c:or,bias:.1}); }                          /* short docked tail, straight up on point */
     const hd=d.head, hc0=T(lerp(12.6,14.2,Math.max(0,hd)),lerp(22.6,9,Math.max(0,hd))-(point?1.2:0)), hc=[hc0[0],hc0[1],0];
     parts.push({p:[B(8.2,17.4,0,3.4),[hc[0]-1,hc[1]-.6,0,2.4]],c:wh,sh});
     const hp=hd*1.0+.08, Hh=(u,v,w,r)=>{ const t2=headPt(hc,hp,0,u,v,w); return [t2[0],t2[1],t2[2],r]; };
-    parts.push({p:[Hh(-.2,.1,0,2.9),Hh(1.6,-.3,0,2.5)],c:or,sh:null});
-    parts.push({p:[Hh(3.4,-.9,0,1.75),Hh(5.2,-1.2,0,1.35)],c:wh,bias:-.05},{p:[Hh(-.4,1.6,0,.7),Hh(2.6,.5,0,.55)],c:wh,bias:-.1});   /* white muzzle and blaze */
+    parts.push({p:[Hh(-.2,.1,0,d.lab?3.2:2.9),Hh(1.6,-.3,0,d.lab?2.8:2.5)],c:d.lab?wh:or,sh:null});
+    parts.push({p:[Hh(3.4,-.9,0,d.lab?2.0:1.75),Hh(5.2,-1.2,0,d.lab?1.6:1.35)],c:wh,bias:-.05}); if(!d.lab) parts.push({p:[Hh(-.4,1.6,0,.7),Hh(2.6,.5,0,.55)],c:wh,bias:-.1});   /* muzzle; the Brittany's white blaze */
     parts.push({p:[Hh(5.9,-1.05,0,.65)],c:rgb(P.nose),bias:-.3});
     for(const sd of [-1,1]){ const flap=moving? Math.sin(q*2)*.6 : 0;
       parts.push({p:[Hh(-.3,1.3,2.4*sd,1.15),Hh(-.6+flap*.4,-1.4,2.9*sd,1.45),Hh(-.3+flap,-3.0,2.7*sd,1.0)],c:far(sd)?orF:or,bias:-.06});
       parts.push({p:[Hh(1.9,.55,1.9*sd,.42)],c:"rgba(30,16,8,.95)",bias:-.4}); }
     return parts;
   }
+  /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
+  let lab=null, nextLab=130;
+  function startLab(){
+    const b=foxBounds(), side=Math.random()<.5, g=rnd(Math.max(b.gmin,lawnMinG(side?W*.9:W*.1))+25,b.gmax-20), p=toGround(side? W+70 : -70, gnd().vy+g);
+    lab={lab:true,Xw:p.Xw,Dw:p.Dw,yaw:side?Math.PI:0,ph:0,state:"run",t:0,legs:5+Math.floor(Math.random()*4),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:true};
+    dogTarget(lab,true); arrive(side? W+70 : -70,lab);
+  }
+  function drawLab(dt,dark){
+    if(!lab){ nextLab-=dt; if(nextLab<=0){ if(groundBusy()) nextLab=15; else startLab(); } return; }
+    stepDog(lab,dt); if(lab.gone){ lab=null; nextLab=rnd(220,400); return; }
+    paintDog(lab,dt,dark);
+  }
   function drawDog(dt,dark){
     if(!dog){ nextDog-=dt; if(nextDog<=0){ if(groundBusy()) nextDog=15; else startDog(); } return; }
     stepDog(dog,dt); if(dog.gone){ dog=null; nextDog=rnd(220,400); return; }
-    const d=dog, s=toScreen(d.Xw,d.Dw), k=.16*s.g/26, moving=d.state==="run"||d.state==="leave";
+    paintDog(dog,dt,dark);
+  }
+  function paintDog(d,dt,dark){
+    const s=toScreen(d.Xw,d.Dw), k=.16*s.g/26, moving=d.state==="run"||d.state==="leave";
     if(d.pw){ const dX=d.Xw-d.pw[0], dZ=trueZ(d.Dw)-d.pw[1]; if(moving&&Math.hypot(dX,dZ)>1e-5) d.yaw=angTo(d.yaw,Math.atan2(dZ,dX),dt*8); } keepOnLawn(d); d.pw=[d.Xw,trueZ(d.Dw)];
     d.ct=(d.ct||0)-dt;
-    if(d.ct<=0||!d.pal){ d.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.66; d.pal={...G, white:mixv(mulv([232,226,212],lit),mulv(G.g,.5),.12), orange:mulv([196,106,48],lit), nose:mulv([110,64,46],lit)}; }
+    if(d.ct<=0||!d.pal){ d.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.66;
+      d.pal= d.lab? {...G, white:mixv(mulv([18,16,15],lit/.66),mulv(G.g,.3),.05), orange:mulv([15,13,12],lit/.66), nose:mulv([14,12,12],lit/.66)}
+                  : {...G, white:mixv(mulv([232,226,212],lit),mulv(G.g,.5),.12), orange:mulv([196,106,48],lit), nose:mulv([110,64,46],lit)}; }
     if(!d.blades) d.blades=Array.from({length:10},()=>({ox:rnd(-20,20),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
     critterBlit(null,null,d,s,k,d.pal,()=>dogParts(d,d.pal,moving),d.yaw,44,70,18,d.blades,d.alpha);
   }
@@ -1293,9 +1317,9 @@ const ambient=(function(){
     /* local (forward, side, up) → world, with the bird banked about its own axis */
     const P=(f,sd,u)=>{ const sY=sd*sb+u*cb, sS=sd*cb-u*sb; return w2s(b.X+F[0]*f*S.half*2+Rt[0]*sS*S.half, b.Y+sY*S.half, b.Z+F[1]*f*S.half*2+Rt[1]*sS*S.half); };
     const c0=w2s(b.X,b.Y,b.Z); if(c0.x<-120||c0.x>W+120||c0.y<-80) return false;
-    const haze=Math.max(0,Math.min(.62,(b.Z-5)/32)), sp=sun(), glow=Math.max(0,1-Math.hypot(c0.x-sp.x,c0.y-sp.y)/(W*.3));
+    const haze=Math.max(.15,Math.min(.82,(b.Z-3)/20)), sp=sun(), glow=Math.max(0,1-Math.hypot(c0.x-sp.x,c0.y-sp.y)/(W*.3));
     if(!b.skyC||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=20; const ip=toImg(c0.x,c0.y); b.skyC=(ip&&ip[1]>0&&ip[1]<1&&sampleAt(Math.max(0,Math.min(1,ip[0])),ip[1]))||[206,180,140]; }
-    const M=c=>{ const hz=dark? mulv(b.skyC,.45) : b.skyC; return rgb(mixv(c.map(v=>v*(dark?.7:1)),hz,Math.min(.75,haze+glow*.2))); };
+    const M=c=>{ const hz=dark? mulv(b.skyC,.45) : b.skyC; return rgb(mixv(c.map(v=>v*(dark?.7:1)),hz,Math.min(.88,haze+glow*.2))); };
     const pal= b.kind==="vult"? {w:M([34,28,26]),band:M([120,116,112]),body:M([30,25,22]),head:M([140,60,52]),tail:M([36,30,27])}
              : b.kind==="hawk"? {w:M([196,178,150]),band:M([70,48,32]),body:M([206,190,166]),head:M([110,76,52]),tail:M([170,92,52])}
              : {w:M([150,120,86]),band:M([96,72,50]),body:M([160,128,92]),head:M([150,120,88]),tail:M([130,102,72])};
@@ -1373,7 +1397,7 @@ const ambient=(function(){
     f.ct=(f.ct||0)-dt;
     if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.66; f.pal={...G, copper:mulv([168,86,40],lit), wing:mulv([150,112,70],lit), tail:mulv([150,112,70],lit), head:mulv([30,72,62],lit), ring:mulv([230,226,214],lit), wattle:mulv([180,40,32],lit), beak:mulv([200,180,120],lit), leg:mulv([110,100,90],lit)}; }
     if(!f.blades) f.blades=Array.from({length:9},()=>({ox:rnd(-16,16),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>pheasWParts(f,f.pal,moving),f.yaw,30,64,12,f.blades,f.alpha);
+    critterBlit(null,null,f,s,k,f.pal,()=>pheasWParts(f,f.pal,moving||f.turning),f.yaw,30,64,12,f.blades,f.alpha);
   }
   function frame(ts){
     raf=0; if(!running()) { ctx.clearRect(0,0,W,H); return; }
@@ -1407,6 +1431,7 @@ const ambient=(function(){
       if(bobcat) L.push({y:toScreen(bobcat.Xw,bobcat.Dw).y,fn:()=>drawBobcat(dt,dark)}); else drawBobcat(dt,dark);
       if(pheasW) L.push({y:toScreen(pheasW.Xw,pheasW.Dw).y,fn:()=>drawPheasW(dt,dark)}); else drawPheasW(dt,dark);
       if(dog) L.push({y:toScreen(dog.Xw,dog.Dw).y,fn:()=>drawDog(dt,dark)}); else drawDog(dt,dark);
+      if(lab) L.push({y:toScreen(lab.Xw,lab.Dw).y,fn:()=>drawLab(dt,dark)}); else drawLab(dt,dark);
       for(const bn of buns) L.push({y:bn.y||0,fn:()=>drawRabbit(bn,dt,dark)});
       turkeyQueue(dt,dark,L);
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawDeer(dt,dark,"front"); ctx.globalAlpha=1; }
