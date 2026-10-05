@@ -14,7 +14,7 @@ const SC={
   key:SceneryHost.key||"scene", sounds:SceneryHost.sounds||"" };
 var natureSfx=(function(){
   let ctx=null, master=null, noiseBuf=null, breezeG=null, breezeF=null, on=true, armed=false, birdT=null, gustT=null, live=false, faded=false;
-  try{ on=localStorage.getItem(SC.key+"-nature")!=="off"; }catch(e){}
+  on=true;   /* sound is on by default every visit; browsers only let it start on the first tap, click or key press */
   const R=(a,b)=>a+Math.random()*(b-a);
   const wanted=()=>on && !document.hidden && (typeof ambient==="undefined"||ambient.on);
   function init(){
@@ -165,7 +165,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, bluebird, setDusk(d){ dusk=d; } };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, bluebird, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -1956,14 +1956,14 @@ const ambient=(function(){
   /* ---- a red-tailed hawk (a "chicken hawk"), in true 3D like the other birds: it comes over your shoulder from behind, sails out over the lawn on broad wings,
      flares and drops into the grass, sits up tall turning its head, then beats off away from you into the distance ---- */
   let hawkG=null, nextHawkG=70; const hkcv=document.createElement("canvas"), hkcx=hkcv.getContext("2d");
-  function startHawkG(){ const sx=rnd(W*.3,W*.72), gy=gnd().vy+Math.min(foxBounds().gmax-20,lawnMinG(sx)+rnd(60,150)), p=toGround(sx,gy);
-    hawkG={t:0,st:0,state:"approach",X0:(Math.random()<.5?-1:1)*rnd(.2,.5),Y0:-rnd(1.5,1.8),tx:sx,ty:gy,Xw:p.Xw,Dw:p.Dw,dur:rnd(4.6,5.4),x:-99,y:-99,m:1,yaw:Math.PI/2,look:0,lookT:0,fl:0}; }
+  function startHawkG(){ const sx=rnd(W*.22,W*.55), gy=gnd().vy+lawnMinG(sx)+rnd(2,14), p=toGround(sx,gy), side=Math.random()<.5?-1:1;
+    hawkG={t:0,st:0,state:"approach",X0:(Math.random()<.5?-1:1)*rnd(.2,.5),Y0:-rnd(1.5,1.8),tx:sx,ty:gy,Xw:p.Xw,Dw:p.Dw,dur:rnd(6,8),x:-99,y:-99,m:1,yaw:Math.PI/2,look:0,lookT:0,fl:0,sx0:side<0? -40 : W+40,sy0:gnd().vy-rnd(50,110)}; }
   function hawk3D(x,P,V,flap,glide,flare,proj,Kw){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const v=nrm(V), f=nrm([v[0],v[1]-flare*.9,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f);                     /* flaring: the body pitches up to brake */
     const pt=(a,b,c)=>proj(P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw);
     const under=-(P[0]*u[0]+P[1]*u[1]+P[2]*u[2])<0, fl=glide? .32+flare*.8 : Math.sin(flap)*.75+.3+flare*.5;
-    const UP=[92,62,40], UP2=[132,98,66], UN=[214,200,176], BAR=[70,46,30], TIP=[40,30,24], RU=[184,88,44], RU2=[214,170,140];
+    const UP=[92,62,40], UP2=[132,98,66], UN=[168,150,126], BAR=[70,46,30], TIP=[40,30,24], RU=[184,88,44], RU2=[214,170,140];
     const poly=(pts,col)=>{ x.fillStyle=rgb(col); x.beginPath(); x.moveTo(pts[0][0],pts[0][1]); for(const q of pts) x.lineTo(q[0],q[1]); x.closePath(); x.fill(); };
     const wing=sd=>{ const h=c=>c*fl, sh=pt(3,sd*2,0), wr=pt(2.6,sd*13,h(6)), tr=pt(-9,sd*14,h(6)), rt=pt(-6,sd*2,0);
       const fingers=[]; for(let i=0;i<5;i++){ const a=-1+i*-1.2, b=sd*(23+i*.6-i*i*.25); fingers.push([pt(a+1.4,sd*(18+i*.2),h(9)),pt(a-.6,b+sd*3,h(10.5+i*.2)),pt(a-1.6,sd*(18+i*.2),h(9))]); }
@@ -1999,24 +1999,25 @@ const ambient=(function(){
     if(!hawkG) return; const h=hawkG, inAir=h.state==="approach"||h.state==="leave";
     if(layer==="near"&&!inAir) return; if(layer==="ground"&&inAir) return;
     h.t+=dt; h.st+=dt;
-    const F=H*.5, cx=W/2, cy=H*.52, sk=Math.max(.5,(h.ty-gnd().vy)/150), zT=6, kL=.16*toScreen(h.Xw,h.Dw).g/26*1.3, Kw=kL*zT/F;
+    const F=H*.5, cx=W/2, cy=H*.52, sk=Math.max(.5,(h.ty-gnd().vy)/150), zT=6, kL=.16*toScreen(h.Xw,h.Dw).g/26*.85, Kw=kL*zT/F;
     let P=null, flare=0, glide=false;
     if(h.state==="approach"){
-      const z0=1.3, u=Math.min(1,h.st/h.dur), e=u*(2-u), z=z0*Math.pow(zT/z0,e), ev=(1/z0-1/z)/(1/z0-1/zT);
-      h.x=lerp(cx+h.X0*F/z,h.tx,ev); h.y=lerp(cy+h.Y0*F/z,h.ty-10*sk,ev)+ev*10*sk; h.m=zT/z; P=[(h.x-cx)*z/F,(h.y-cy)*z/F,z];
+      const u=Math.min(1,h.st/h.dur), e=u*(2-u), z=zT;                                                          /* far off: a long glide in from the side, dropping toward the far edge of the lawn */
+      h.x=lerp(h.sx0,h.tx,e); h.y=lerp(h.sy0,h.ty-6,e*e)+Math.sin(u*Math.PI)*-14; h.m=1; P=[(h.x-cx)*z/F,(h.y-cy)*z/F,z];
       flare=Math.max(0,(u-.82)/.18); glide=Math.sin(h.t*1.6)>-.3&&flare===0;                                       /* mostly sailing, a few deep beats, then flaring up to land */
       if(u>=1){ h.state="land"; h.st=0; h.fold=0; arrive(h.tx,h); h.yaw=h.V&&h.V[0]<0? Math.PI-.35 : .35; } }   /* everything small on the lawn scatters */
     else if(h.state==="land"||h.state==="sit"){
       if(h.state==="land"){ h.fold=Math.min(1,h.st/.8); if(h.st>.8){ h.state="sit"; h.st=0; h.dur=rnd(7,11); } }
       h.lookT-=dt; if(h.lookT<=0){ h.lookT=rnd(.6,1.8); h.lookTo=rnd(-1.4,1.4); } h.look+=((h.lookTo||0)-h.look)*Math.min(1,dt*8);
-      if(h.state==="sit"&&h.st>h.dur){ h.state="leave"; h.st=0; h.lx0=h.tx; h.ly0=h.ty-10*sk; h.ltx=h.tx<W/2? -W*.05 : W*1.05; h.lty=gnd().vy-rnd(40,110); }
+      if(h.state==="sit"&&h.st>h.dur){ h.state="leave"; h.st=0; h.lx0=h.tx; h.ly0=h.ty-10*sk; h.ltx=h.tx<W/2? -W*.05 : W*1.05; h.lty=gnd().vy-rnd(60,140); }
       const s=toScreen(h.Xw,h.Dw); h.ct=(h.ct||0)-dt; if(h.ct<=0||!h.pal){ h.ct=1.5; const G=groundPal(s,dark), lit=dark?.45:.62;
         h.pal={...G, back:mulv([100,68,44],lit), breast:mulv([224,212,190],lit), band:mulv([70,46,30],lit), wing:mulv([86,58,38],lit), head:mulv([92,62,40],lit), beak:mulv([70,66,64],lit), leg:mulv([210,178,70],lit), tail:mulv([184,88,44],lit)}; }
       if(!h.blades) h.blades=Array.from({length:10},()=>({ox:rnd(-14,14),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
       critterBlit(null,null,h,s,kL,h.pal,()=>hawkSitParts(h,h.pal),h.yaw,40,40,10,h.blades,1); h.x=s.x; h.y=s.y-14*kL; h.m=1; return; }
-    else { const u=Math.min(1,h.st/4), z=zT*Math.pow(20/zT,u*u), e=u*(2-u);                                      /* lifting off and beating away from you into the distance */
+    else { const u=Math.min(1,h.st/5), z=zT*Math.pow(10/zT,u), e=u*(2-u);                                      /* lifting off and beating away from you into the distance */
       h.x=lerp(h.lx0,h.ltx,e); h.y=lerp(h.ly0,h.lty,e)-Math.sin(u*Math.PI)*20*sk; h.m=zT/z; P=[(h.x-cx)*z/F,(h.y-cy)*z/F,z]; glide=(h.st%1.4)>.9;
       if(u>=1){ hawkG=null; nextHawkG=rnd(150,260); return; } }
+    if(!isFinite(h.x)) { hawkG=null; return; }
     const V=h.pp? [P[0]-h.pp[0],P[1]-h.pp[1],P[2]-h.pp[2]] : [0,0,1]; h.pp=P; if(Math.hypot(...V)>1e-7) h.V=h.V? h.V.map((v,i)=>lerp(v,V[i],.15)) : V;
     h.fl+=dt*(glide?0:5.2)*Math.PI*2*.5;
     /* paint into a sprite, then the evening light and the air of the photo */
@@ -2030,7 +2031,7 @@ const ambient=(function(){
     const haze=Math.min(.7,Math.max(0,(zT/h.m-2)/12)+.06); x.fillStyle=rgb(h.bg,haze); x.fillRect(0,0,sz,sz);
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    const bl=Math.max(0,h.m-3)*.4; ctx.save(); ctx.globalAlpha=h.state==="leave"? Math.min(1,(1-h.st/4)*3) : 1; ctx.filter=bl>.4? `blur(${bl.toFixed(1)}px)` : "none"; ctx.drawImage(hkcv,0,0,sz,sz,h.x-sz/2,h.y-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
+    const bl=Math.max(0,h.m-3)*.4; ctx.save(); ctx.globalAlpha=h.state==="leave"? Math.min(1,(1-h.st/5)*3) : Math.min(1,h.st*2); ctx.filter=bl>.4? `blur(${bl.toFixed(1)}px)` : "none"; ctx.drawImage(hkcv,0,0,sz,sz,h.x-sz/2,h.y-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
   }
   /* ---- little brown bats in 3D: membrane wings on finger bones, beating deep and fast, jinking after insects over the lawn ---- */
   function bat3D(x,P,V,ph,proj,K){
@@ -2143,7 +2144,7 @@ const ambient=(function(){
   const bats=[];
   function drawBats(dt,dark){
     const want=duskV>.22? (MOBILE()?2:4) : 0, F=H*.5, cx=W/2, cy=H*.52;
-    while(bats.length<want) bats.push({x:rnd(W*.1,W*.9),y:gnd().vy-rnd(20,120),z:rnd(2.5,6),vx:rnd(-60,60),vy:0,vz:0,ph:rnd(0,6),f:rnd(11,14),tw:0});
+    while(bats.length<want) bats.push({x:rnd(W*.1,W*.9),y:gnd().vy-rnd(20,120),z:rnd(2.5,6),vx:rnd(-60,60),vy:0,vz:0,ph:rnd(0,6),f:rnd(52,64),tw:0});
     if(bats.length>want) bats.length=want;
     const a=Math.min(1,(duskV-.22)/.15); if(a<=0) return;
     ctx.save(); ctx.fillStyle=`rgba(22,16,14,${(.88*a).toFixed(2)})`; ctx.strokeStyle=ctx.fillStyle;
