@@ -1275,7 +1275,7 @@ const ambient=(function(){
     const b=foxBounds(), side=Math.random()<.5, x0=side? W+70 : -70, g=rnd(Math.max(b.gmin,lawnMinG(side?W*.9:W*.1))+40,b.gmax-30);
     const p=toGround(x0,gnd().vy+g), q=toGround(side? W+170 : -170,gnd().vy+g+rnd(-25,25)), len=rnd(26,34);
     dog={Xw:p.Xw,Dw:p.Dw,yaw:side?Math.PI:0,ph:0,state:"run",t:0,legs:4+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:false,romp:len,it:false,lane:-1};
-    lab={lab:true,Xw:q.Xw,Dw:q.Dw,yaw:side?Math.PI:0,ph:1.3,state:"run",t:0,legs:3+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:true,romp:len,it:true,lane:1};
+    lab={lab:true,Xw:q.Xw,Dw:q.Dw,yaw:side?Math.PI:0,ph:1.3,state:"run",t:0,legs:3+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:true,romp:len,it:true,chase:rnd(2,3),lag:.9,lane:1};
     dog.mate=lab; lab.mate=dog; rompTarget(dog,true); lastArrive=t; nextLab=rnd(220,400);
   }
   function rompTarget(d,first){
@@ -1283,13 +1283,22 @@ const ambient=(function(){
     const mid=(lo+b.gmax)/2, g=d.lane<0? rnd(lo,mid-14) : rnd(mid+14,b.gmax-6), p=toGround(sx,gnd().vy+g); d.tX=p.Xw; d.tD=p.Dw;
   }
   function stepRomp(d,dt){
-    const m=d.mate&&!d.mate.gone&&d.mate.romp>0? d.mate : null; d.romp-=dt; d.swap=(d.swap||0)-dt;
+    const m=d.mate&&!d.mate.gone&&d.mate.romp>0? d.mate : null; d.romp-=dt;
+    const a=toScreen(d.Xw,d.Dw); (d.hist||(d.hist=[])).push([t,a.x,a.g]); while(d.hist.length&&d.hist[0][0]<t-2) d.hist.shift();   /* where this dog has been, so the other can follow a beat late */
     if(!m||d.romp<=0){ d.romp=0; d.it=false; dogTarget(d); return false; }
-    if(d.it){ const a=toScreen(d.Xw,d.Dw), c=toScreen(m.Xw,m.Dw), b=foxBounds(), lo=Math.max(b.gmin,lawnMinG(c.x))+12, mid=(lo+b.gmax)/2;
-      /* chasing: run alongside and a little behind, in its own lane, so the two never pile on top of each other */
-      const gx=c.x+(a.x<c.x?-1:1)*.22*c.g, gg=d.lane<0? Math.max(lo,Math.min(mid-14,c.g-.32*c.g)) : Math.min(b.gmax-6,Math.max(mid+14,c.g+.32*c.g)), p=toGround(gx,gnd().vy+gg); d.tX=p.Xw; d.tD=p.Dw;
-      if(d.swap<=0&&Math.abs(a.x-c.x)<.3*a.g){ d.it=false; m.it=true; d.swap=m.swap=2.2; rompTarget(d); } }   /* drew level: now it's the other one's turn to chase */
+    if(d.it){ d.chase-=dt;
+      if(d.chase<=0){ d.it=false; rompTarget(d); return true; }
+      /* chasing: head for where the other dog was a moment ago, in its own lane, so it reacts late and turns on its own beat */
+      const h=m.hist&&m.hist.find(e=>e[0]>=t-d.lag)||[t,toScreen(m.Xw,m.Dw).x,toScreen(m.Xw,m.Dw).g], b=foxBounds(), lo=Math.max(b.gmin,lawnMinG(h[1]))+12, mid=(lo+b.gmax)/2;
+      const gx=h[1]+(a.x<h[1]?-1:1)*.25*h[2], gg=d.lane<0? Math.max(lo,Math.min(mid-14,h[2]-.32*h[2])) : Math.min(b.gmax-6,Math.max(mid+14,h[2]+.32*h[2])), p=toGround(gx,gnd().vy+gg); d.tX=p.Xw; d.tD=p.Dw; }
     return true;
+  }
+  /* at the end of a dash: a quick stop, a dash somewhere new, or a turn at chasing the other one, each dog deciding for itself */
+  function rompArrive(d){
+    const m=d.mate, r=Math.random(); d.sm=rnd(.8,1.2);
+    if(r<.3){ d.state="pause"; d.t=0; d.st=rnd(.3,1.1); return; }
+    if(r<.6&&m&&!m.it&&m.romp>0){ d.it=true; d.chase=rnd(1.8,3.6); d.lag=rnd(.6,1.2); return; }
+    rompTarget(d);
   }
   function dogTarget(d,first){
     const b=foxBounds(), cur=toScreen(d.Xw,d.Dw), sx=first? W*(d.dir>0?rnd(.3,.5):rnd(.5,.7)) : Math.max(W*.08,Math.min(W*.92,cur.x+d.dir*W*rnd(.18,.36))), lo=Math.max(b.gmin,lawnMinG(sx))+10;
@@ -1299,14 +1308,14 @@ const ambient=(function(){
     d.t+=dt;
     const romping=d.state==="run"&&d.romp>0&&stepRomp(d,dt);
     if(d.state==="run"||d.state==="leave"){
-      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=romping? (d.it?1.32:1.18) : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
+      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=romping? (d.it?1.3:1.12)*(d.sm||1) : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
       const pr=d.lp? Math.hypot(d.Xw-d.lp[0],(d.Dw-d.lp[1])*.25) : 1; d.lp=[d.Xw,d.Dw]; d.stl= pr<sp*dt*.2? (d.stl||0)+dt : 0;
       if(d.stl>.8){ d.stl=0; if(d.state==="leave") d.fade=true; else { d.tX=d.Xw; d.tD=d.Dw; } }
       if(d.fade){ d.alpha-=dt*2.5; if(d.alpha<=0){ d.gone=true; return; } }
       if(dist<=sp*dt){ d.Xw=d.tX; d.Dw=d.tD; } else { d.Xw+=dX/dist*sp*dt; const sD=dD/dist*sp*dt*4; d.Dw+=Math.sign(sD)*Math.min(Math.abs(sD),Math.abs(dD)); }
       d.ph+=dt*(d.lab?4.6:4.2)*(romping?1.45:1); d.head+=((d.state==="run"&&!romping? (d.lab?.25:.45) : 0)-d.head)*Math.min(1,dt*6);               /* nose down, working the scent */
       if(d.state==="leave"){ const s=toScreen(d.Xw,d.Dw); if(s.x<-90||s.x>W+90||dist<.02){ d.alpha-=dt*3; if(d.alpha<=0) d.gone=true; } return; }
-      if(romping){ if(dist<.02&&!d.it) rompTarget(d); return; }
+      if(romping){ if(dist<.02&&!d.it) rompArrive(d); return; }
       if(dist<.02){ d.legs--;
         if(!d.lab && !d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
         else if(d.legs<=0){ d.state="leave"; const s=toScreen(d.Xw,d.Dw), p=toGround(d.dir>0? W+140 : -140, gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
@@ -1315,6 +1324,7 @@ const ambient=(function(){
       return;
     }
     if(d.state==="sniff"){ d.head+=(1-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; dogTarget(d); } return; }
+    if(d.state==="pause"){ d.head+=(-.15-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; rompTarget(d); } return; }   /* a quick stop mid-romp, head up */
     if(d.state==="point"){ d.head+=(-.05-d.head)*Math.min(1,dt*10);                                          /* frozen: head level, tail up, a forepaw lifted */
       if(!d.flushed && d.t>d.pt*.7){ d.flushed=true; if(!grouse&&!pheas){ if(Math.random()<.6) flushPheasant(); else flushGrouse(); } }
       if(d.t>d.pt){ d.state="run"; dogTarget(d); } }
