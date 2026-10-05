@@ -2048,12 +2048,12 @@ const ambient=(function(){
       return [0,1,2].map(i=>b.P[i]+(f[i]*8.4+uu[i]*.8)*Kw); };
     const A=beak(birds[1]), Bk=beak(birds[0]);   /* the trailing bird's bill to the leader's */
     /* the ribbon: hangs between the two bills, sags in the middle, ripples in the wind of their flight */
-    const N=52, E=.05, hgt=span*.12, sag=span*.07, pts=[];
+    const N=64, E=.13, hgt=span*.12, sag=span*.07, pts=[];
     for(let i=0;i<=N;i++){ const s=-E+(1+2*E)*i/N, sc=Math.max(0,Math.min(1,s)), out=s<0? -s/E : s>1? (s-1)/E : 0, inn=Math.sin(sc*Math.PI);
-      const w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*inn, tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*inn+(s<0?-1:1)*out*.15*Math.sin(B.t*3+s*9);   /* the free ends flutter */
-      const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],sc)+sag*4*sc*(1-sc)+w+out*out*hgt*.35, lerp(A[2],Bk[2],sc)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*inn+out*hgt*.3];
+      const w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*inn, tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*inn+out*(.34*Math.sin(B.t*3.6-out*3.2+(s<0?0:2))+.14*Math.sin(B.t*6.1-out*5));   /* the free ends twist and flutter */
+      const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],sc)+sag*4*sc*(1-sc)+w+out*out*hgt*.55+Math.sin(B.t*3.1-out*3.6+(s<0?1:3))*hgt*.4*out+Math.sin(B.t*5.3-out*6)*hgt*.1*out, lerp(A[2],Bk[2],sc)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*inn+out*hgt*.3+Math.sin(B.t*2.6-out*3+(s<0?2:0))*hgt*.6*out];   /* the loose ends hang and stream, a wave running out along each one */
       const dn=[Math.sin(tw)*.0,Math.cos(tw),Math.sin(tw)];   /* the cloth's width hangs down, twisting a little toward and away from you */
-      pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hgt,c[1]+dn[1]*hgt,c[2]+dn[2]*hgt), shade:.78+.22*Math.cos(tw*2.2)+(Math.sin(s*Math.PI*2.2-B.t*4.6))*.08}); }
+      pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hgt,c[1]+dn[1]*hgt,c[2]+dn[2]*hgt), shade:.9+.2*Math.cos(tw*2.2)+Math.sin(s*Math.PI*2.2-B.t*4.6)*.07+.5*Math.pow(Math.max(0,Math.sin(s*Math.PI*2.6-B.t*1.7+Math.sin(tw)*2)),12)}   /* a band of sheen slides along the silk as it turns to the sun */); }
     /* the lettering, set once per text and size into a strip that's wrapped onto the cloth */
     const texW=1400, texH=Math.round(texW*.85*hgt/span);   /* a fixed size, set once: the lettering belongs to the cloth and moves only with it */
     const key=text+"|"+texW+"|"+texH; if(btex._k!==key){ btex._k=key; btex.width=texW; btex.height=texH; const tx=btex.getContext("2d");
@@ -2084,8 +2084,11 @@ const ambient=(function(){
     { const xa=pts[0].top[0], xb=pts[N].top[0]; if(Math.abs(xb-xa)>2){ const g=x.createLinearGradient(xa,0,xb,0);   /* the folds catch the light and fall into shadow along its length */
         for(let i=0;i<=N;i+=2){ const sh=pts[i].shade; g.addColorStop(i/N, sh<1? `rgba(70,44,20,${Math.min(.28,(1-sh)*.7).toFixed(3)})` : `rgba(255,236,204,${Math.min(.4,(sh-1)*1.6).toFixed(3)})`); }
         x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=g; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].top[0],pts[i].top[1]) : x.moveTo(pts[i].top[0],pts[i].top[1]); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]); x.closePath(); x.fill();
-        { const rr=Math.max(W,H)*.32, gl=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,rr); gl.addColorStop(0,"rgba(255,196,110,.42)"); gl.addColorStop(.5,"rgba(255,180,100,.14)"); gl.addColorStop(1,"rgba(255,170,90,0)"); x.fillStyle=gl; x.fill(); }   /* where the sun is behind it, the silk glows */
+        { const rr=Math.max(W,H)*.45, gl=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,rr); gl.addColorStop(0,"rgba(255,206,120,.6)"); gl.addColorStop(.5,"rgba(255,190,110,.24)"); gl.addColorStop(1,"rgba(255,170,90,0)"); x.fillStyle=gl; x.fill(); }   /* where the sun is behind it, the silk glows */
         x.restore(); } }
+    { x.save(); x.lineJoin="round"; x.lineCap="round"; const ht0=Math.hypot(pts[N>>1].bot[0]-pts[N>>1].top[0],pts[N>>1].bot[1]-pts[N>>1].top[1]);
+      const g=x.createLinearGradient(pts[0].top[0],0,pts[N].top[0],0); for(let i=0;i<=N;i+=4){ const d=Math.hypot(pts[i].top[0]-sp.x,pts[i].top[1]-sp.y)/Math.max(W,H); g.addColorStop(i/N,`rgba(255,236,190,${Math.max(.18,.75-d*1.1).toFixed(2)})`); }
+      x.strokeStyle=g; x.lineWidth=Math.max(1,ht0*.05); x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].top[0],pts[i].top[1]+ht0*.02) : x.moveTo(pts[i].top[0],pts[i].top[1]+ht0*.02); x.stroke(); x.restore(); }   /* the sun catching the top edge */
     /* pinch wrinkles fanning out from where each bill grips the cloth */
     for(const [i0,dirn] of [[Math.round(N*E/(1+2*E)),1],[N-Math.round(N*E/(1+2*E)),-1]]){ const P0=pts[i0], ht=Math.hypot(P0.bot[0]-P0.top[0],P0.bot[1]-P0.top[1]);
       for(let k=0;k<3;k++){ const j=Math.min(N,Math.max(0,i0+dirn*(2+k))), Q=pts[j], fy=.3+k*.2, tx0=P0.top[0]+(P0.bot[0]-P0.top[0])*.15, ty0=P0.top[1]+(P0.bot[1]-P0.top[1])*.15, tx1=Q.top[0]+(Q.bot[0]-Q.top[0])*fy, ty1=Q.top[1]+(Q.bot[1]-Q.top[1])*fy;
