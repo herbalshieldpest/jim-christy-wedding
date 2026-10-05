@@ -188,9 +188,18 @@ var natureSfx=(function(){
     s.connect(bp); bp.connect(am); am.connect(env); s.start(now,R(0,2)); s.stop(now+2.6); lfo.start(now); lfo.stop(now+2.6);
     if(kind==="pheas"){ const o=voice(master,pan); let at=now+.15; for(let i=0;i<2;i++){ tone(at,820,610,.13,.06,o,"sawtooth"); tone(at+.15,760,560,.12,.05,o,"sawtooth"); at+=.42; } }
   }
+  /* a tom turkey's gobble: a fast, gurgling, falling rattle, gobble-obble-obble */
+  function gobble(pan,v){ if(!ctx||!live) return; v=v??1; const at=ctx.currentTime+.03, out=voice(master,pan), d=R(.85,1.1);
+    const o=ctx.createOscillator(); o.type="sawtooth"; o.frequency.setValueAtTime(R(980,1120),at); o.frequency.linearRampToValueAtTime(R(760,860),at+d*.35); o.frequency.exponentialRampToValueAtTime(R(430,520),at+d);
+    const lfo=ctx.createOscillator(); lfo.frequency.setValueAtTime(R(24,28),at); lfo.frequency.linearRampToValueAtTime(R(15,18),at+d); const lg=ctx.createGain(); lg.gain.value=.5; lfo.connect(lg);
+    const am=ctx.createGain(); am.gain.value=.5; lg.connect(am.gain);
+    const fm=ctx.createGain(); fm.gain.value=R(70,110); lfo.connect(fm); fm.connect(o.frequency);
+    const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1150; bp.Q.value=1.3; const bp2=ctx.createBiquadFilter(); bp2.type="bandpass"; bp2.frequency.value=2300; bp2.Q.value=2; const g2=ctx.createGain(); g2.gain.value=.35;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09*v,at+.05); g.gain.setValueAtTime(.085*v,at+d*.6); g.gain.exponentialRampToValueAtTime(.0001,at+d);
+    o.connect(am); am.connect(bp); am.connect(bp2); bp.connect(g); bp2.connect(g2); g2.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); }
   function honk(xFrac,near){
-    if(!ctx||!live||Math.random()<.35) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=900; bp.Q.value=2; bp.connect(o);
-    const v=.035*near; let at=now; const n=1+Math.floor(Math.random()*3); for(let i=0;i<n;i++){ tone(at,R(330,380),R(290,320),.16,v,bp,"sawtooth"); at+=R(.22,.4); }
+    if(!ctx||!live||Math.random()<.15) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=950; bp.Q.value=1.6; bp.connect(o);
+    const v=.075*Math.max(.35,near); let at=now; const n=1+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ const f=R(310,380); tone(at,f*.82,f,.05,v*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,v,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,v*.35,bp,"square"); at+=R(.24,.42); }   /* the two-part a-honk of a Canada goose */
   }
   function apply(){
     const want=wanted();
@@ -207,7 +216,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
+  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -334,7 +343,7 @@ const ambient=(function(){
     const l=bigL, f=FOC(), vp=vanish(); l.age+=dt; l.ph+=dt*1.3;
     l.D+=l.vD*dt; const wk=Math.min(1,l.D); l.X+=(l.vX+Math.cos(l.ph)*.03)*wk*dt; l.Y+=(l.vY+Math.sin(l.ph*.8)*.02)*wk*dt; l.rot+=l.vr*dt*(l.kind==="milkweed"?.3:1); l.flip+=l.vf*dt; l.tilt+=l.vt*dt;
     const D=Math.max(.04,l.D), x=vp[0]+l.X*f/D, y=vp[1]+l.Y*f/D, S=l.base*f/D;
-    if(l.D<.06||l.D>7||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
+    l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>7||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
     const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,(5.5-l.D)/2)), A=fadeIn*fadeFar*(dark?.8:1);
     const blur= l.D<.5? (.5-l.D)*26 : l.D>2.2? Math.min(2,(l.D-2.2)*.7) : 0;                         /* too close for the lens to focus, or soft with distance */
     const mist=Math.max(0,Math.min(.45,(l.D-1.2)/8)), sp=sun(), toSun=Math.atan2(sp.y-y,sp.x-x);
@@ -506,8 +515,9 @@ const ambient=(function(){
     M.cov=cn? cs/cn : 0; moonCv.getContext("2d").putImageData(M.out,0,0);
     if(moonBl.width!==S2){ moonBl.width=moonBl.height=S2; } const bx=moonBl.getContext("2d"); bx.clearRect(0,0,S2,S2); bx.filter="blur(.6px)"; bx.drawImage(moonCv,0,0); bx.filter="none";
   }
+  let moonAt=null;
   function drawMoon(){
-    const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.08, d=Math.min(1,duskV/.62), a=.55+.4*d;
+    const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.08; moonAt=[p[0],p[1],R]; const d=Math.min(1,duskV/.62), a=.55+.4*d;
     if(!(moonImg.complete&&moonImg.naturalWidth)){ ctx.save(); ctx.globalAlpha=a*.8; ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64); ctx.restore(); return; }
     const S2=Math.ceil(R*2), key=[W,H,S2,Math.round(p[0]),Math.round(p[1]),tileKey].join("|");
     if(moonKey!==key){ moonKey=key; moonPrep(p,R,S2); }
@@ -1276,6 +1286,7 @@ const ambient=(function(){
   function turkGoal(T){ const b=foxBounds(), cs=toScreen(T.cX,T.cD), sx=Math.max(W*.12,Math.min(W*.8,cs.x+T.dir*W*rnd(.08,.22))), lo=lawnMinG(sx)+35, g=Math.max(lo,Math.min(b.gmax-30,cs.g+rnd(-110,110))), p=toGround(sx,gnd().vy+g); T.gX=p.Xw; T.gD=p.Dw; }
   function stepTurks(dt){
     const T=turks; T.t-=dt; T.age=(T.age||0)+dt;
+    T.gob=(T.gob??rnd(1.5,4))-dt; if(T.gob<=0){ T.gob=rnd(5,13); const cs=toScreen(T.cX,T.cD); if(cs.x>-40&&cs.x<W+40&&typeof natureSfx!=="undefined"&&natureSfx.gobble) natureSfx.gobble((cs.x/W*2-1)*.85,Math.min(1,.55+cs.g/260)); }   /* the toms gobble now and then as they feed */
     if(T.age>80 && T.mode!=="leave"){ T.mode="leave"; const s=toScreen(T.cX,T.cD), p=toGround(T.dir>0? W+160 : -160, gnd().vy+s.g); T.gX=p.Xw; T.gD=p.Dw; }
     const spd= T.mode==="run"||T.mode==="leave"? .9 : T.mode==="walk"? .3 : 0;
     if(spd){ const cg={Xw:T.gX,Dw:T.gD}; if(T.mode!=="leave"){ keepOnLawn(cg); T.gX=cg.Xw; T.gD=cg.Dw; } const dX=T.gX-T.cX, dD=T.gD-T.cD, d=Math.hypot(dX,dD*.25)||1e-6; const fr=Math.min(1,spd*dt/d); T.cX+=dX*fr; T.cD+=dD*fr;
@@ -1568,6 +1579,8 @@ const ambient=(function(){
     WF("seed",[[248,246,240]]),                                                 /* a drifting dandelion seed */
     WF("leaf",[[198,72,40],[220,128,40],[180,52,44],[214,170,60]]),             /* a little maple or sumac leaf */
   ];
+  const WILDN=["Flowering dogwood petal","Ox-eye daisy petal","White phlox petal","Bloodroot petal","Black-eyed Susan petal","Tickseed petal","Evening primrose petal","Sneezeweed petal","Flame azalea petal","Butterfly weed blossom","Cardinal flower petal","Fire pink petal","Mountain laurel blossom","Wild phlox petal","Purple coneflower petal","Chicory petal","Virginia bluebell","Goldenrod","Dandelion seed","Staghorn sumac leaf"];
+  WILD.forEach((fn,i)=>{ WILD[i]=()=>Object.assign(fn(),{n:WILDN[i]}); });
   function drawWild(p,lt,flip){ const r=p.r, c=rgb(mulv(flip>0?p.c:mulv(p.c,.84),lt)), shade=rgb(mulv(p.c,.62*lt),.5);
     const petal=(len,wid)=>{ ctx.beginPath(); ctx.moveTo(0,-len); ctx.bezierCurveTo(wid,-len*.7,wid*.9,len*.6,0,len*.85); ctx.bezierCurveTo(-wid*.9,len*.6,-wid,-len*.7,0,-len); ctx.fill(); };
     ctx.fillStyle=c;
@@ -2881,7 +2894,7 @@ const ambient=(function(){
   let tags=[]; const tagEl=document.createElement("div"); tagEl.className="scn-tag";   /* a host page can restyle the name labels with .scn-tag */
   tagEl.style.cssText="position:fixed;z-index:6;pointer-events:none;padding:6px 11px;border-radius:99px;background:rgba(24,18,12,.62);border:1px solid rgba(246,239,226,.22);color:#f6efe2;font:500 13px/1.3 system-ui,sans-serif;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity .25s;white-space:nowrap;transform:translate(-50%,-130%)";
   let tagTimer=null; document.addEventListener("DOMContentLoaded",()=>document.body.append(tagEl)); if(document.body) document.body.append(tagEl);
-  function tag(x,y,r,name){ if(x>-50&&x<W+50&&y>-50&&y<H+50) tags.push([x,y,r,name]); }
+  function tag(x,y,r,name,minor){ if(x>-50&&x<W+50&&y>-50&&y<H+50&&isFinite(x)&&isFinite(y)) tags.push([x,y,r,name,!!minor]); }
   function collectTags(){
     tags=[]; const T=(o,n,r)=>{ if(o&&!o.gone){ const s=toScreen(o.Xw,o.Dw); tag(s.x,s.y-r*.6,r,n); } }, g=v=>Math.max(14,v);
     T(fox,"Red fox",30); T(skunk,"Striped skunk",24); T(cub,"Black bear cub",34); T(mom,"Black bear",60); T(bobcat,"Bobcat",30); T(coyote,"Gray fox",30); T(coy2,"Coyote",40); T(turtle,"Box turtle",16);
@@ -2896,12 +2909,20 @@ const ambient=(function(){
     if(bbFlock) for(const b of bbFlock.birds) if(b.sx!=null) tag(b.sx,b.sy,24,"Eastern bluebird");
     if(hum&&hum.sx!=null) tag(hum.sx,hum.sy,40,"Ruby-throated hummingbird"); for(const b of bats) tag(b.x,b.y,16,"Little brown bat");
     for(const c of cards) tag(c.x,gnd().vy+lawnMinG(c.x)-16,14,c.male?"Northern cardinal":"Northern cardinal (female)");
+    { const LEAFN={maple:"Sugar maple leaf",oak:"Red oak leaf",birch:"Yellow birch leaf",milkweed:"Milkweed seed"};
+      for(const l of leaves) if(l.x!=null) tag(l.x,l.y,Math.max(10,(l.s||12)*1.2),LEAFN[l.kind]||"Leaf",true);
+      if(bigL&&bigL.sx!=null) tag(bigL.sx,bigL.sy,Math.min(220,bigL.sS*1.2),LEAFN[bigL.kind]||"Leaf"); }
+    for(const p of trail) if(p.n) tag(p.x,p.y,14,p.n,true);
+    for(const f of flies) tag(f.x,f.y,10,"Firefly",true);
+    for(const m of motes2) tag(m.x,m.y,12,"Miller moth",true);
+    for(const f of flocks){ const c=w2s(f.X,f.Y,f.Z); tag(c.x,c.y,Math.max(30,40*9/Math.max(4,f.Z)),"Canada geese"); }
+    if(moonAt) tag(moonAt[0],moonAt[1],moonAt[2],"Crescent moon");
     for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,26,b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
   }
   document.addEventListener("click",e=>{
     if(SC.identify===false||!on) return;
     if(e.target.closest&&e.target.closest("a,button,input,textarea,select,label,summary,[role=button],[contenteditable],h1,h2,h3,p,li,.note,.lockup,[data-no-scenery]")) return;
-    const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n] of tags){ const d=Math.hypot(qx-x,qy-y); if(d<r*1.5+Math.max(56,Math.min(W,H)*.06)&&d<bd){ bd=d; best=[x,y,n]; } }
+    const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n,mn] of tags){ const d=Math.hypot(qx-x,qy-y), zone=mn? r+30 : r*1.5+Math.max(56,Math.min(W,H)*.06), sc=mn? d*1.6+20 : d; if(d<zone&&sc<bd){ bd=sc; best=[x,y,n]; } }   /* the animals win over a leaf or petal drifting nearby */
     if(!best) return; tagEl.textContent=best[2]; tagEl.style.left=e.clientX+"px"; tagEl.style.top=e.clientY+"px"; tagEl.style.opacity="1";
     clearTimeout(tagTimer); tagTimer=setTimeout(()=>{ tagEl.style.opacity="0"; },2600);
   });
