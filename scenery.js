@@ -2049,7 +2049,7 @@ const ambient=(function(){
     const A=beak(birds[1]), Bk=beak(birds[0]);   /* the trailing bird's bill to the leader's */
     /* the ribbon: hangs between the two bills, sags in the middle, ripples in the wind of their flight */
     const N=44, hgt=span*.12, sag=span*.07, pts=[];
-    for(let i=0;i<=N;i++){ const s=i/N, w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*Math.sin(s*Math.PI), tw=Math.sin(s*Math.PI*1.6-B.t*3.2)*.38*Math.sin(s*Math.PI);
+    for(let i=0;i<=N;i++){ const s=i/N, w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*Math.sin(s*Math.PI), tw=Math.sin(s*Math.PI*1.6-B.t*3.2)*.62*Math.sin(s*Math.PI);
       const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],s)+sag*4*s*(1-s)+w, lerp(A[2],Bk[2],s)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*Math.sin(s*Math.PI)];
       const dn=[Math.sin(tw)*.0,Math.cos(tw),Math.sin(tw)];   /* the cloth's width hangs down, twisting a little toward and away from you */
       pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hgt,c[1]+dn[1]*hgt,c[2]+dn[2]*hgt), shade:.78+.22*Math.cos(tw*2.2)+(Math.sin(s*Math.PI*2.2-B.t*4.6))*.08}); }
@@ -2057,7 +2057,7 @@ const ambient=(function(){
     const sx0=Math.min(pts[0].top[0],pts[N].top[0]), sx1=Math.max(pts[0].top[0],pts[N].top[0]), texW=Math.max(200,Math.round(Math.abs(sx1-sx0)*1.15)), texH=Math.max(30,Math.round(Math.hypot(pts[N>>1].bot[0]-pts[N>>1].top[0],pts[N>>1].bot[1]-pts[N>>1].top[1])*1.4));
     const key=text+"|"+texW+"|"+texH; if(btex._k!==key){ btex._k=key; btex.width=texW; btex.height=texH; const tx=btex.getContext("2d");
       { const g=tx.createLinearGradient(0,0,0,texH); g.addColorStop(0,"#fbf4e4"); g.addColorStop(.18,"#fffaf0"); g.addColorStop(.55,"#f1e6d0"); g.addColorStop(.86,"#e2d3b6"); g.addColorStop(1,"#cdbb98"); tx.fillStyle=g; tx.fillRect(0,0,texW,texH); }   /* the cloth cups a little: bright along the top, shaded underneath */
-      tx.globalAlpha=.06; for(let yy=0;yy<texH;yy+=2){ tx.fillStyle=yy%4? "#7a6648" : "#ffffff"; tx.fillRect(0,yy,texW,1); } for(let xx2=0;xx2<texW;xx2+=3){ tx.fillStyle="#6a5638"; tx.fillRect(xx2,0,1,texH); } tx.globalAlpha=1;   /* the weave */
+      tx.globalAlpha=.028; for(let yy=0;yy<texH;yy+=2){ tx.fillStyle=yy%4? "#7a6648" : "#ffffff"; tx.fillRect(0,yy,texW,1); } for(let xx2=0;xx2<texW;xx2+=3){ tx.fillStyle="#6a5638"; tx.fillRect(xx2,0,1,texH); } tx.globalAlpha=1;   /* the weave */
       for(let k=0;k<texW/18;k++){ const xx2=Math.random()*texW; tx.fillStyle=`rgba(${Math.random()<.5?"255,255,255":"110,90,60"},${(.04+Math.random()*.05).toFixed(3)})`; tx.fillRect(xx2,0,1+Math.random()*3,texH); }   /* slubs in the silk */
       tx.strokeStyle="rgba(122,35,24,.6)"; tx.lineWidth=Math.max(1,texH*.025); for(const yy of [texH*.13,texH*.87]){ tx.beginPath(); tx.moveTo(texW*.03,yy); tx.lineTo(texW*.97,yy); tx.stroke(); }   /* a fine woven border */
       tx.setLineDash([Math.max(2,texH*.05),Math.max(2,texH*.04)]); tx.strokeStyle="rgba(150,120,80,.45)"; tx.lineWidth=Math.max(.6,texH*.012); for(const yy of [texH*.05,texH*.95]){ tx.beginPath(); tx.moveTo(0,yy); tx.lineTo(texW,yy); tx.stroke(); } tx.setLineDash([]);   /* the stitched hem */
@@ -2082,11 +2082,11 @@ const ambient=(function(){
         x.restore(); } }
     /* pinch wrinkles fanning out from where each bill grips the cloth */
     for(const [i0,dirn] of [[0,1],[N,-1]]){ const P0=pts[i0], ht=Math.hypot(P0.bot[0]-P0.top[0],P0.bot[1]-P0.top[1]);
-      for(let k=0;k<4;k++){ const j=Math.min(N,Math.max(0,i0+dirn*(3+k*2))), Q=pts[j], fy=.25+k*.17, tx0=P0.top[0]+(P0.bot[0]-P0.top[0])*.15, ty0=P0.top[1]+(P0.bot[1]-P0.top[1])*.15, tx1=Q.top[0]+(Q.bot[0]-Q.top[0])*fy, ty1=Q.top[1]+(Q.bot[1]-Q.top[1])*fy;
+      for(let k=0;k<3;k++){ const j=Math.min(N,Math.max(0,i0+dirn*(2+k))), Q=pts[j], fy=.3+k*.2, tx0=P0.top[0]+(P0.bot[0]-P0.top[0])*.15, ty0=P0.top[1]+(P0.bot[1]-P0.top[1])*.15, tx1=Q.top[0]+(Q.bot[0]-Q.top[0])*fy, ty1=Q.top[1]+(Q.bot[1]-Q.top[1])*fy;
         x.strokeStyle="rgba(90,62,30,.22)"; x.lineWidth=Math.max(.6,ht*.035); x.beginPath(); x.moveTo(tx0,ty0); x.quadraticCurveTo((tx0+tx1)/2,(ty0+ty1)/2-ht*.08,tx1,ty1); x.stroke();
         x.strokeStyle="rgba(255,250,236,.35)"; x.lineWidth=Math.max(.4,ht*.02); x.beginPath(); x.moveTo(tx0,ty0+ht*.04); x.quadraticCurveTo((tx0+tx1)/2,(ty0+ty1)/2-ht*.04,tx1,ty1+ht*.04); x.stroke(); } }
     /* swallow-tailed ends trailing from each bill: folded under, the inside of the fold in shadow */
-    for(const [i,dirn] of [[0,-1],[N,1]]){ const p=pts[i], q=pts[i+(dirn<0?1:-1)], ox=(p.top[0]-q.top[0])*4.5, oy=(p.top[1]-q.top[1])*4.5+Math.abs(p.bot[1]-p.top[1])*.6, mid=[(p.top[0]+p.bot[0])/2+ox*.55,(p.top[1]+p.bot[1])/2+oy*.55];
+    for(const [i,dirn] of [[0,-1],[N,1]]){ const p=pts[i], q=pts[i+(dirn<0?2:-2)], hh=Math.hypot(p.bot[0]-p.top[0],p.bot[1]-p.top[1]), dl=Math.hypot(p.top[0]-q.top[0],p.top[1]-q.top[1])||1, ox=(p.top[0]-q.top[0])/dl*hh*1.1, oy=(p.top[1]-q.top[1])/dl*hh*1.1+hh*.55, mid=[(p.top[0]+p.bot[0])/2+ox*.55,(p.top[1]+p.bot[1])/2+oy*.55];
       const T1=[p.top[0]+ox,p.top[1]+oy], B1=[p.bot[0]+ox,p.bot[1]+oy];
       x.fillStyle="#b9a27c"; x.beginPath(); x.moveTo(p.top[0],p.top[1]); x.lineTo(p.top[0]+ox*.35,p.top[1]+oy*.35+(p.bot[1]-p.top[1])*.1); x.lineTo(p.bot[0]+ox*.35,p.bot[1]+oy*.35); x.lineTo(p.bot[0],p.bot[1]); x.closePath(); x.fill();   /* the shaded fold */
       const g=x.createLinearGradient(p.top[0],p.top[1],T1[0],T1[1]); g.addColorStop(0,"#d9c7a4"); g.addColorStop(1,"#efe2c8"); x.fillStyle=g;
@@ -3341,23 +3341,37 @@ const ambient=(function(){
     x.putImageData(D,0,0); return c; });
   let vigC=null, vigK=""; const scratches=[];
   /* ---- sun beams: soft shafts of light fanning out from the sun through the gaps in the clouds, each slowly brightening and fading on its own ---- */
-  let rayC=null, rayT=0, rayN=0; const RAYS=Array.from({length:13},(_,i)=>({a:(i+Math.random()*.6)/13*6.283,w:.04+Math.random()*.065,ph:Math.random()*6.283,sp:.06+Math.random()*.1,pk:.5+Math.random()*.5,dr:(Math.random()-.5)*.01}));
+  let rayC=null, rayT=0, rayN=0, glints=[], nextGlint=.5; const RAYS=Array.from({length:13},(_,i)=>({a:(i+Math.random()*.6)/13*6.283,w:.04+Math.random()*.065,ph:Math.random()*6.283,sp:.06+Math.random()*.1,pk:.5+Math.random()*.5,dr:(Math.random()-.5)*.01}));
+  /* glints: a few fine, bright shafts that flare up for a moment and fade, so the light glistens */
+  function drawGlints(dt,st,dk){
+    nextGlint-=dt; if(nextGlint<=0&&glints.length<4){ nextGlint=rnd(.6,1.8); glints.push({a:rnd(0,6.283),w:rnd(.004,.01),t:0,life:rnd(1.6,3.4),dr:rnd(-.02,.02),pk:rnd(.5,1)}); }
+    if(!glints.length) return; const sp=sun(), L=Math.hypot(W,H)*.9, vy=gnd().vy;
+    ctx.save(); ctx.globalCompositeOperation="screen";
+    for(let i=glints.length-1;i>=0;i--){ const g=glints[i]; g.t+=dt; const u=g.t/g.life; if(u>=1){ glints.splice(i,1); continue; }
+      const k=Math.sin(u*Math.PI)**2*g.pk*(.8+.2*Math.sin(g.t*9))*Math.min(1,.5+st*1.5)*dk, a=g.a+g.dr*g.t, ex=sp.x+Math.cos(a)*L, ey=sp.y+Math.sin(a)*L;
+      if(ey>vy+H*.3&&Math.sin(a)>.2) { /* mostly up in the sky */ }
+      const gr=ctx.createLinearGradient(sp.x,sp.y,ex,ey); gr.addColorStop(0,"rgba(255,236,200,0)"); gr.addColorStop(.04,`rgba(255,236,196,${(.5*k).toFixed(3)})`); gr.addColorStop(.3,`rgba(255,214,160,${(.22*k).toFixed(3)})`); gr.addColorStop(.7,"rgba(255,200,140,0)");
+      ctx.fillStyle=gr; ctx.beginPath(); ctx.moveTo(sp.x,sp.y); ctx.lineTo(sp.x+Math.cos(a-g.w)*L,sp.y+Math.sin(a-g.w)*L); ctx.lineTo(sp.x+Math.cos(a+g.w)*L,sp.y+Math.sin(a+g.w)*L); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  }
   function drawRays(dt,dark){
-    if(dark) return; let st=0; try{ const h=SC.sun(); st=h&&SC.shown()? h.strength : 0; }catch(e){} if(!(st>=.04)) return;
-    rayT+=dt; rayN=(rayN+1)%2; const vyG=gnd().vy, bandH=Math.min(H,Math.ceil(vyG+H*.42)), cw=Math.max(1,Math.ceil(W/4)), ch=Math.max(1,Math.ceil(H/4));
-    if(rayN&&rayC&&rayC.width===cw&&rayC.height===ch){ ctx.save(); ctx.globalCompositeOperation="screen"; ctx.drawImage(rayC,0,0,cw,Math.ceil(bandH/4),0,0,cw*4,Math.ceil(bandH/4)*4); ctx.restore(); return; }   /* they change slowly: redrawn every other frame */
+    let st=0; try{ const h=SC.sun(); st=h&&SC.shown()? h.strength : 0; }catch(e){} if(!(st>=.04)) return;   /* (they used to be skipped when the device was in dark mode, which is why some browsers never showed them) */
+    const dk=dark? .7 : 1;
+    rayT+=dt; rayN=(rayN+1)%2; drawGlints(dt,st,dk); const vyG=gnd().vy, bandH=Math.min(H,Math.ceil(vyG+H*.42)), cw=Math.max(1,Math.ceil(W/4)), ch=Math.max(1,Math.ceil(H/4));
+    if(rayN&&rayC&&rayC.width===cw&&rayC.height===ch){ ctx.save(); ctx.globalCompositeOperation="screen"; ctx.globalAlpha=dk; ctx.drawImage(rayC,0,0,cw,Math.ceil(bandH/4),0,0,cw*4,Math.ceil(bandH/4)*4); ctx.restore(); return; }   /* they change slowly: redrawn every other frame */
     const sp=sun();
     if(!rayC) rayC=document.createElement("canvas"); if(rayC.width!==cw||rayC.height!==ch){ rayC.width=cw; rayC.height=ch; }
     const x=rayC.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch); x.setTransform(.25,0,0,.25,0,0); x.globalCompositeOperation="lighter";
     const L=Math.hypot(W,H)*1.15;
-    for(const r of RAYS){ const k=Math.pow(.5+.5*Math.sin(rayT*r.sp+r.ph),1.6); if(k<.02) continue;                          /* each beam comes and goes over half a minute or so */
-      const a=r.a+Math.sin(rayT*.03+r.ph)*.05+rayT*r.dr, amt=.62*r.pk*k*Math.min(1,.55+st*1.4);
+    RAYS.forEach((r,i)=>{ let k=Math.pow(.5+.5*Math.sin(rayT*r.sp*1.6+r.ph),1.6); if(k<.02) return;                        /* each beam swells and fades on its own */
+      k*=.72+.28*Math.sin(rayT*(1.1+i*.13)+r.ph*3)*Math.sin(rayT*(.53+i*.07)+r.ph);                                            /* and shimmers as the cloud edges move across the sun */
+      const a=r.a+Math.sin(rayT*.11+r.ph)*.09+Math.sin(rayT*.37+r.ph*2)*.015+rayT*r.dr, amt=.62*r.pk*k*Math.min(1,.55+st*1.4);
       for(const [wm,am] of [[2.2,.25],[1.4,.35],[.8,.4]]){ const w=r.w*wm, g=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,L);
         g.addColorStop(0,"rgba(255,214,150,0)"); g.addColorStop(.05,`rgba(255,212,148,${(amt*am).toFixed(3)})`); g.addColorStop(.35,`rgba(255,200,130,${(amt*am*.55).toFixed(3)})`); g.addColorStop(1,"rgba(255,190,120,0)");
-        x.fillStyle=g; x.beginPath(); x.moveTo(sp.x,sp.y); x.lineTo(sp.x+Math.cos(a-w)*L,sp.y+Math.sin(a-w)*L); x.lineTo(sp.x+Math.cos(a+w)*L,sp.y+Math.sin(a+w)*L); x.closePath(); x.fill(); } }
+        x.fillStyle=g; x.beginPath(); x.moveTo(sp.x,sp.y); x.lineTo(sp.x+Math.cos(a-w)*L,sp.y+Math.sin(a-w)*L); x.lineTo(sp.x+Math.cos(a+w)*L,sp.y+Math.sin(a+w)*L); x.closePath(); x.fill(); } });
     { const vy=gnd().vy, g=x.createLinearGradient(0,0,0,H); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(Math.min(.95,vy/H),"rgba(0,0,0,.85)"); g.addColorStop(Math.min(.98,vy/H+.25),"rgba(0,0,0,.22)"); g.addColorStop(Math.min(.99,vy/H+.4),"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,0)");
       x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,W,H); x.globalCompositeOperation="source-over"; }   /* strongest in the sky, softening down over the fields */
-    ctx.save(); ctx.globalCompositeOperation="screen"; ctx.globalAlpha=1; ctx.imageSmoothingEnabled=true; ctx.drawImage(rayC,0,0,cw,Math.ceil(bandH/4),0,0,cw*4,Math.ceil(bandH/4)*4); ctx.restore();   /* only the band where they show */
+    ctx.save(); ctx.globalCompositeOperation="screen"; ctx.globalAlpha=dk; ctx.imageSmoothingEnabled=true; ctx.drawImage(rayC,0,0,cw,Math.ceil(bandH/4),0,0,cw*4,Math.ceil(bandH/4)*4); ctx.restore();   /* only the band where they show */
   }
   let filmC=[], filmLast=-1;
   function filmPass(){
