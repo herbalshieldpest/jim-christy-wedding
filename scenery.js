@@ -2878,7 +2878,7 @@ const ambient=(function(){
       ctx.restore(); }
   }
   /* ---- tap an animal to see what it is ---- */
-  let tags=[]; const tagEl=document.createElement("div");
+  let tags=[]; const tagEl=document.createElement("div"); tagEl.className="scn-tag";   /* a host page can restyle the name labels with .scn-tag */
   tagEl.style.cssText="position:fixed;z-index:6;pointer-events:none;padding:6px 11px;border-radius:99px;background:rgba(24,18,12,.62);border:1px solid rgba(246,239,226,.22);color:#f6efe2;font:500 13px/1.3 system-ui,sans-serif;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity .25s;white-space:nowrap;transform:translate(-50%,-130%)";
   let tagTimer=null; document.addEventListener("DOMContentLoaded",()=>document.body.append(tagEl)); if(document.body) document.body.append(tagEl);
   function tag(x,y,r,name){ if(x>-50&&x<W+50&&y>-50&&y<H+50) tags.push([x,y,r,name]); }
