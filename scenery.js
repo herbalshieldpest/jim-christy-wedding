@@ -1307,7 +1307,10 @@ const ambient=(function(){
     }
     const tor=d.lab? [[-8.8,15.4,4.8],[-4,15.6,5.3],[1,15.7,5.6],[5.6,16.4,5.3]] : [[-8.6,15.6,4.2],[-4,15.8,4.6],[1,15.9,5.0],[5.6,16.6,4.8]];
     parts.push({p:tor.map(([a,b,r])=>B(a,b,0,r)),c:wh,sh});
-    if(d.lab){ const wag=Math.sin(t*(moving?9:6))*.5; parts.push({p:[B(-11.6,17.2,0,1.6),B(-14.6,16.4,1.6*wag,1.2),B(-17.4,15.2,3.4*wag,.7)],c:wh,bias:.1}); }   /* thick otter tail, wagging */
+    if(d.lab){ /* a long, full tail: out from the rump, sweeping up in a curve, feathered and bushy, wagging hardest at the tip */
+      const wag=Math.sin(t*(moving?9:6))*.55; let px=-11.2, py=17.2, pz=0; const tl=[B(px,py,pz,1.9)], R=[2.3,2.6,2.6,2.5,2.3,2.0,1.6,1.1];
+      for(let i=0;i<8;i++){ const a=-.15+i*.2, step=1.75; px-=Math.cos(a)*step; py+=Math.sin(a)*step; pz=wag*(i+1)*.55; tl.push(B(px,py,pz,R[i])); }
+      parts.push({p:tl,c:wh,sh,bias:.1}); }
     else { parts.push({p:[[-6.4,17.6,2.6],[-2,18.4,2.8],[2.6,18.6,2.6]].map(([a,b,r])=>B(a,b,0,r)),c:or,bias:-.02});      /* orange saddle */
     parts.push({p:[B(-9,16.6,0,2.4)],c:or,bias:-.02});
     parts.push({p:[B(-12.4,17.4,0,1.2),B(-14.2,point?20.4:18.8,0,.95)],c:or,bias:.1}); }                          /* short docked tail, straight up on point */
@@ -1347,7 +1350,7 @@ const ambient=(function(){
       d.pal= d.lab? {...G, white:mixv(mulv([18,16,15],lit/.66),mulv(G.g,.3),.05), orange:mulv([15,13,12],lit/.66), nose:mulv([14,12,12],lit/.66)}
                   : {...G, white:mixv(mulv([232,226,212],lit),mulv(G.g,.5),.12), orange:mulv([196,106,48],lit), nose:mulv([110,64,46],lit)}; }
     if(!d.blades) d.blades=Array.from({length:10},()=>({ox:rnd(-20,20),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,d,s,k,d.pal,()=>dogParts(d,d.pal,moving),d.yaw,44,70,18,d.blades,d.alpha);
+    critterBlit(null,null,d,s,k,d.pal,()=>dogParts(d,d.pal,moving),d.yaw,44,70,18,d.blades,d.alpha,d.lab?.7:0);   /* a black coat takes much less of the warm rim light */
   }
   /* ---- big birds aloft: a kettle of turkey vultures circling on a thermal, a red-tailed hawk wheeling, an owl gliding low across the field ---- */
   const SOAR={
@@ -1504,5 +1507,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
