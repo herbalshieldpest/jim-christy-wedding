@@ -1499,7 +1499,7 @@ const ambient=(function(){
   let rompAt=1.2;
   let cur=null, callDist=0, lastCall=-99; const trail=[], puffs=[];
   document.addEventListener("pointermove",e=>{ if(!on) return; const x=(e.clientX-(1-camZ)*W/2-camX)/camZ, y=(e.clientY-(1-camZ)*H/2-camY)/camZ;
-    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) trail.push({x,y,t,r:rnd(4.5,7),rot:rnd(0,6.28),spin:rnd(-3,3),vx:rnd(-12,12),hue:Math.random(),ph:rnd(0,6)}); if(trail.length>50) trail.shift();
+    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) trail.push(Object.assign({x,y,t,r:rnd(4.5,7),rot:rnd(0,6.28),spin:rnd(-3,3),vx:rnd(-12,12),ph:rnd(0,6)},pick(WILD)())); if(trail.length>50) trail.shift();
     if(!dog&&!lab&&rompAt==null){ if(prev) callDist+=Math.hypot(x-prev.x,y-prev.y); if(callDist>W*1.2&&t-lastCall>6){ callDist=0; lastCall=t; startRomp(); } } else callDist=0; },{passive:true});   /* wave the cursor around a bit and the dogs come running back */
   const chasing=()=>cur&&t-cur.t<2.6;
   /* each dog has a mind of its own: it notices the cursor late (or not at all this time), and follows a lagging, smoothed idea of where it is */
@@ -1528,13 +1528,49 @@ const ambient=(function(){
     if(dogs.some(d=>d.chase||d.romp>0)&&!grouse&&!pheas&&Math.random()<.04){ if(Math.random()<.55) flushPheasant(); else flushGrouse(); }
     if(turks&&turks.mode!=="leave"){ turks.bird=true; const s=toScreen(turks.cX,turks.cD), d=near(s.x,s.y,turks); if(d){ const p=toGround(d.x<s.x? W+150 : -150,gnd().vy+s.g); turks.mode="leave"; turks.gX=p.Xw; turks.gD=p.Dw; turks.dir=s.x<d.x?-1:1; turks.birds.forEach(b=>{ b.state="walk"; b.fanT=0; }); } }
   }
+  /* what the trail scatters: petals and little blossoms of Appalachian wildflowers, plus the odd leaf and seed */
+  const WF=(f,cols,extra)=>()=>Object.assign({f,c:pick(cols)},extra||{});
+  const WILD=[
+    WF("petal",[[244,190,40],[236,170,30]],{eye:[70,40,20]}),                 /* black-eyed Susan */
+    WF("flower",[[244,186,36]],{n:12,eye:[64,36,18],pl:1.25}),
+    WF("long",[[206,110,170],[220,130,186]]),                                  /* purple coneflower */
+    WF("flower",[[150,110,210],[170,130,224]],{n:16,eye:[236,196,60],pl:1}),  /* New England aster */
+    WF("long",[[130,160,232],[150,176,240]]),                                  /* chicory */
+    WF("petal",[[200,40,52],[214,36,40]]),                                      /* cardinal flower */
+    WF("notch",[[222,50,72],[236,70,90]]),                                      /* fire pink */
+    WF("petal",[[250,170,196],[248,206,220],[236,140,180]]),                   /* mountain laurel and rhododendron */
+    WF("petal",[[244,130,40],[250,160,50]]),                                    /* flame azalea */
+    WF("petal",[[246,244,236],[236,224,230]]),                                  /* white trillium, dogwood */
+    WF("long",[[196,150,206],[210,170,220]]),                                   /* bee balm, wild bergamot */
+    WF("petal",[[184,120,160],[200,140,176]]),                                  /* Joe Pye weed */
+    WF("bell",[[110,140,224],[140,160,236]]),                                   /* Virginia bluebells */
+    WF("bell",[[214,60,48]],{tip:[246,200,60]}),                                /* wild columbine */
+    WF("flower",[[250,214,60]],{n:5,eye:[200,150,30],pl:.9}),                   /* buttercup */
+    WF("dots",[[236,196,50],[226,180,40]]),                                     /* goldenrod sprig */
+    WF("leaf",[[198,72,40],[220,128,40],[180,52,44],[214,170,60]]),             /* a little maple or sumac leaf */
+  ];
+  function drawWild(p,lt,flip){ const r=p.r, c=rgb(mulv(flip>0?p.c:mulv(p.c,.84),lt)), shade=rgb(mulv(p.c,.62*lt),.5);
+    const petal=(len,wid)=>{ ctx.beginPath(); ctx.moveTo(0,-len); ctx.bezierCurveTo(wid,-len*.7,wid*.9,len*.6,0,len*.85); ctx.bezierCurveTo(-wid*.9,len*.6,-wid,-len*.7,0,-len); ctx.fill(); };
+    ctx.fillStyle=c;
+    if(p.f==="petal"){ petal(r*1.3,r); ctx.fillStyle=shade; ctx.beginPath(); ctx.ellipse(0,r*.7,r*.25,r*.35,0,0,6.283); ctx.fill(); }
+    else if(p.f==="long"){ petal(r*1.7,r*.55); ctx.strokeStyle=shade; ctx.lineWidth=r*.12; ctx.beginPath(); ctx.moveTo(0,-r*1.2); ctx.lineTo(0,r*1.1); ctx.stroke(); }
+    else if(p.f==="notch"){ ctx.beginPath(); ctx.moveTo(0,r*1.2); ctx.bezierCurveTo(r*.9,r*.4,r*1.1,-r*.6,r*.55,-r*1.25); ctx.lineTo(r*.15,-r*.75); ctx.lineTo(0,-r*1.2); ctx.lineTo(-r*.15,-r*.75); ctx.lineTo(-r*.55,-r*1.25); ctx.bezierCurveTo(-r*1.1,-r*.6,-r*.9,r*.4,0,r*1.2); ctx.fill(); }   /* the fringed tip of fire pink */
+    else if(p.f==="flower"){ const n=p.n, L=r*(p.pl||1); for(let i=0;i<n;i++){ ctx.save(); ctx.rotate(i/n*6.283); ctx.translate(0,-L*.75); ctx.scale(1,1); petal(L*.62,L*(n>8?.17:.42)); ctx.restore(); }
+      ctx.fillStyle=rgb(mulv(p.eye,lt)); ctx.beginPath(); ctx.arc(0,0,L*(n>8?.36:.3),0,6.283); ctx.fill(); }
+    else if(p.f==="bell"){ ctx.beginPath(); ctx.moveTo(-r*.35,-r*1.2); ctx.quadraticCurveTo(-r*.5,r*.2,-r*.95,r*1); ctx.quadraticCurveTo(0,r*1.35,r*.95,r*1); ctx.quadraticCurveTo(r*.5,r*.2,r*.35,-r*1.2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=p.tip? rgb(mulv(p.tip,lt)) : shade; ctx.beginPath(); ctx.ellipse(0,r*1.02,r*.7,r*.2,0,0,6.283); ctx.fill(); }
+    else if(p.f==="dots"){ ctx.strokeStyle=rgb(mulv([120,120,50],lt)); ctx.lineWidth=r*.12; ctx.beginPath(); ctx.moveTo(0,r*1.3); ctx.lineTo(0,-r*1.3); ctx.stroke();
+      for(let i=0;i<9;i++){ const yy=-r*1.2+i*r*.3, sd=i%2?1:-1; ctx.beginPath(); ctx.arc(sd*r*(.25+.1*(i%3)),yy,r*.22,0,6.283); ctx.fill(); } }
+    else if(p.f==="leaf"){ ctx.beginPath(); for(let i=0;i<=5;i++){ const a=-Math.PI/2+(i-2.5)*.55, rr=i%2? r*.7 : r*1.3; i? ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr) : ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); } ctx.lineTo(r*.2,r*.5); ctx.lineTo(0,r*1.1); ctx.lineTo(-r*.2,r*.5); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle=shade; ctx.lineWidth=r*.1; ctx.beginPath(); ctx.moveTo(0,r*1.1); ctx.lineTo(0,-r*.9); ctx.stroke(); }
+    if(p.eye&&p.f==="petal"){ ctx.fillStyle=rgb(mulv(p.eye,lt),.55); ctx.beginPath(); ctx.ellipse(0,r*.95,r*.18,r*.22,0,0,6.283); ctx.fill(); }
+  }
   function drawTrail(dt,dark){                                                                    /* the cursor's trail: little motes of light that drift and fade */
     for(let i=trail.length-1;i>=0;i--){ const p=trail[i], age=t-p.t, a=Math.min(1,(2.6-age)/1.1); if(a<=0){ trail.splice(i,1); continue; }   /* petals shaken loose: they flutter up off the air toward you, growing, going soft and fading as they pass */
       const k=1+age*age*.9, ex=dt*.55*age; p.x+=(p.x-W/2)*ex+dt*(p.vx+Math.sin(t*3+p.ph)*16); p.y+=(p.y-H*.45)*ex+dt*(6+Math.sin(t*2.2+p.ph)*10); p.rot+=dt*p.spin; const flip=Math.cos(t*4+p.ph);
-      const col=p.hue<.45? [240,190,204] : p.hue<.8? [248,232,226] : [226,156,182], lt=dark?.6:.92;
+      const lt=dark?.6:.92; if(!p.c) Object.assign(p,pick(WILD)());
       ctx.save(); if(k>1.8) ctx.filter=`blur(${Math.min(6,(k-1.8)*1.6).toFixed(1)}px)`; ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(k,k*Math.max(.15,Math.abs(flip))); ctx.globalAlpha=a*.9;
-      ctx.fillStyle=rgb(mulv(flip>0?col:mulv(col,.86),lt)); ctx.beginPath(); ctx.moveTo(0,-p.r*1.3); ctx.bezierCurveTo(p.r,-p.r*.9,p.r*.9,p.r*.8,0,p.r*1.1); ctx.bezierCurveTo(-p.r*.9,p.r*.8,-p.r,-p.r*.9,0,-p.r*1.3); ctx.fill();
-      ctx.fillStyle=rgb(mulv([226,150,170],lt),.5); ctx.beginPath(); ctx.ellipse(0,p.r*.7,p.r*.25,p.r*.35,0,0,6.283); ctx.fill(); ctx.restore(); }
+      drawWild(p,lt,flip); ctx.restore(); }
     for(let i=puffs.length-1;i>=0;i--){ const p=puffs[i], a=1-(t-p.t)/.7; if(a<=0){ puffs.splice(i,1); continue; } p.r+=dt*14*p.k; p.y-=dt*5*p.k;      /* dust and bits of grass kicked up behind the running dogs */
       ctx.fillStyle=rgb(dark?[90,80,60]:[196,176,130],.22*a); ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*.55,0,0,6.283); ctx.fill(); }
   }
