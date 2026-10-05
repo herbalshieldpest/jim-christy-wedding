@@ -1510,7 +1510,41 @@ const ambient=(function(){
     luna:{fw:[186,214,164],fw2:[160,196,146],edge:[156,112,132],hw:[178,208,158],tail:true,spot:[[12,-1,1.7,[226,206,140],[120,96,96]],[9,11,1.6,[226,206,140],[120,96,96]]],veins:true,body:[230,228,214]},
     rosy:{fw:[228,122,158],fw2:[244,214,104],edge:[214,96,140],hw:[246,226,150],band:true,body:[248,226,120]},
     io:{fw:[226,186,62],fw2:[200,150,52],edge:[170,110,40],hw:[238,206,80],eye:true,body:[214,170,60]}};
+  /* a luna moth, drawn from life: broad pale-lime forewings with a maroon leading edge that runs right across the shoulders, small comma eyespots,
+     long twisting hindwing tails, round yellow-ringed eyespots with a dark crescent and a pink centre, a white furry body and feathery tan antennae */
+  function lunaWings(x,flap){
+    const wf=Math.max(.12,Math.abs(Math.cos(flap))), G=[194,216,162], G2=[176,204,148], RIM=[226,224,176], COSTA=[104,70,92];
+    for(const sd of [-1,1]){ x.save(); x.scale(sd*wf,1);
+      /* hindwing with its long tail */
+      const hg=x.createLinearGradient(0,0,6,38); hg.addColorStop(0,rgb(G2)); hg.addColorStop(.6,rgb(G)); hg.addColorStop(1,rgb(mixv(G,RIM,.5))); x.fillStyle=hg;
+      x.beginPath(); x.moveTo(1.5,-1); x.bezierCurveTo(9,-1,18,2,19,7); x.bezierCurveTo(20,12,15,16,12,19);
+      x.bezierCurveTo(9,23,8.5,29,9.5,34); x.bezierCurveTo(10.5,38,10,41,8.6,42); x.bezierCurveTo(7,41,6,37,5.4,33);
+      x.bezierCurveTo(4.6,27,3.4,22,2.2,16); x.bezierCurveTo(1.6,10,1.2,4,1.5,-1); x.closePath(); x.fill();
+      x.strokeStyle=rgb(RIM); x.lineWidth=.7; x.stroke();
+      x.strokeStyle="rgba(96,120,78,.28)"; x.lineWidth=.35; for(const [ex,ey] of [[17,8],[13,16],[8,30]]){ x.beginPath(); x.moveTo(2,2); x.quadraticCurveTo(ex*.5,ey*.45,ex,ey); x.stroke(); }
+      /* the hindwing eyespot */
+      x.fillStyle=rgb([214,186,86]); x.beginPath(); x.ellipse(9.4,11,2.1,2.0,0,0,6.283); x.fill();
+      x.fillStyle=rgb([214,152,170]); x.beginPath(); x.arc(9.4,11.3,1.15,0,6.283); x.fill();
+      x.strokeStyle=rgb([28,22,24]); x.lineWidth=.8; x.beginPath(); x.arc(9.4,11,2.05,Math.PI*1.1,Math.PI*1.95); x.stroke();
+      /* forewing */
+      const fg=x.createLinearGradient(0,-6,26,0); fg.addColorStop(0,rgb(G2)); fg.addColorStop(.5,rgb(G)); fg.addColorStop(1,rgb(mixv(G,RIM,.3))); x.fillStyle=fg;
+      x.beginPath(); x.moveTo(1.5,-5); x.bezierCurveTo(10,-7.5,20,-10,25.5,-9.6); x.bezierCurveTo(28,-9,28.4,-6,27,-3.4);
+      x.bezierCurveTo(25,1,22,5,18.5,6.8); x.bezierCurveTo(12,8.4,6,6.6,1.8,3.4); x.closePath(); x.fill();
+      x.strokeStyle=rgb(RIM); x.lineWidth=.7; x.beginPath(); x.moveTo(27,-3.4); x.bezierCurveTo(25,1,22,5,18.5,6.8); x.bezierCurveTo(12,8.4,6,6.6,1.8,3.4); x.stroke();
+      x.strokeStyle="rgba(96,120,78,.28)"; x.lineWidth=.35; for(const [ex,ey] of [[25,-6],[23,-1],[19,5],[13,7]]){ x.beginPath(); x.moveTo(2,-2); x.quadraticCurveTo(ex*.5,ey*.5-1.5,ex,ey); x.stroke(); }
+      /* the comma eyespot near the leading edge */
+      x.strokeStyle=rgb([60,40,50]); x.lineWidth=1; x.beginPath(); x.arc(11.6,-6.3,1.15,-.4,Math.PI*1.25); x.stroke();
+      x.fillStyle=rgb([214,156,170]); x.beginPath(); x.ellipse(11.6,-6.0,.7,.85,0,0,6.283); x.fill();
+      /* the maroon leading edge */
+      x.strokeStyle=rgb(COSTA); x.lineWidth=1.8; x.beginPath(); x.moveTo(0,-5.4); x.bezierCurveTo(10,-7.8,20,-10.2,25.6,-9.7); x.stroke();
+      x.restore(); }
+    x.strokeStyle=rgb([104,70,92]); x.lineWidth=2.2; x.beginPath(); x.moveTo(-2.5,-5.2); x.lineTo(2.5,-5.2); x.stroke();   /* the band carries across the shoulders */
+    const bg=x.createRadialGradient(0,-2,.5,0,0,5); bg.addColorStop(0,rgb([246,244,232])); bg.addColorStop(1,rgb([214,214,196])); x.fillStyle=bg;
+    x.beginPath(); x.ellipse(0,-1.6,2.8,4,0,0,6.283); x.fill(); x.beginPath(); x.ellipse(0,5,2.1,6,0,0,6.283); x.fill();        /* white, furry thorax and abdomen */
+    x.fillStyle=rgb([196,160,104]); for(const sd of [-1,1]){ x.save(); x.translate(sd*.8,-6.6); x.rotate(sd*.42); x.beginPath(); x.ellipse(0,-3.4,1.25,3.6,0,0,6.283); x.fill(); x.restore(); }   /* feathery antennae */
+  }
   function mothWings(x,sp,flap){
+    if(sp==="luna") return lunaWings(x,flap);
     const M=MOTH[sp], wf=Math.max(.12,Math.abs(Math.cos(flap)));
     for(const sd of [-1,1]){ x.save(); x.scale(sd*wf,1);
       /* hindwing */
@@ -1559,12 +1593,12 @@ const ambient=(function(){
     mothWings(hx,h.sp,h.fl);
     hx.setTransform(1,0,0,1,0,0); hx.globalCompositeOperation="source-atop";
     const dx=sp.x-sx, dy=sp.y-sy, dl=Math.hypot(dx,dy)||1, near=Math.max(0,1-dl/(W*.45));
-    hx.fillStyle=`rgba(40,28,18,${(.56-near*.2).toFixed(2)})`; hx.fillRect(0,0,sz,sz);                     /* we see the shaded side: the sun is behind it */
+    hx.fillStyle=`rgba(40,28,18,${(.44-near*.18).toFixed(2)})`; hx.fillRect(0,0,sz,sz);                     /* we see the shaded side: the sun is behind it */
     const rl=hx.createLinearGradient(sz/2-dx/dl*sz*.5,sz/2-dy/dl*sz*.5,sz/2+dx/dl*sz*.5,sz/2+dy/dl*sz*.5);
     rl.addColorStop(0,"rgba(20,12,8,.25)"); rl.addColorStop(.55,"rgba(255,190,110,0)"); rl.addColorStop(1,`rgba(255,196,112,${(.38+near*.3).toFixed(2)})`); hx.fillStyle=rl; hx.fillRect(0,0,sz,sz);   /* warm light catching the sun-side edges */
     const gw=hx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz*.42); gw.addColorStop(0,`rgba(255,214,150,${(.12+near*.22).toFixed(2)})`); gw.addColorStop(1,"rgba(255,214,150,0)"); hx.fillStyle=gw; hx.fillRect(0,0,sz,sz);   /* light glowing through the wings */
     if(!h.skyC||(h.skyT=(h.skyT||0)-1)<=0){ h.skyT=6; const ip=toImg(sx,sy); h.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
-    hx.fillStyle="rgba(255,168,84,.22)"; hx.fillRect(0,0,sz,sz);   /* bathed in the orange evening light */
+    hx.fillStyle="rgba(255,168,84,.13)"; hx.fillRect(0,0,sz,sz);   /* bathed in the orange evening light */
     const haze=Math.min(.78,Math.max(0,(z-.8)/6)); if(haze>0){ hx.fillStyle=rgb(h.skyC,haze); hx.fillRect(0,0,sz,sz); }   /* the farther it flies, the more it melts into the evening air */
     if(SC.dim()){ hx.fillStyle="rgba(20,14,6,.18)"; hx.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ hx.globalAlpha=tn.a; hx.fillStyle=tn.c; hx.fillRect(0,0,sz,sz); hx.globalAlpha=1; } }
     if(dark){ hx.fillStyle="rgba(10,8,14,.3)"; hx.fillRect(0,0,sz,sz); }
