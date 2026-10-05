@@ -1771,6 +1771,68 @@ const ambient=(function(){
       ctx.fillStyle=gl; ctx.fillRect(f.x-r*3,yy-r*3,r*6,r*6); }
     ctx.restore();
   }
+  /* ---- monarch butterflies: a few drifting over the field and the lawn in 3D, flapping and then sailing on wings held in a shallow V ---- */
+  let monSpr=null; const MR=6, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
+  function monarchSprite(){ if(monSpr) return monSpr; const c=document.createElement("canvas"); c.width=26*MR; c.height=34*MR; const x=c.getContext("2d");
+    x.setTransform(MR,0,0,MR,-MX0*MR,-MY0*MR); const OR=[232,124,28], OR2=[244,156,52], BK=[24,18,16], WD=[246,240,226];
+    /* hindwing: rounded, orange with a thick black border and black veins */
+    x.fillStyle=rgb(BK); x.beginPath(); x.moveTo(1,0); x.bezierCurveTo(9,-1,17,2,17,8); x.bezierCurveTo(17,14,11,18,6,17); x.bezierCurveTo(3,16,1.4,10,1,0); x.fill();
+    const hg=x.createRadialGradient(4,4,1,6,6,13); hg.addColorStop(0,rgb(OR2)); hg.addColorStop(1,rgb(OR)); x.fillStyle=hg;
+    x.beginPath(); x.moveTo(2,1.2); x.bezierCurveTo(9,.4,15,3,15,8); x.bezierCurveTo(15,12.6,10,15.6,6.4,15); x.bezierCurveTo(4,14.4,2.6,9,2,1.2); x.fill();
+    x.strokeStyle=rgb(BK); x.lineWidth=.55; for(const [ex,ey] of [[15,5],[15,9],[12,13.5],[8,15],[5,14]]){ x.beginPath(); x.moveTo(2,2); x.quadraticCurveTo(ex*.55,ey*.5,ex,ey); x.stroke(); }
+    x.fillStyle=rgb(WD); for(let i=0;i<7;i++){ const a=-.2+i*.32, rr=.45; x.beginPath(); x.arc(9+Math.cos(a)*7.4,7.5+Math.sin(a)*8.2,rr,0,6.283); x.fill(); }
+    /* forewing: long, with the black tip and its rows of white spots */
+    x.fillStyle=rgb(BK); x.beginPath(); x.moveTo(1,-3); x.bezierCurveTo(9,-8,18,-12,23,-11); x.bezierCurveTo(24,-8,22,-2,18,2); x.bezierCurveTo(12,4,6,3,1,1); x.fill();
+    const fg=x.createLinearGradient(2,0,18,-6); fg.addColorStop(0,rgb(OR2)); fg.addColorStop(1,rgb(OR)); x.fillStyle=fg;
+    x.beginPath(); x.moveTo(2,-2.4); x.bezierCurveTo(8,-6,13,-8,16,-8.4); x.bezierCurveTo(18,-6,18.4,-2.4,16.4,.4); x.bezierCurveTo(11,2,6,1.8,2,.4); x.fill();
+    x.strokeStyle=rgb(BK); x.lineWidth=.55; for(const [ex,ey] of [[17,-6],[17.5,-2.5],[15,0.6],[10,1.6]]){ x.beginPath(); x.moveTo(2,-1); x.quadraticCurveTo(ex*.55,ey*.5-.6,ex,ey); x.stroke(); }
+    x.fillStyle=rgb(WD); for(const [a,b,r] of [[19.5,-9.4,.6],[21.2,-8.2,.5],[20.6,-5.6,.55],[19,-3,.5],[17.6,-.6,.45],[13,2.4,.4],[9,2.8,.4],[18.4,-7.2,.45]]){ x.beginPath(); x.arc(a,b,r,0,6.283); x.fill(); }
+    x.fillStyle=rgb([246,170,70]); for(const [a,b] of [[18.6,-8.2],[20,-7]]){ x.beginPath(); x.arc(a,b,.5,0,6.283); x.fill(); }   /* the little orange spots near the tip */
+    return monSpr=c; }
+  function monarch3D(x,P,V,ang,proj){
+    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+    const v=nrm(V), f=nrm([v[0],v[1]-.3,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0062;
+    const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*K, P[1]+(f[1]*a+r[1]*b+u[1]*c)*K, P[2]+(f[2]*a+r[2]*b+u[2]*c)*K], S=p=>proj(p[0],p[1],p[2]), spr=monarchSprite();
+    const wingAt=sd=>{ const L=(lx,ly)=>W3(-ly,sd*lx*Math.cos(ang),lx*Math.sin(ang)); const O=S(L(0,0)), A=S(L(1,0)), B=S(L(0,1)), X=[A[0]-O[0],A[1]-O[1]], Y=[B[0]-O[0],B[1]-O[1]];
+      x.save(); x.transform(X[0]/MR,X[1]/MR,Y[0]/MR,Y[1]/MR,O[0]+X[0]*MX0+Y[0]*MY0,O[1]+X[1]*MX0+Y[1]*MY0); x.drawImage(spr,0,0); x.restore(); };
+    const d2=sd=>{ const p=W3(0,sd*10,0); return p[0]*p[0]+p[1]*p[1]+p[2]*p[2]; }, far=d2(-1)>d2(1)? -1 : 1;
+    wingAt(far);
+    const hd=S(W3(5,0,0)), tl=S(W3(-10,0,0)), wd=Math.max(.6,Math.hypot(...[0,1].map(i=>S(W3(0,1.2,0))[i]-S(W3(0,0,0))[i])));
+    x.lineCap="round"; x.strokeStyle="rgb(22,16,14)"; x.lineWidth=wd*1.5; x.beginPath(); x.moveTo(tl[0],tl[1]); x.lineTo(hd[0],hd[1]); x.stroke();
+    x.lineWidth=Math.max(.4,wd*.35); for(const sd of [-1,1]){ const a1=S(W3(12,sd*3.5,1.5)); x.beginPath(); x.moveTo(hd[0],hd[1]); x.lineTo(a1[0],a1[1]); x.stroke(); }
+    wingAt(-far);
+  }
+  function drawMonarchs(dt,dark){
+    const F=H*.5, cx=W/2, cy=H*.52, g=gnd();
+    nextMon-=dt; if(nextMon<=0&&mons.length<3){ nextMon=rnd(12,28); const side=Math.random()<.5?-1:1;
+      mons.push({t:0,life:rnd(22,40),sx:side<0? -30 : W+30,sy:g.vy+rnd(-30,90),z:rnd(2.2,6.5),dir:-side,ph:rnd(0,6),flapT:0,glide:0,ang:.4,tz:rnd(2,6),wy:rnd(0,6)}); }
+    if(!mons.length) return;
+    const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(mncv.width!==cw||mncv.height!==ch){ mncv.width=cw; mncv.height=ch; }
+    const x=mncx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
+    let zs=0;
+    for(let i=mons.length-1;i>=0;i--){ const m=mons[i]; m.t+=dt;
+      /* a lazy, wandering course: drifting across, rising and dipping, coming nearer and farther */
+      m.sx+=m.dir*(26+Math.sin(m.t*.7+m.ph)*14)*dt*(4/m.z); m.sy+=(Math.sin(m.t*1.1+m.wy)*22+Math.sin(m.t*2.9)*10)*dt; m.sy=Math.max(g.vy-70,Math.min(H*.92,m.sy));
+      if(Math.random()<dt*.15) m.tz=rnd(1.6,6.5); m.z+=(m.tz-m.z)*dt*.25;
+      if(m.t>m.life||m.sx<-60||m.sx>W+60){ mons.splice(i,1); continue; }
+      /* flap a few beats, then sail with the wings held up in a shallow V */
+      m.flapT-=dt; if(m.flapT<=0){ m.glide=m.glide? 0 : 1; m.flapT=m.glide? rnd(.5,1.4) : rnd(.6,1.5); }
+      m.ang= m.glide? lerp(m.ang,.55,Math.min(1,dt*6)) : .35+Math.sin(m.t*Math.PI*2*5.2+m.ph)*1.05;
+      const X=(m.sx-cx)*m.z/F, Y=(m.sy-cy)*m.z/F, Pn=[X,Y,m.z], Vn=m.pp? [X-m.pp[0],Y-m.pp[1],m.z-m.pp[2]] : [m.dir,0,0]; m.pp=Pn;
+      if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((v,j)=>lerp(v,Vn[j],.08)) : Vn;
+      const a=Math.min(1,m.t/1)*Math.min(1,(m.life-m.t)/1.2); x.globalAlpha=Math.max(0,a);
+      monarch3D(x,Pn,m.V||Vn,m.ang,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz,cy+Y3*F/zz]; });
+      zs+=m.z; }
+    x.globalAlpha=1; if(!mons.length) return; const zc=zs/mons.length;
+    /* in the low evening sun: the light glows through the orange wings, the air hazes them a little with distance */
+    x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
+    x.fillStyle="rgba(40,24,12,.18)"; x.fillRect(0,0,cw,ch); x.fillStyle="rgba(255,176,90,.16)"; x.fillRect(0,0,cw,ch);
+    x.fillStyle=`rgba(214,176,128,${Math.min(.35,zc*.04).toFixed(2)})`; x.fillRect(0,0,cw,ch);
+    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
+    if(dark){ x.fillStyle="rgba(10,8,14,.28)"; x.fillRect(0,0,cw,ch); }
+    x.globalCompositeOperation="source-over";
+    ctx.save(); ctx.filter="blur(.35px)"; ctx.drawImage(mncv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+  }
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
   let lab=null, nextLab=130;
   function startLab(){
@@ -1942,7 +2004,7 @@ const ambient=(function(){
       if(lab) L.push({y:toScreen(lab.Xw,lab.Dw).y,fn:()=>drawLab(dt,dark)}); else drawLab(dt,dark);
       for(const bn of buns) L.push({y:bn.y||0,fn:()=>drawRabbit(bn,dt,dark)});
       turkeyQueue(dt,dark,L);
-      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); }
+      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
@@ -1956,5 +2018,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
