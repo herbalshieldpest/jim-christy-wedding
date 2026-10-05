@@ -824,8 +824,16 @@ const ambient=(function(){
     x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=who.alpha; ctx.drawImage(dsp,0,0,w,h,p.x-ax/R,p.y-ay/R,w/R,h/R); ctx.restore();
   }
+  /* when the buck comes out close on the lawn, any dog nearby bolts off the other way */
+  function dogsFlee(){
+    if(!buck||!buck.onLawn) return; const bp=buckPose();
+    for(const d of [dog,lab]){ if(!d||d.gone||d.flee||d.hidden||d.state==="greet"||d.toViewer) continue;
+      const s=toScreen(d.Xw,d.Dw); if(Math.hypot(s.x-bp.x,(s.y-bp.y)*1.5)>W*.4) continue;
+      d.flee=true; d.romp=0; d.it=false; d.state="leave"; d.scratching=false; d.ang=null;
+      const p=toGround(s.x<bp.x? -160 : W+160,gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
+  }
   function drawDeer(dt,dark,layer){
-    if(layer==="front"){ stepBuck(dt); stepBuck2(dt); stepHerd(dt); }
+    if(layer==="front"){ stepBuck(dt); stepBuck2(dt); stepHerd(dt); dogsFlee(); }
     if(layer==="behind"&&buck2) paintDeer(buck2Pose(),dark,buck2);   /* painted before the left brush, so the brush hides his legs */
     const L=[];
     if(buck) L.push({who:buck,p:buckPose()});
@@ -1337,7 +1345,7 @@ const ambient=(function(){
     d.t+=dt; d.sitA=(d.sitA||0)+((d.state==="sit"?1:0)-(d.sitA||0))*Math.min(1,dt*5);
     const romping=d.state==="run"&&d.romp>0&&stepRomp(d,dt);
     if(d.state==="run"||d.state==="leave"){
-      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=romping? (d.it?1.3:1.12)*(d.sm||1) : d.toViewer? 1.05 : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
+      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=d.flee? 1.6 : romping? (d.it?1.3:1.12)*(d.sm||1) : d.toViewer? 1.05 : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
       const pr=d.lp? Math.hypot(d.Xw-d.lp[0],(d.Dw-d.lp[1])*.25) : 1; d.lp=[d.Xw,d.Dw]; d.stl= pr<sp*dt*.2? (d.stl||0)+dt : 0;
       if(d.stl>.8){ d.stl=0; if(d.state==="leave") d.fade=true; else { d.tX=d.Xw; d.tD=d.Dw; } }
       if(d.fade){ d.alpha-=dt*2.5; if(d.alpha<=0){ d.gone=true; return; } }
@@ -1672,5 +1680,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&toScreen(d.Xw,d.Dw)); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
