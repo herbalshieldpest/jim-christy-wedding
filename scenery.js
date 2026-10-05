@@ -2901,7 +2901,7 @@ const ambient=(function(){
   document.addEventListener("click",e=>{
     if(SC.identify===false||!on) return;
     if(e.target.closest&&e.target.closest("a,button,input,textarea,select,label,summary,[role=button],[contenteditable],h1,h2,h3,p,li,.note,.lockup,[data-no-scenery]")) return;
-    const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n] of tags){ const d=Math.hypot(qx-x,qy-y); if(d<r+26&&d<bd){ bd=d; best=[x,y,n]; } }
+    const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n] of tags){ const d=Math.hypot(qx-x,qy-y); if(d<r*1.5+Math.max(56,Math.min(W,H)*.06)&&d<bd){ bd=d; best=[x,y,n]; } }
     if(!best) return; tagEl.textContent=best[2]; tagEl.style.left=e.clientX+"px"; tagEl.style.top=e.clientY+"px"; tagEl.style.opacity="1";
     clearTimeout(tagTimer); tagTimer=setTimeout(()=>{ tagEl.style.opacity="0"; },2600);
   });

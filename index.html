@@ -38,6 +38,12 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
   .line{left:0;top:0;margin-top:126px;font-size:16px;font-weight:400;letter-spacing:.08em;color:var(--ink)}
 }
 
+/* the animal name labels, in the site's type with a vine either side */
+.scn-tag{font:500 15px/1 var(--caps)!important;letter-spacing:.24em!important;text-transform:uppercase;color:var(--ink)!important;padding:10px 16px 9px calc(16px + .24em)!important;border-radius:2px!important;background:rgba(24,16,8,.58)!important;border:1px solid rgba(255,250,242,.38)!important;outline:1px solid rgba(255,250,242,.14);outline-offset:3px;box-shadow:0 10px 30px -12px rgba(0,0,0,.6);display:flex;align-items:center;gap:12px;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.scn-tag::before,.scn-tag::after{content:"";flex:none;width:44px;height:9px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20110%2022%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23fffaf2%22%20stroke-opacity%3D%22.75%22%20stroke-width%3D%221%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M2%2011%20C16%208%2024%2014%2038%2011%20S62%206%2076%2010.5%20S97%2015%20101%2010%20C104%206.5%20100%204%2097.5%206.5%20C96%208%2098%2010%2099.5%208.5%22/%3E%3Cpath%20d%3D%22M16%209.5%20C17.5%205%2022%203%2025.5%203.5%20C24%207%2020.5%209.5%2016%209.5%20Z%22/%3E%3Cpath%20d%3D%22M30%2012.5%20C32%2016.5%2036.5%2018.5%2040%2017.5%20C38%2014.5%2034.5%2013%2030%2012.5%20Z%22/%3E%3Cpath%20d%3D%22M57%208%20C58%203.5%2062%201%2065.5%201.5%20C64.5%205%2061%207.5%2057%208%20Z%22/%3E%3Cpath%20d%3D%22M70%2011.5%20C71.5%2015.5%2075.5%2018%2079%2017%20C77.5%2014%2074%2012%2070%2011.5%20Z%22/%3E%3Ccircle%20cx%3D%2246%22%20cy%3D%224%22%20r%3D%22.9%22/%3E%3Ccircle%20cx%3D%2247%22%20cy%3D%2218.5%22%20r%3D%22.9%22/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;order:-1}
+.scn-tag::after{order:1}
+.scn-tag::before{transform:scaleX(-1)}
+@media (max-width:640px){.scn-tag{font-size:13px!important;letter-spacing:.2em!important;gap:9px;padding:9px 12px 8px calc(12px + .2em)!important}.scn-tag::before,.scn-tag::after{width:30px;height:7px}}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,500;1,400&family=Jost:wght@500&display=swap">
 </head>
