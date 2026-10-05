@@ -1274,20 +1274,21 @@ const ambient=(function(){
   function startRomp(){
     const b=foxBounds(), side=Math.random()<.5, x0=side? W+70 : -70, g=rnd(Math.max(b.gmin,lawnMinG(side?W*.9:W*.1))+40,b.gmax-30);
     const p=toGround(x0,gnd().vy+g), q=toGround(side? W+170 : -170,gnd().vy+g+rnd(-25,25)), len=rnd(26,34);
-    dog={Xw:p.Xw,Dw:p.Dw,yaw:side?Math.PI:0,ph:0,state:"run",t:0,legs:4+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:false,romp:len,it:false};
-    lab={lab:true,Xw:q.Xw,Dw:q.Dw,yaw:side?Math.PI:0,ph:1.3,state:"run",t:0,legs:3+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:true,romp:len,it:true};
+    dog={Xw:p.Xw,Dw:p.Dw,yaw:side?Math.PI:0,ph:0,state:"run",t:0,legs:4+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:false,romp:len,it:false,lane:-1};
+    lab={lab:true,Xw:q.Xw,Dw:q.Dw,yaw:side?Math.PI:0,ph:1.3,state:"run",t:0,legs:3+Math.floor(Math.random()*3),dir:side?-1:1,alpha:1,head:0,turn:0,pointed:true,romp:len,it:true,lane:1};
     dog.mate=lab; lab.mate=dog; rompTarget(dog,true); lastArrive=t; nextLab=rnd(220,400);
   }
   function rompTarget(d,first){
     const b=foxBounds(), cur=toScreen(d.Xw,d.Dw), sx=first? W*(d.dir>0?rnd(.3,.45):rnd(.55,.7)) : Math.max(W*.1,Math.min(W*.9,cur.x+(Math.random()<.5?-1:1)*W*rnd(.15,.32))), lo=Math.max(b.gmin,lawnMinG(sx))+12;
-    const p=toGround(sx,gnd().vy+rnd(lo,b.gmax-6)); d.tX=p.Xw; d.tD=p.Dw;
+    const mid=(lo+b.gmax)/2, g=d.lane<0? rnd(lo,mid-14) : rnd(mid+14,b.gmax-6), p=toGround(sx,gnd().vy+g); d.tX=p.Xw; d.tD=p.Dw;
   }
   function stepRomp(d,dt){
     const m=d.mate&&!d.mate.gone&&d.mate.romp>0? d.mate : null; d.romp-=dt; d.swap=(d.swap||0)-dt;
     if(!m||d.romp<=0){ d.romp=0; d.it=false; dogTarget(d); return false; }
-    if(d.it){ d.tX=m.Xw; d.tD=m.Dw;                                       /* chasing: aim straight at the other dog */
-      const a=toScreen(d.Xw,d.Dw), c=toScreen(m.Xw,m.Dw);
-      if(d.swap<=0&&Math.hypot(a.x-c.x,(a.y-c.y)*2)<.2*a.g){ d.it=false; m.it=true; d.swap=m.swap=1.6; rompTarget(d); } }   /* tagged: now the other one gives chase */
+    if(d.it){ const a=toScreen(d.Xw,d.Dw), c=toScreen(m.Xw,m.Dw), b=foxBounds(), lo=Math.max(b.gmin,lawnMinG(c.x))+12, mid=(lo+b.gmax)/2;
+      /* chasing: run alongside and a little behind, in its own lane, so the two never pile on top of each other */
+      const gx=c.x+(a.x<c.x?-1:1)*.22*c.g, gg=d.lane<0? Math.max(lo,Math.min(mid-14,c.g-.32*c.g)) : Math.min(b.gmax-6,Math.max(mid+14,c.g+.32*c.g)), p=toGround(gx,gnd().vy+gg); d.tX=p.Xw; d.tD=p.Dw;
+      if(d.swap<=0&&Math.abs(a.x-c.x)<.3*a.g){ d.it=false; m.it=true; d.swap=m.swap=2.2; rompTarget(d); } }   /* drew level: now it's the other one's turn to chase */
     return true;
   }
   function dogTarget(d,first){
