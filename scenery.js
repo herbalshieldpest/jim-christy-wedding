@@ -2000,45 +2000,67 @@ const ambient=(function(){
     const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw];
     const pt=(a,b,c)=>{ const w=W3(a,b,c); return proj(w[0],w[1],w[2]); };
     const sc=a=>{ const p0=pt(a,0,0), p1=pt(a+1,0,0), p2=pt(a,1,0); return Math.max(Math.hypot(p1[0]-p0[0],p1[1]-p0[1]),Math.hypot(p2[0]-p0[0],p2[1]-p0[1])); };
-    const toEye=nrm([-P[0],-P[1],-P[2]]), under=dot(u,toEye)<0, sTop=dot(u,sunL), lit=Math.max(0,Math.min(1,(under? -sTop : sTop)*1.5+.15));
-    const glow=Math.max(0,Math.min(1,(dot(nrm(P),sunL)-.45)/.45))*(1-lit*.6);
-    const L=(c,k)=>{ const l=lit*(k??1); return [c[0]*(.55+.8*l)+8*(1-l), c[1]*(.55+.6*l)+10*(1-l), c[2]*(.55+.45*l)+16*(1-l)]; };
+    const toEye=nrm([-P[0],-P[1],-P[2]]), glow=Math.max(0,Math.min(1,(dot(nrm(P),sunL)-.45)/.45));
+    const litOf=n=>Math.max(0,Math.min(1,dot(n,sunL)*1.4+.25));
+    const L=(c,l)=>[c[0]*(.5+.75*l)+10*(1-l), c[1]*(.5+.62*l)+12*(1-l), c[2]*(.52+.5*l)+20*(1-l)];        /* lit warm, shaded toward the cool sky */
     const smooth=(pts,col)=>{ x.fillStyle=col; x.beginPath(); const n=pts.length, m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2]; let q=m(pts[n-1],pts[0]); x.moveTo(q[0],q[1]); for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n], mm=m(a,b); x.quadraticCurveTo(a[0],a[1],mm[0],mm[1]); } x.closePath(); x.fill(); };
     const line=(a,b,col,w)=>{ x.strokeStyle=col; x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
     const px=sc(0); x.lineCap="round"; x.lineJoin="round";
-    const BLU=[40,96,206], BLU2=[96,156,236], DEEP=[24,52,128], UGRY=[176,180,192], RUST=[204,112,56], BELLY=[236,232,224], BLK=[20,20,26];
-    const wing=(sd,fl)=>{ const h=k=>fl*k, bend=Math.abs(fl)*.35;
-      const wa=Math.atan2(fl*9.4,15), sw=[0,1,2].map(i=>r[i]*sd*Math.cos(wa)+u[i]*Math.sin(wa)), tn=crs(sw,f).map(c=>c*sd), under=dot(tn,toEye)<0;   /* which face of this wing we see, raised or lowered */
-      const S=pt(2.4,sd*1.6,.6), Wr=pt(1.4,sd*7,h(4.6)+bend), Tp=pt(-3,sd*15,h(9.4)), T2=pt(-5.8,sd*12.6,h(7.8)), Tr=pt(-6.2,sd*7,h(4.4)), R0=pt(-4,sd*1.6,.4);
-      const g=x.createLinearGradient(S[0],S[1],Tp[0],Tp[1]);
-      if(under){ g.addColorStop(0,rgb(L(UGRY,.8))); g.addColorStop(1,rgb(mixv(L(mulv(UGRY,.8),.7),[246,194,128],glow*.3))); }
-      else { g.addColorStop(0,rgb(L(BLU2))); g.addColorStop(.55,rgb(L(BLU))); g.addColorStop(1,rgb(L(DEEP))); }
-      smooth([S,Wr,pt(-.6,sd*11.8,h(7.6)),Tp,T2,Tr,R0],g);
-      { const d0=pt(-1.6,sd*12.4,h(8)), d1=pt(-4.2,sd*14,h(9)); smooth([pt(-.6,sd*11.8,h(7.6)),Tp,T2,d1,d0],rgb(under? L([96,100,116],.7) : L([22,30,62]),.85)); }   /* the dusky wingtip */
-      { const e0=pt(-5.4,sd*4,h(2.6)), e1=pt(-5.9,sd*10,h(6.4)), e2=pt(-4.7,sd*10,h(6.4)), e3=pt(-4.4,sd*4,h(2.6)); smooth([e0,e1,e2,e3],rgb(under? L([110,114,130],.7) : L(DEEP),.6)); }   /* the darker trailing edge */
-      for(let i=0;i<7;i++){ const t=i/6, a0=pt(lerp(-.4,-5,t),sd*lerp(10,8.6,t),h(lerp(6.4,5.6,t))), a1=pt(lerp(-2.4,-6.2,t),sd*lerp(14.8,12.2,t),h(lerp(9.3,7.7,t))); line(a0,a1,rgb(under? L(mulv(UGRY,.62),.6) : [14,22,52],.7),Math.max(.45,px*.28)); }   /* the separate primaries */
-      for(let i=0;i<7;i++){ const t=(i+.5)/7, a=lerp(-5.6,-6.1,t), s0=lerp(4,10.4,t), q=pt(a,sd*s0,h(lerp(2.6,6.6,t))); x.fillStyle=rgb(under? L(mulv(UGRY,.8),.7) : L(DEEP)); x.beginPath(); x.arc(q[0],q[1],Math.max(.5,px*.75),0,6.283); x.fill(); }   /* the secondaries' rounded tips along the trailing edge */
-      if(!under) for(let i=0;i<4;i++){ const t=(i+.5)/4, a0=pt(lerp(1,-3,t),sd*lerp(3,8,t),h(lerp(1.8,4.8,t))); x.fillStyle=rgb(L(BLU2,1.2),.35); x.beginPath(); x.arc(a0[0],a0[1],Math.max(.4,px*.9),0,6.283); x.fill(); }   /* the bright coverts */
-      if(glow>.08){ x.strokeStyle=rgb([255,200,130],glow*.5); x.lineWidth=Math.max(.4,px*.3); x.beginPath(); x.moveTo(Tp[0],Tp[1]); x.quadraticCurveTo(T2[0],T2[1],Tr[0],Tr[1]); x.stroke(); } };
+    /* an eastern bluebird: sky-blue back, wings and tail with dusky flight feathers, a warm rust throat and breast, white belly and vent;
+       underneath, the wings are pale silver-grey with darker grey flight feathers */
+    const BLU=[46,104,214], BLU2=[104,164,238], DEEP=[26,50,120], TIPS=[22,28,52], RUST=[198,108,52], RUST2=[220,140,80], BELLY=[238,234,226], ULIN=[214,214,220], UFLT=[136,140,154];
+    const wing=(sd,fl,ghost)=>{ const h=k=>fl*k, bend=Math.abs(fl)*.3;
+      const wa=Math.atan2(fl*9.4,15), sw=[0,1,2].map(i=>r[i]*sd*Math.cos(wa)+u[i]*Math.sin(wa)), tn=crs(sw,f).map(c=>c*sd), under=dot(tn,toEye)<0, lit=litOf(under? tn.map(c=>-c) : tn);
+      const P_=(a,s)=>pt(a,sd*s,h(s*.62)+bend*Math.min(1,s/8));   /* a point on the wing, by distance back from the leading edge (a) and out along the span (s) */
+      /* the planform: rounded arm, a short pointed hand made of separate primaries, a scalloped trailing edge */
+      const lead=[[2.4,1.6],[2,5],[1.4,8],[.4,10.6],[-1,12.6]], trail=[[-6,8.4],[-6.4,6],[-6.2,3.6],[-4.4,1.6]];
+      const base=lead.map(([a,s])=>P_(a,s)).concat([P_(-2.2,13.2)],trail.map(([a,s])=>P_(a,s)));
+      const g=x.createLinearGradient(...P_(1.8,4),...P_(-6,5));
+      if(under){ g.addColorStop(0,rgb(L(ULIN,lit))); g.addColorStop(.45,rgb(L(ULIN,lit*.9))); g.addColorStop(.55,rgb(L(UFLT,lit))); g.addColorStop(1,rgb(mixv(L(UFLT,lit*.9),[250,200,140],glow*.25))); }
+      else { g.addColorStop(0,rgb(L(BLU2,lit))); g.addColorStop(.45,rgb(L(BLU,lit))); g.addColorStop(.6,rgb(L(DEEP,lit))); g.addColorStop(1,rgb(L(DEEP,lit*.85))); }
+      smooth(base,g);
+      /* the primaries: six long feathers fanning out to the wingtip, each its own shape */
+      for(let i=0;i<6;i++){ const t=i/5, a0=lerp(.2,-5.4,t), s0=lerp(10.2,8.4,t), ang=lerp(.12,-.55,t), len=lerp(5.6,4,t)+(i===1||i===2? .6 : 0), ta=a0+Math.sin(ang)*len, ts=s0+Math.cos(ang)*len, wd=.85;
+        const q=[P_(a0+wd,s0),P_(a0+wd*.7+(ta-a0)*.55,s0+(ts-s0)*.55),P_(ta,ts),P_(a0-wd*.7+(ta-a0)*.55,s0+(ts-s0)*.55),P_(a0-wd,s0)];
+        smooth(q,rgb(under? mixv(L(UFLT,lit*(i%2? .9 : 1)),[250,200,140],glow*.3) : L(i%2? TIPS : mixv(TIPS,DEEP,.4),lit)));
+        if(!ghost&&px>.5) line(P_(a0,s0),P_(ta,ts),rgb(under? [228,228,232] : [70,90,140],.35),Math.max(.3,px*.12)); }   /* the pale feather shafts */
+      if(ghost) return;
+      /* the secondaries' rounded tips along the trailing edge */
+      for(let i=0;i<7;i++){ const t=(i+.5)/7, q=P_(lerp(-4.6,-6.2,t)-.3,lerp(1.8,8.6,t)); x.fillStyle=rgb(under? L(UFLT,lit*.9) : L(DEEP,lit*.8)); x.beginPath(); x.arc(q[0],q[1],Math.max(.5,px*.8),0,6.283); x.fill(); }
+      if(!under){ for(let row=0;row<2;row++) for(let i=0;i<5;i++){ const t=(i+.5)/5, q=P_(lerp(1.4,-.6,row)-t*.8,lerp(2.4,8,t)); x.fillStyle=rgb(L(BLU2,lit*1.15),.45); x.beginPath(); x.ellipse(q[0],q[1],Math.max(.4,px*.75),Math.max(.3,px*.5),0,0,6.283); x.fill(); } }   /* the bright coverts, laid like scales */
+      if(glow>.08){ const e0=P_(-2.2,13.2), e1=P_(-6,8.4), e2=P_(-6.2,3.6); x.strokeStyle=rgb([255,206,140],glow*.55); x.lineWidth=Math.max(.4,px*.3); x.beginPath(); x.moveTo(e0[0],e0[1]); x.quadraticCurveTo(e1[0],e1[1],e2[0],e2[1]); x.stroke(); }   /* sun shining through the feather edges */
+    };
+    const wings=sd=>{ if(glide){ wing(sd,.1); return; } const a0=x.globalAlpha, fl=k=>Math.sin(flap+k)*.95+.08;                /* the quick beat of the wings, with the blur of the stroke either side */
+      x.globalAlpha=a0*.22; wing(sd,fl(-.55),true); wing(sd,fl(.55),true); x.globalAlpha=a0; wing(sd,fl(0)); };
     const near=sd=>{ const w=W3(0,sd*6,0); return w[0]*w[0]+w[1]*w[1]+w[2]*w[2]; }, farS=near(-1)>near(1)? -1 : 1;
-    const fl=glide? .12 : Math.sin(flap)*.95+.08;
-    wing(farS,fl);
-    { const t0=pt(-4.2,-1.4,0), t1=pt(-4.2,1.4,0), t2=pt(-11,2.2,-.3), t3=pt(-11.6,0,-.4), t4=pt(-11,-2.2,-.3); smooth([t0,t4,t3,t2,t1],rgb(under? L(UGRY,.7) : L(BLU))); }   /* the short, slightly notched tail */
-    const SECT=[[-5,1.2,1.0,.5],[-3.6,2.0,1.9,.3],[-1.8,2.6,2.6,0],[0,2.9,2.9,-.2],[1.8,2.8,2.8,-.2],[3.4,2.3,2.4,.1],[4.4,1.9,2.1,.5]];
+    const upN=u, under=dot(upN,toEye)<0, bodyLit=litOf(under? upN.map(c=>-c) : upN);
+    wings(farS);
+    /* the tail: short, square-ended, blue above and dusky grey beneath */
+    { const t0=pt(-4.4,-1.2,.2), t1=pt(-4.4,1.2,.2), t2=pt(-10,1.9,-.2), t3=pt(-10.3,.5,-.25), t4=pt(-10.3,-.5,-.25), t5=pt(-10,-1.9,-.2);
+      const g=x.createLinearGradient(t0[0],t0[1],t3[0],t3[1]); g.addColorStop(0,rgb(under? L([110,116,138],bodyLit) : L(BLU,bodyLit))); g.addColorStop(1,rgb(under? L([80,86,104],bodyLit) : L(TIPS,bodyLit)));
+      smooth([t0,t5,t4,t3,t2,t1],g); }
+    /* the body: plump and round-chested, tapering to the tail */
+    const SECT=[[-5.2,1.1,1.0,.5],[-4,1.9,1.9,.3],[-2.4,2.6,2.7,0],[-.6,3.0,3.1,-.25],[1.2,3.0,3.1,-.3],[2.8,2.6,2.7,-.1],[4,2.2,2.3,.3]];
     const body=new Path2D(); for(let i=0;i<SECT.length-1;i++){ const A=SECT[i], B=SECT[i+1]; for(let k=0;k<3;k++){ const t=k/3, a=lerp(A[0],B[0],t), w=lerp(A[1],B[1],t), hh=lerp(A[2],B[2],t), zc=lerp(A[3],B[3],t);
-        for(let j=0;j<14;j++){ const th=j/14*6.283, q=pt(a,w*Math.cos(th),zc+hh*Math.sin(th)); j? body.lineTo(q[0],q[1]) : body.moveTo(q[0],q[1]); } body.closePath(); } }
-    x.fillStyle=rgb(L(under? RUST : BLU)); x.fill(body);
+        for(let j=0;j<16;j++){ const th=j/16*6.283, q=pt(a,w*Math.cos(th),zc+hh*Math.sin(th)); j? body.lineTo(q[0],q[1]) : body.moveTo(q[0],q[1]); } body.closePath(); } }
+    x.fillStyle=rgb(L(RUST,bodyLit)); x.fill(body);
     x.save(); x.clip(body);
-    { const tp=pt(0,0,3.4), bt=pt(0,0,-3.2), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]); g.addColorStop(0,rgb(L(BLU2,1.1))); g.addColorStop(.4,rgb(L(BLU))); g.addColorStop(.55,rgb(L(RUST))); g.addColorStop(.85,rgb(L(RUST,.9))); g.addColorStop(1,rgb(L(BELLY,.8))); x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); }   /* blue above, a rusty breast, white under the tail */
-    { const bl=pt(-3.2,0,-1.6), rr=Math.max(1,sc(-3)*2.2), g=x.createRadialGradient(bl[0],bl[1],0,bl[0],bl[1],rr); g.addColorStop(0,rgb(L(BELLY),.85)); g.addColorStop(1,rgb(L(BELLY),0)); x.fillStyle=g; x.fillRect(bl[0]-rr,bl[1]-rr,rr*2,rr*2); }
+    { const tp=pt(0,0,3.4), bt=pt(0,0,-3.3), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]);                   /* blue across the back, the rust breast below it, softly meeting */
+      g.addColorStop(0,rgb(L(BLU2,Math.min(1,bodyLit*1.2)))); g.addColorStop(.32,rgb(L(BLU,bodyLit))); g.addColorStop(.48,rgb(L(mixv(BLU,RUST,.55),bodyLit))); g.addColorStop(.6,rgb(L(RUST2,bodyLit))); g.addColorStop(1,rgb(L(RUST,bodyLit*.75)));
+      x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); }
+    { const bl=pt(-3.4,0,-1.7), rr=Math.max(1,sc(-3)*3), g=x.createRadialGradient(bl[0],bl[1],0,bl[0],bl[1],rr); g.addColorStop(0,rgb(L(BELLY,bodyLit),.95)); g.addColorStop(.6,rgb(L(BELLY,bodyLit),.5)); g.addColorStop(1,rgb(L(BELLY,bodyLit),0)); x.fillStyle=g; x.fillRect(bl[0]-rr,bl[1]-rr,rr*2,rr*2); }   /* the white belly and vent */
+    { const s0=proj(P[0]+sunL[0]*.03,P[1]+sunL[1]*.03,P[2]+sunL[2]*.03), c0=pt(0,0,0), dx=s0[0]-c0[0], dy=s0[1]-c0[1], dd=Math.hypot(dx,dy)||1, R=sc(0)*3.6;   /* the rim of gold on the side toward the sun */
+      const g=x.createLinearGradient(c0[0]-dx/dd*R,c0[1]-dy/dd*R,c0[0]+dx/dd*R,c0[1]+dy/dd*R); g.addColorStop(0,"rgba(10,14,30,.25)"); g.addColorStop(.6,"rgba(255,200,130,0)"); g.addColorStop(1,`rgba(255,206,140,${(.25+glow*.35).toFixed(2)})`); x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); }
     x.restore();
-    const hd=pt(5.4,0,1.2), rH=Math.max(.8,sc(5.4)*2.1);
-    { const g=x.createRadialGradient(hd[0]-rH*.3,hd[1]-rH*.35,0,hd[0],hd[1],rH); g.addColorStop(0,rgb(L(BLU2,1.2))); g.addColorStop(1,rgb(L(BLU))); x.fillStyle=g; x.beginPath(); x.arc(hd[0],hd[1],rH,0,6.283); x.fill(); }
-    { const th=pt(6,0,-.6), rr=Math.max(.6,sc(6)*1.2), g=x.createRadialGradient(th[0],th[1],0,th[0],th[1],rr); g.addColorStop(0,rgb(L(RUST),.8)); g.addColorStop(1,rgb(L(RUST),0)); x.fillStyle=g; x.fillRect(th[0]-rr,th[1]-rr,rr*2,rr*2); }   /* the rusty throat */
-    for(const sd of [-1,1]){ const side=[r[0]*sd,r[1]*sd,r[2]*sd]; if(dot(side,toEye)<-.1) continue; const ey=pt(6.6,sd*1.5,1.6), er=Math.max(.35,sc(6.6)*.42);
-      x.fillStyle="rgba(10,10,14,.95)"; x.beginPath(); x.arc(ey[0],ey[1],er,0,6.283); x.fill(); x.fillStyle="rgba(255,250,240,.7)"; x.beginPath(); x.arc(ey[0]-er*.3,ey[1]-er*.3,er*.3,0,6.283); x.fill(); }
-    { const b0=pt(7,.55,1.1), b1=pt(7,-.55,1.1), bt=pt(8.8,0,.8), bb=pt(7.1,0,.5); x.fillStyle=rgb(L(BLK,1.2)); x.beginPath(); x.moveTo(b0[0],b0[1]); x.lineTo(bt[0],bt[1]); x.lineTo(b1[0],b1[1]); x.lineTo(bb[0],bb[1]); x.closePath(); x.fill(); }
-    wing(-farS,fl);
+    /* the head: big and round, the blue cap, a rusty throat, a dark eye with a pale ring, the small black bill */
+    const hd=pt(5.2,0,1.3), rH=Math.max(.9,sc(5.2)*2.55);
+    { const g=x.createRadialGradient(hd[0]-rH*.35,hd[1]-rH*.4,rH*.1,hd[0],hd[1],rH); g.addColorStop(0,rgb(L(BLU2,Math.min(1,bodyLit*1.25)))); g.addColorStop(.7,rgb(L(BLU,bodyLit))); g.addColorStop(1,rgb(L(DEEP,bodyLit))); x.fillStyle=g; x.beginPath(); x.arc(hd[0],hd[1],rH,0,6.283); x.fill(); }
+    { const th=pt(5.4,0,-.8), rr=Math.max(.6,sc(5.4)*1.6), g=x.createRadialGradient(th[0],th[1],0,th[0],th[1],rr); g.addColorStop(0,rgb(L(RUST2,bodyLit),.9)); g.addColorStop(1,rgb(L(RUST,bodyLit),0)); x.fillStyle=g; x.fillRect(th[0]-rr,th[1]-rr,rr*2,rr*2); }
+    for(const sd of [-1,1]){ const side=[r[0]*sd,r[1]*sd,r[2]*sd], fc=dot(side,toEye); if(fc<-.15) continue; const ey=pt(6.4,sd*1.75,1.7), er=Math.max(.4,sc(6.4)*.5)*Math.min(1,.5+fc);
+      x.fillStyle="rgba(232,226,214,.55)"; x.beginPath(); x.arc(ey[0],ey[1],er*1.35,0,6.283); x.fill();
+      x.fillStyle="rgba(8,8,12,.96)"; x.beginPath(); x.arc(ey[0],ey[1],er,0,6.283); x.fill(); x.fillStyle="rgba(255,250,240,.8)"; x.beginPath(); x.arc(ey[0]-er*.3,ey[1]-er*.35,er*.28,0,6.283); x.fill(); }
+    { const b0=pt(7.2,.55,1.3), b1=pt(7.2,-.55,1.3), bt=pt(8.9,0,.95), bb=pt(7.3,0,.7); x.fillStyle="rgb(26,24,28)"; x.beginPath(); x.moveTo(b0[0],b0[1]); x.lineTo(bt[0],bt[1]); x.lineTo(b1[0],b1[1]); x.lineTo(bb[0],bb[1]); x.closePath(); x.fill(); }
+    wings(-farS);
     return W3(8.4,0,.8);
   }
   function startBanner(){ const dir=Math.random()<.5?1:-1; ban={t:0,dir,dur:rnd(19,23),ph:[rnd(0,6),rnd(0,6)],fy:rnd(.12,.17),z0:rnd(1.75,2.05)}; }
