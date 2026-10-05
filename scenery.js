@@ -217,9 +217,12 @@ var natureSfx=(function(){
     const k=R(.93,1.07), f1=1350*k, f2=1250*k;
     note(at,.34,t=>f1*(.84+.16*sm(t/.07))*(1+.03*sm((t-.1)/.2))*(1-.04*sm((t-.28)/.06)),.055);                         /* whee: scoops up, settles, drops off */
     note(at+.48,.95,t=>f2*(.84+.16*sm(t/.08))*(1+.04*sm((t-.1)/.3))*(1+1.8*Math.pow(sm((t-.42)/.5),1.3)),.065); }   /* wheeeeEEEET: holds, then climbs well over an octave right to the end */
-  function honk(xFrac,near){
-    if(!ctx||!live||Math.random()<.15) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=950; bp.Q.value=1.6; bp.connect(o);
-    const v=.075*Math.max(.35,near); let at=now; const n=1+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ const f=R(310,380); tone(at,f*.82,f,.05,v*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,v,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,v*.35,bp,"square"); at+=R(.24,.42); }   /* the two-part a-honk of a Canada goose */
+  /* a flock of Canada geese going over: each goose honks from its own place in the V, panned hard across the stereo field, so you hear them spread out and moving */
+  function honk(xFrac,near,spread){
+    if(!ctx||!live) return; const now=ctx.currentTime+.02, base=Math.max(-1,Math.min(1,(xFrac*2-1)*1.4)), sp=Math.max(.35,spread||.5);
+    const v=.075*Math.max(.35,near); let at=now; const n=2+Math.floor(Math.random()*4);
+    for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))), o=voice(master,pan), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(880,1020); bp.Q.value=1.6; bp.connect(o);
+      const f=R(300,390), vv=v*R(.6,1); tone(at,f*.82,f,.05,vv*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,vv,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,vv*.35,bp,"square"); at+=R(.14,.38); }   /* the two-part a-honk, overlapping voices */
   }
   function apply(){
     const want=wanted();
@@ -258,9 +261,20 @@ const ambient=(function(){
       let r=(.48+.52*tip+serr)*(.78+.22*Math.cos(th)); if(Math.abs(Math.sin(th/2))>.97) r*=.35;   /* pointed lobes, smaller toward the stem */
       const x=r*Math.cos(a), y=r*Math.sin(a)*1.02; i? maple.lineTo(x,y) : maple.moveTo(x,y); }
     maple.closePath();
-    const oak=new Path2D(); const M=60, side=[];
-    for(let i=0;i<=M;i++){ const y=-1+2*i/M, w=.42*Math.sqrt(Math.max(0,1-y*y))*(1+.28*Math.sin((y+1)*Math.PI*3.2))+.04; side.push([w,y]); }
-    oak.moveTo(0,-1); side.forEach(([w,y])=>oak.lineTo(w,y)); side.slice().reverse().forEach(([w,y])=>oak.lineTo(-w,y)); oak.closePath();
+    /* a red oak leaf: deep rounded sinuses cutting nearly to the midrib, and pointed lobes that end in two or three bristle-tipped teeth */
+    const oak=new Path2D();
+    const half=(sd,dy)=>{ const P=[];
+      P.push([.05,-.97],[.15,-.84],[.09,-.8],[.2,-.7]);                                                 /* the terminal lobe's teeth */
+      const lobes=[[-.42+dy,.56],[.04+dy,.62],[.46+dy,.42]];
+      let yPrev=-.68;
+      for(const [y0,Lw] of lobes){ const ys=(yPrev+y0)/2+.02;
+        P.push([.15,ys-.05],[.11,ys],[.15,ys+.05]);                                                       /* the rounded sinus, cut deep toward the midrib */
+        P.push([Lw*.55,y0-.2],[Lw*.72,y0-.27],[Lw*.68,y0-.19],[Lw*1.0,y0-.17],[Lw*.86,y0-.08],[Lw*.94,y0+.02],[Lw*.7,y0+.04],[Lw*.4,y0+.1]);   /* the lobe and its bristle-tipped teeth, swept forward */
+        yPrev=y0; }
+      P.push([.14,.66],[.2,.74],[.12,.86],[.03,.93],[.02,1]);                                            /* the wedge-shaped base and the stem */
+      return P.map(([w,y])=>[w*sd,y]); };
+    const R=half(1,0), Lf=half(-1,.05).reverse();
+    oak.moveTo(0,-1); for(const [x,y] of R) oak.lineTo(x,y); for(const [x,y] of Lf) oak.lineTo(x,y); oak.closePath();
     return {birch,maple,oak};
   })();
   function newLeaf(top){
@@ -379,6 +393,7 @@ const ambient=(function(){
     const vein=`rgba(${back?"70,40,18":"255,214,150"},${back?.4:.35})`;                                                        /* veins: pale on the face, dark on the back */
     ctx.save(); ctx.clip(p); ctx.strokeStyle=vein; ctx.lineWidth=1.6/S; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(0,-.85); ctx.lineTo(0,1.4);
     if(l.kind==="maple"){ for(const [a,b] of [[-.62,-.45],[.62,-.45],[-.7,.35],[.7,.35]]){ ctx.moveTo(0,.22); ctx.lineTo(a,b); } }
+    else if(l.kind==="oak"){ for(const [y0,Lw,dy] of [[-.42,.56,0],[.04,.62,0],[.46,.42,0]]) for(const sd of [-1,1]){ const yy=y0+(sd<0?.05:0); ctx.moveTo(0,yy+.12); ctx.quadraticCurveTo(sd*Lw*.45,yy-.02,sd*Lw*.95,yy-.16); } ctx.moveTo(0,-.6); ctx.lineTo(.12,-.82); ctx.moveTo(0,-.6); ctx.lineTo(-.12,-.82); }   /* a vein out to each lobe tip */
     else { for(let i=0;i<6;i++){ const yy=-.65+i*.28, w=(l.kind==="oak"?.36:.5)*Math.sqrt(Math.max(0,1-yy*yy)); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(w*.5,yy-.02,w,yy-.14); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(-w*.5,yy-.02,-w,yy-.14); } }
     ctx.stroke(); ctx.restore();
     { const b0=l.kind==="maple"? .3 : .92; ctx.strokeStyle=vein; ctx.lineWidth=1.6/S; ctx.beginPath(); ctx.moveTo(0,b0); ctx.lineTo(0,b0+.3); ctx.stroke(); }   /* a short stem */
@@ -408,7 +423,7 @@ const ambient=(function(){
       f.X+=f.hx*f.sp*dt; f.Z+=f.hz*f.sp*dt; f.bob+=dt*.5;
       if(f.Z<4) f.done=true;
       const haze=Math.max(0,Math.min(.85,(f.Z-8)/50)); let any=false;
-      f.honk-=dt; if(f.honk<=0){ f.honk=rnd(.8,3.5); const c=w2s(f.X,f.Y,f.Z); if(c.x>0&&c.x<W&&typeof natureSfx!=="undefined") natureSfx.honk(c.x/W,Math.min(1,9/f.Z)); }
+      f.honk-=dt; if(f.honk<=0){ f.honk=rnd(.7,2.4); const c=w2s(f.X,f.Y,f.Z); if(c.x>0&&c.x<W&&typeof natureSfx!=="undefined") natureSfx.honk(c.x/W,Math.min(1,9/f.Z),Math.min(.9,Math.max(.35,40/f.Z))); }
       ctx.save(); ctx.lineCap="round"; ctx.lineJoin="round";
       for(const bd of f.birds){ bd.ph+=dt*bd.f;
         const X=f.X+f.hx*bd.b+f.px*bd.s, Z=f.Z+f.hz*bd.b+f.pz*bd.s, Y=f.Y+bd.y+Math.sin(f.bob+bd.b)*.04;
