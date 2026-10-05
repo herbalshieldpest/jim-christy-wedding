@@ -655,8 +655,8 @@ const ambient=(function(){
   /* ---- flushed birds, flown in 3D: they burst from cover and climb away from you toward the far hills, shrinking into the distance ---- */
   /* world: X sideways, Y height (camera at 1), Z depth; on screen x = vx + X*f/Z, y = vy + (1-Y)*f/Z */
   function w2s(X,Y,Z){ const v=vanish(), k=FOC()/Z; return {x:v[0]+X*k, y:v[1]+(1-Y)*k, k}; }
-  function flyStart(kind){
-    const [p0]=flushPath(), gp=toGround(p0[0],p0[1]);
+  function flyStart(kind,at){
+    const p0=at||flushPath()[0], gp=at? {Xw:at.Xw,Dw:at.Dw} : toGround(p0[0],p0[1]);
     const away=Math.PI/2+rnd(-.75,.75)*(Math.random()<.5?1:-1)*.9;
     return {kind, X:gp.Xw, Y:.04, Z:trueZ(gp.Dw), yaw:away, yawT:away+rnd(-.35,.35), v:0, vmax:kind==="pheas"?rnd(1.9,2.4):rnd(2.2,2.8), alt:rnd(.55,1.05), age:0, ph:rnd(0,6), dur:kind==="pheas"?rnd(7,9):rnd(6.5,8), p0};
   }
@@ -690,10 +690,11 @@ const ambient=(function(){
     b.climb=lerp(b.climb||1.1,Math.atan2(dY/dt||0,b.v||1),Math.min(1,dt*3));
     const pheas=b.kind==="pheas", burst=b.age<(pheas?1.4:1.1), cyc=(b.age-(pheas?1.4:1.1))%(pheas?2.2:1.6), flap=burst||cyc<(pheas?.6:.75);
     b.ph+=dt*(burst?(pheas?24:28):flap?(pheas?15:17):0);
-    const s=w2s(b.X,b.Y,b.Z), worldSpan=b.kind==="pheas"?.26:.22, u=worldSpan*s.k/60; b.sx=s.x; b.sy=s.y; b.sr=Math.max(26,worldSpan*s.k*.7); b.st=Math.max(1,Math.min(2.2,u*1.6));
+    const s=w2s(b.X,b.Y,b.Z), worldSpan=b.kind==="pheas"?.26:b.kind==="quail"?.19:.22, u=worldSpan*s.k/60; b.sx=s.x; b.sy=s.y; b.sr=Math.max(26,worldSpan*s.k*.7); b.st=Math.max(1,Math.min(2.2,u*1.6));
     const haze=Math.max(0,Math.min(.8,(b.Z-4)/22)), hz=dark?[60,52,44]:[200,176,134];
     const lit=dark?.5:.72, M=c=>rgb(mixv(mulv(c,lit),hz,haze));
     const C= pheas? {wing:M([128,94,58]),body:M([150,76,34]),head:M([22,58,50]),tail:M([124,88,52]),ring:M([214,206,192]),dark:M([40,30,20])}
+                  : b.kind==="quail"? {wing:M([132,100,66]),body:M([150,104,62]),head:M([92,60,38]),tail:M([110,84,58]),dark:M([36,26,18])}
                   : {wing:M([118,92,62]),body:M([104,78,50]),head:M([96,72,46]),tail:M([112,86,56]),dark:M([40,30,20])};
     const pitch=Math.atan2(1-b.Y,b.Z);
     const fade=Math.max(0,Math.min(1,(b.dur-b.age)/1.2));
@@ -798,6 +799,13 @@ const ambient=(function(){
     pheas=flyStart("pheas"); flushBits(pheas.p0,22,["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#a33b25"],1.2);
     if(typeof natureSfx!=="undefined") natureSfx.flush("pheas",pheas.p0[0]/W);
   }
+  /* a covey of bobwhite quail exploding out of the grass in front of the dog: a whirr of small birds scattering every which way */
+  let covey=[];
+  function flushQuail(at){ const n=5+Math.floor(Math.random()*5);
+    for(let i=0;i<n;i++){ const q=flyStart("quail",{Xw:at.Xw+rnd(-.05,.05),Dw:at.Dw+rnd(-.04,.04),0:at[0],1:at[1]}); q.vmax=rnd(1.5,2); q.alt=rnd(.25,.5); q.dur=rnd(4,5.5); q.yaw+=rnd(-1,1); q.yawT=q.yaw+rnd(-.4,.4); q.age=-rnd(0,.25); covey.push(q); }
+    flushBits(at,26,["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e"],.9);
+    if(typeof natureSfx!=="undefined"){ natureSfx.flush("grouse",at[0]/W); setTimeout(()=>natureSfx.flush&&natureSfx.flush("grouse",at[0]/W+.05),120); } }
+  function drawCovey(dt,dark){ for(let i=covey.length-1;i>=0;i--){ const q=covey[i]; if(q.age<0){ q.age+=dt; continue; } if(!drawFlier(q,dt,dark)) covey.splice(i,1); } }
   function drawPheasant(dt,dark){
     if(!pheas){ nextPheas-=dt; if(nextPheas<=0) flushPheasant(); return; }
     if(!drawFlier(pheas,dt,dark)){ pheas=null; nextPheas=rnd(70,150); }
@@ -1686,7 +1694,7 @@ const ambient=(function(){
       if(romping){ if(dist<.02&&!d.it) rompArrive(d); return; }
       if(d.toViewer){ if(dist<.02){ d.toViewer=false; d.state="greet"; d.t=0; startGreet(d); } return; }
       if(dist<.02){ d.legs--;
-        if(!d.lab && !d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
+        if(!d.lab && (d.points||0)<2 && d.legs<=5 && t-(d.lastPoint??-99)>12 && Math.random()<.55){ d.state="point"; d.t=0; d.pt=rnd(2.6,4.2); d.points=(d.points||0)+1; d.lastPoint=t; d.pointed=true; d.flushed=false; d.idleYaw=d.yaw; }
         else if(d.legs<=0){ d.state="leave"; const s=toScreen(d.Xw,d.Dw), p=toGround(d.dir>0? W+140 : -140, gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
         else if(Math.random()<.28) dogSit(d,false);
         else if(Math.random()<(d.lab?.5:.3)){ d.state="sniff"; d.t=0; d.st=d.lab?rnd(1.4,3):rnd(.8,1.6); }
@@ -1700,8 +1708,12 @@ const ambient=(function(){
     if(d.state==="greet"){ d.alpha=Math.max(0,d.alpha-dt*4); if(d.alpha<=0) d.hidden=true; return; }   /* drops out of sight below the view as the close-up takes over */
     if(d.state==="pause"){ d.head+=(-.15-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; rompTarget(d); } return; }   /* a quick stop mid-romp, head up */
     if(d.state==="point"){ d.head+=(-.05-d.head)*Math.min(1,dt*10);                                          /* frozen: head level, tail up, a forepaw lifted */
-      if(!d.flushed && d.t>d.pt*.7){ d.flushed=true; if(!grouse&&!pheas){ if(Math.random()<.6) flushPheasant(); else flushGrouse(); } }
-      if(d.t>d.pt){ d.state="run"; dogTarget(d); } }
+      if(!d.flushed && d.t>d.pt){ d.flushed=true;                                                       /* staunch on point, holding, holding... then the bird goes up a few feet ahead of the nose */
+        const fx=Math.cos(d.yaw), fz=Math.sin(d.yaw), g0=toScreen(d.Xw,d.Dw).g, Xw=d.Xw+fx*55/g0, Dw=d.Dw*(1+fz*.1), sc=toScreen(Xw,Dw), at=Object.assign([sc.x,sc.y],{Xw,Dw});
+        if(Math.random()<.5){ if(!pheas&&!grouse){ pheas=flyStart("pheas",at); flushBits(at,22,["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#a33b25"],1.2); if(typeof natureSfx!=="undefined") natureSfx.flush("pheas",at[0]/W); } else flushQuail(at); }
+        else flushQuail(at);
+        d.afterFlush=rnd(.6,1.1); }
+      if(d.flushed){ d.afterFlush-=dt; if(d.afterFlush<=0){ d.state="run"; dogTarget(d); } } }
   }
   function dogParts(d,P,moving){
     const q=d.ph*Math.PI*.9, yaw=d.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], point=d.state==="point";
@@ -3142,7 +3154,7 @@ const ambient=(function(){
     for(const f of flies) tag(f.x,f.y,10,"Firefly",true);
     for(const m of motes2) tag(m.x,m.y,18,"Miller moth");
     for(const f of flocks){ const c=w2s(f.X,f.Y,f.Z); tag(c.x,c.y,Math.max(30,40*9/Math.max(4,f.Z)),"Canada geese"); }
-    if(grouse&&grouse.sx!=null) tag(grouse.sx,grouse.sy,grouse.sr,"Ruffed grouse"); if(pheas&&pheas.sx!=null) tag(pheas.sx,pheas.sy,pheas.sr,"Ring-necked pheasant");
+    for(const q of covey) if(q.sx!=null) tag(q.sx,q.sy,q.sr,"Northern bobwhite"); if(grouse&&grouse.sx!=null) tag(grouse.sx,grouse.sy,grouse.sr,"Ruffed grouse"); if(pheas&&pheas.sx!=null) tag(pheas.sx,pheas.sy,pheas.sr,"Ring-necked pheasant");
     if(pheasW) T(pheasW,"Ring-necked pheasant",26);
     if(pf){ const F=H*.5; tag(W/2+pf.P[0]*F/pf.P[2],H*.52+pf.P[1]*F/pf.P[2],Math.min(260,.016*20*F/Math.max(.3,pf.P[2])),"Ring-necked pheasant"); }
     if(jays) for(const k of ["b0","b1"]){ const b=jays[k]; if(b&&b.pp){ const F=H*.5; tag(W/2+b.pp[0]*F/b.pp[2],H*.52+b.pp[1]*F/b.pp[2],Math.min(160,.011*18*F/Math.max(.3,b.pp[2])),"Blue jay"); } }
@@ -3552,7 +3564,7 @@ const ambient=(function(){
       drawHenAll(dt,dark,L);
       if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||(hawkG.state==="leave"&&hawkG.st<.5))) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L);
-      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); }
+      L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
@@ -3567,5 +3579,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ dog.state="point"; dog.t=0; dog.pt=2.5; dog.flushed=false; } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
