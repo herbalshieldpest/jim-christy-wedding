@@ -45,10 +45,10 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 .scn-tag::before{transform:scaleX(-1)}
 @media (max-width:640px){.scn-tag{font-size:13px!important;letter-spacing:.2em!important;gap:9px;padding:9px 12px 8px calc(12px + .2em)!important}.scn-tag::before,.scn-tag::after{width:30px;height:7px}}
 /* the names arrive: from far too close and out of focus, settling into place */
-@keyframes lockIn{from{opacity:0;scale:4;filter:blur(26px)}55%{filter:blur(3px)}to{opacity:1;scale:1;filter:blur(0)}}
-.lockup .kicker,.lockup .nm,.lockup .amp,.lockup .line{animation:lockIn 2.2s cubic-bezier(.14,.72,.2,1) backwards;transform-origin:50% 50%}
+@keyframes lockIn{from{opacity:0;scale:1.5;filter:blur(10px)}to{opacity:1;scale:1;filter:blur(0)}}
+.lockup .kicker,.lockup .nm,.lockup .amp,.lockup .line{animation:lockIn 1s cubic-bezier(.2,.7,.25,1) backwards;transform-origin:50% 50%}
 .lockup .nm,.lockup .amp{display:inline-block}
-.lockup .kicker{animation-delay:.15s}.lockup .nm1{animation-delay:.5s}.lockup .amp{animation-delay:.85s}.lockup .nm2{animation-delay:1.05s}.lockup .line{animation-delay:1.5s}   /* one after another */
+.lockup .kicker{animation-delay:.1s}.lockup .nm1{animation-delay:.22s}.lockup .amp{animation-delay:.34s}.lockup .nm2{animation-delay:.42s}.lockup .line{animation-delay:.6s}   /* one after another */
 @media (prefers-reduced-motion:reduce){.lockup .kicker,.lockup .nm,.lockup .amp,.lockup .line{animation:none}}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,500;1,400&family=Jost:wght@500&display=swap">
