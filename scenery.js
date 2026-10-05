@@ -3096,7 +3096,7 @@ const ambient=(function(){
     x.lineCap="round"; x.strokeStyle=C([34,58,40]); x.lineWidth=wR*1.1; x.beginPath(); x.moveTo(tl[0],tl[1]); x.lineTo(tl2[0],tl2[1]); x.stroke();     /* tail */
     x.strokeStyle=C(front? [214,212,198] : [70,136,78]); x.lineWidth=wR*2.1; x.beginPath(); x.moveTo(tl[0],tl[1]); x.lineTo(bc[0],bc[1]); x.stroke();   /* body: pale front, green back */
     if(front){ const g1=S(2,0,-.6); x.strokeStyle=C([70,136,78]); x.lineWidth=wR*1.2; x.beginPath(); x.moveTo(S(-3,1.4,.4)[0],S(-3,1.4,.4)[1]); x.lineTo(S(1.6,1.3,.6)[0],S(1.6,1.3,.6)[1]); x.moveTo(S(-3,-1.4,.4)[0],S(-3,-1.4,.4)[1]); x.lineTo(S(1.6,-1.3,.6)[0],S(1.6,-1.3,.6)[1]); x.stroke();   /* green flanks */
-      x.fillStyle=C([196,26,44]); x.beginPath(); x.arc(g1[0],g1[1],wR*.95,0,6.283); x.fill(); }                    /* the ruby gorget */
+      x.fillStyle=rgb([238,24,40]); x.beginPath(); x.arc(g1[0],g1[1],wR*1.05,0,6.283); x.fill(); x.fillStyle="rgba(255,120,110,.6)"; x.beginPath(); x.arc(g1[0]-wR*.25,g1[1]-wR*.25,wR*.4,0,6.283); x.fill(); }                    /* the ruby gorget */
     x.fillStyle=C([62,124,72]); x.beginPath(); x.arc(hd[0],hd[1],wR*.95,0,6.283); x.fill();
     for(const sd of [-1,1]){ const e=S(3.9,sd*.9,.9); x.fillStyle="rgba(8,6,6,.95)"; x.beginPath(); x.arc(e[0],e[1],Math.max(.6,wR*.22),0,6.283); x.fill(); }
     x.strokeStyle=C([26,22,20]); x.lineWidth=Math.max(.6,wR*.18); x.beginPath(); x.moveTo(hd[0],hd[1]); x.lineTo(bt[0],bt[1]); x.stroke();     /* the long needle bill */
@@ -3113,8 +3113,8 @@ const ambient=(function(){
     parts.push({p:[S(-3.2,0,0,1.1),S(-1.2,0,0,1.85),S(.7,0,0,1.85),S(1.9,0,0,1.3)],c:C(G),sh});                                      /* body: green back and flanks */
     parts.push({p:[S(-2.4,.75,0,.7),S(-1,.85,0,1.1),S(.3,.8,0,1.15)],c:C([168,170,156]),sh:[C([120,124,112]),C([186,186,172])],bias:-.05});                  /* pale front */
     parts.push({p:[S(1.1,.85,0,.75)],c:C([226,224,212]),bias:-.07});                                                                 /* white collar under the gorget */
-    parts.push({p:[S(1.6,.95,0,.95),S(2.5,.75,0,.85)],c:C([96,16,30]),sh:[C([50,10,18]),C([150,26,48])],bias:-.08});                                                   /* the ruby gorget, mostly dark until it catches the light */
-    parts.push({p:[S(2.2,1.45,.45,.18),S(2.5,1.3,.4,.12)],c:C([190,40,64]),bias:-.12});
+    parts.push({p:[S(1.5,.98,0,1.05),S(2.55,.78,0,.95)],c:rgb([236,22,40]),sh:[rgb([168,8,26]),rgb([255,86,90])],bias:-.08});   /* the ruby gorget, blazing red */                                                   /* the ruby gorget, mostly dark until it catches the light */
+    parts.push({p:[S(2.2,1.45,.45,.22),S(2.5,1.3,.4,.16)],c:rgb([255,70,72]),bias:-.12});   /* its glint */
     const hc=[3.0*ct-.2,3.0*st+.6,0];                                                                                                  /* the head sits nearly level whatever the body does */
     parts.push({p:[[hc[0],hc[1],0,1.42]],c:C(G),sh});
     for(const sd of [-1,1]){ parts.push({p:[[hc[0]+.45,hc[1]+.25,sd*1.05,.26]],c:"rgba(8,6,6,.96)",bias:-.2}); parts.push({p:[[hc[0]-.25,hc[1]+.2,sd*1.12,.14]],c:C(WH),bias:-.18}); }
