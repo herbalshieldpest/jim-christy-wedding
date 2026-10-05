@@ -46,10 +46,9 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 @media (max-width:640px){.scn-tag{font-size:13px!important;letter-spacing:.2em!important;gap:9px;padding:9px 12px 8px calc(12px + .2em)!important}.scn-tag::before,.scn-tag::after{width:30px;height:7px}}
 /* the names arrive: from far too close and out of focus, settling into place */
 @keyframes lockIn{from{opacity:0;scale:1.5;filter:blur(10px)}to{opacity:1;scale:1;filter:blur(0)}}
-.lockup .kicker,.lockup .nm,.lockup .amp,.lockup .line{animation:lockIn 1s cubic-bezier(.2,.7,.25,1) backwards;transform-origin:50% 50%}
-.lockup .nm,.lockup .amp{display:inline-block}
-.lockup .kicker{animation-delay:.1s}.lockup .nm1{animation-delay:.22s}.lockup .amp{animation-delay:.34s}.lockup .nm2{animation-delay:.42s}.lockup .line{animation-delay:.6s}   /* one after another */
-@media (prefers-reduced-motion:reduce){.lockup .kicker,.lockup .nm,.lockup .amp,.lockup .line{animation:none}}
+.lockup .kicker,.lockup h1,.lockup .line{animation:lockIn 1s cubic-bezier(.2,.7,.25,1) backwards;transform-origin:50% 50%}
+.lockup .kicker{animation-delay:.1s}.lockup h1{animation-delay:.25s}.lockup .line{animation-delay:.45s}   /* one after another */
+@media (prefers-reduced-motion:reduce){.lockup .kicker,.lockup h1,.lockup .line{animation:none}}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,500;1,400&family=Jost:wght@500&display=swap">
 </head>
@@ -59,7 +58,7 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 <main>
   <div class="lockup">
     <p class="kicker">The wedding of</p>
-    <h1><span class="nm nm1">Jim</span> <span class="amp">&amp;</span> <span class="nm nm2">Christy</span></h1>
+    <h1>Jim <span class="amp">&amp;</span> Christy</h1>
     <p class="line">June 19, 2027 <span class="dot" aria-hidden="true">&middot;</span> Grantsville, MD</p>
   </div>
 </main>
@@ -67,9 +66,9 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 /* centre the names by their actual ink, not their text box: the script's swashes reach well outside the letters */
 (function(){ const h=document.querySelector("h1"), lk=document.querySelector(".lockup"); if(!h||!lk) return;
   function fit(){ lk.style.marginLeft=""; const r=document.createRange(); r.selectNodeContents(h);
-    const c=document.createElement("canvas").getContext("2d"), cs=getComputedStyle(h); let L=Infinity, R=-Infinity, x=h.getBoundingClientRect().left+parseFloat(cs.paddingLeft);
+    const c=document.createElement("canvas").getContext("2d"), cs=getComputedStyle(h); const hr=h.getBoundingClientRect(), S=parseFloat(cs.scale)||1; let L=Infinity, R=-Infinity, x=hr.left+hr.width*(1-1/S)/2+parseFloat(cs.paddingLeft);   /* measured as it will sit, even mid-intro while it's still scaled */
     for(const node of h.childNodes){ const el=node.nodeType===1?node:h, st=getComputedStyle(el); c.font=st.fontStyle+" "+st.fontWeight+" "+st.fontSize+" "+st.fontFamily;
-      const txt=node.textContent, m=c.measureText(txt); L=Math.min(L,x-m.actualBoundingBoxLeft); R=Math.max(R,x+m.actualBoundingBoxRight); x+=(node.nodeType===1? node.getBoundingClientRect().width : (()=>{ const rr=document.createRange(); rr.selectNodeContents(node); return rr.getBoundingClientRect().width; })()); }
+      const txt=node.textContent, m=c.measureText(txt); L=Math.min(L,x-m.actualBoundingBoxLeft); R=Math.max(R,x+m.actualBoundingBoxRight); x+=(node.nodeType===1? node.getBoundingClientRect().width : (()=>{ const rr=document.createRange(); rr.selectNodeContents(node); return rr.getBoundingClientRect().width; })())/S; }
     const shift=innerWidth/2-(L+R)/2; if(Math.abs(shift)<200) lk.style.marginLeft=`${(2*shift).toFixed(1)}px`; }
   (document.fonts?document.fonts.ready:Promise.resolve()).then(fit); addEventListener("resize",fit); })();
 </script>
