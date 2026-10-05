@@ -217,8 +217,6 @@ var natureSfx=(function(){
     const k=R(.93,1.07), f1=1350*k, f2=1250*k;
     note(at,.34,t=>f1*(.84+.16*sm(t/.07))*(1+.03*sm((t-.1)/.2))*(1-.04*sm((t-.28)/.06)),.055);                         /* whee: scoops up, settles, drops off */
     note(at+.48,.95,t=>f2*(.84+.16*sm(t/.08))*(1+.04*sm((t-.1)/.3))*(1+1.8*Math.pow(sm((t-.42)/.5),1.3)),.065); }   /* wheeeeEEEET: holds, then climbs well over an octave right to the end */
-  /* a flock of Canada geese going over: each goose honks from its own place in the V, panned hard across the stereo field, so you hear them spread out and moving */
-  /* ravens: a deep, rough, gurgling "gronk", or the odd hollow wooden knock "tok-tok-tok" */
   /* peregrine: a harsh, rapid, scolding "kak-kak-kak-kak" */
   function falcon(pan){ if(!ctx||!live) return; const out=voice(master,pan||0); let at=ctx.currentTime+.03; const n=6+Math.floor(Math.random()*5), f0=R(1900,2200);
     for(let i=0;i<n;i++){ const o=ctx.createOscillator(); o.type="sawtooth"; o.frequency.setValueAtTime(f0*1.05,at); o.frequency.exponentialRampToValueAtTime(f0*.82,at+.09);
@@ -242,11 +240,25 @@ var natureSfx=(function(){
       const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(700,900); bp.Q.value=1.4; const bp2=ctx.createBiquadFilter(); bp2.type="bandpass"; bp2.frequency.value=1700; bp2.Q.value=3; const g2=ctx.createGain(); g2.gain.value=.4;
       const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09,at+.04); g.gain.setValueAtTime(.08,at+d*.6); g.gain.exponentialRampToValueAtTime(.0001,at+d);
       o.connect(bp); o.connect(bp2); bp2.connect(g2); g2.connect(g); bp.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); at+=d+R(.15,.3); } }
+  /* a flock of Canada geese going over. Each goose's call is the real two-part "ah-HONK": a short low grunt that breaks up into a loud, nasal,
+     brassy honk a good fifth higher, sliding down at the end. The nasal colour comes from a buzzy source pushed through a few resonances,
+     with a little rasp in it. Each goose honks from its own place in the stereo field. */
+  function gooseCall(at,pan,vol,near){ const out=voice(master,pan), f=R(250,300), hi=f*R(1.55,1.75), d1=R(.06,.09), d2=R(.16,.24);
+    const o=ctx.createOscillator(), o2=ctx.createOscillator(); o.type="sawtooth"; o2.type="square";
+    for(const [osc,m] of [[o,1],[o2,1.004]]){ osc.frequency.setValueAtTime(f*m,at); osc.frequency.linearRampToValueAtTime(f*1.05*m,at+d1*.8); osc.frequency.setValueAtTime(hi*1.04*m,at+d1); osc.frequency.linearRampToValueAtTime(hi*m,at+d1+.04); osc.frequency.exponentialRampToValueAtTime(hi*.84*m,at+d1+d2); }   /* ah — HONK, falling off */
+    const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=R(28,40); vg.gain.value=R(8,16); vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);   /* the throaty rattle */
+    const mix=ctx.createGain(), g2=ctx.createGain(); g2.gain.value=.45; o.connect(mix); o2.connect(g2); g2.connect(mix);
+    const env=ctx.createGain(); env.gain.setValueAtTime(0,at); env.gain.linearRampToValueAtTime(vol*.35,at+.015); env.gain.setValueAtTime(vol*.3,at+d1-.01); env.gain.linearRampToValueAtTime(vol,at+d1+.02); env.gain.setValueAtTime(vol*.9,at+d1+d2*.6); env.gain.exponentialRampToValueAtTime(.0001,at+d1+d2+.04);
+    const sum=ctx.createGain(); sum.gain.value=1;
+    for(const [fq,q,gn] of [[700,5,1],[1250,6,.9],[2400,7,.5],[3300,8,.25]]){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=fq*R(.94,1.06); bp.Q.value=q; const gg=ctx.createGain(); gg.gain.value=gn*1.6; mix.connect(bp); bp.connect(gg); gg.connect(sum); }   /* the nasal resonances */
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nb=ctx.createBiquadFilter(); nb.type="bandpass"; nb.frequency.value=1600; nb.Q.value=1; const ng=ctx.createGain(); ng.gain.value=.06; n.connect(nb); nb.connect(ng); ng.connect(sum);   /* breath */
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1800+Math.min(1,near)*4500;   /* far off they are softer and duller; close overhead, clear and full */
+    sum.connect(env); env.connect(lp); lp.connect(out);
+    const end=at+d1+d2+.08; o.start(at); o2.start(at); vib.start(at); n.start(at,R(0,2),end-at); o.stop(end); o2.stop(end); vib.stop(end); }
   function honk(xFrac,near,spread){
     if(!ctx||!live) return; const now=ctx.currentTime+.02, base=Math.max(-1,Math.min(1,(xFrac*2-1)*1.4)), sp=Math.max(.35,spread||.5);
-    const v=.02+.11*near; let at=now; const n=2+Math.floor(Math.random()*4);
-    for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))), o=voice(master,pan), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(880,1020); bp.Q.value=1.6; const lpf=ctx.createBiquadFilter(); lpf.type="lowpass"; lpf.frequency.value=1400+Math.min(1,near)*4000; bp.connect(lpf); lpf.connect(o);   /* far off they are softer and duller; close overhead, clear and full */
-      const f=R(300,390), vv=v*R(.6,1); tone(at,f*.82,f,.05,vv*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,vv,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,vv*.35,bp,"square"); at+=R(.14,.38); }   /* the two-part a-honk, overlapping voices */
+    const v=.03+.15*near; let at=now; const n=2+Math.floor(Math.random()*4);
+    for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))); gooseCall(at,pan,v*R(.6,1),near); if(Math.random()<.35) gooseCall(at+R(.28,.36),pan,v*R(.5,.8),near); at+=R(.18,.45); }   /* overlapping voices, some geese honking twice */
   }
   function apply(){
     const want=wanted();
