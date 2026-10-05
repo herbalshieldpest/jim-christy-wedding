@@ -3325,7 +3325,7 @@ const ambient=(function(){
     x.putImageData(D,0,0); return c; });
   let vigC=null, vigK=""; const scratches=[];
   /* ---- sun beams: soft shafts of light fanning out from the sun through the gaps in the clouds, each slowly brightening and fading on its own ---- */
-  let rayC=null, rayT=0, rayN=0; const RAYS=Array.from({length:13},(_,i)=>({a:(i+Math.random()*.6)/13*6.283,w:.035+Math.random()*.06,ph:Math.random()*6.283,sp:.06+Math.random()*.1,pk:.5+Math.random()*.5,dr:(Math.random()-.5)*.01}));
+  let rayC=null, rayT=0, rayN=0; const RAYS=Array.from({length:13},(_,i)=>({a:(i+Math.random()*.6)/13*6.283,w:.04+Math.random()*.065,ph:Math.random()*6.283,sp:.06+Math.random()*.1,pk:.5+Math.random()*.5,dr:(Math.random()-.5)*.01}));
   function drawRays(dt,dark){
     if(dark) return; let st=0; try{ const h=SC.sun(); st=h&&SC.shown()? h.strength : 0; }catch(e){} if(!(st>=.04)) return;
     rayT+=dt; rayN=(rayN+1)%2; const vyG=gnd().vy, bandH=Math.min(H,Math.ceil(vyG+H*.42)), cw=Math.max(1,Math.ceil(W/4)), ch=Math.max(1,Math.ceil(H/4));
@@ -3335,7 +3335,7 @@ const ambient=(function(){
     const x=rayC.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch); x.setTransform(.25,0,0,.25,0,0); x.globalCompositeOperation="lighter";
     const L=Math.hypot(W,H)*1.15;
     for(const r of RAYS){ const k=Math.pow(.5+.5*Math.sin(rayT*r.sp+r.ph),1.6); if(k<.02) continue;                          /* each beam comes and goes over half a minute or so */
-      const a=r.a+Math.sin(rayT*.03+r.ph)*.05+rayT*r.dr, amt=.36*r.pk*k*Math.min(1,st*1.8);
+      const a=r.a+Math.sin(rayT*.03+r.ph)*.05+rayT*r.dr, amt=.62*r.pk*k*Math.min(1,.55+st*1.4);
       for(const [wm,am] of [[2.2,.25],[1.4,.35],[.8,.4]]){ const w=r.w*wm, g=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,L);
         g.addColorStop(0,"rgba(255,214,150,0)"); g.addColorStop(.05,`rgba(255,212,148,${(amt*am).toFixed(3)})`); g.addColorStop(.35,`rgba(255,200,130,${(amt*am*.55).toFixed(3)})`); g.addColorStop(1,"rgba(255,190,120,0)");
         x.fillStyle=g; x.beginPath(); x.moveTo(sp.x,sp.y); x.lineTo(sp.x+Math.cos(a-w)*L,sp.y+Math.sin(a-w)*L); x.lineTo(sp.x+Math.cos(a+w)*L,sp.y+Math.sin(a+w)*L); x.closePath(); x.fill(); } }

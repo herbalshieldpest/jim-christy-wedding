@@ -67,7 +67,7 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
     const shift=innerWidth/2-(L+R)/2; if(Math.abs(shift)<200) lk.style.marginLeft=`${(2*shift).toFixed(1)}px`; }
   (document.fonts?document.fonts.ready:Promise.resolve()).then(fit); addEventListener("resize",fit); })();
 </script>
-<script>window.SceneryHost={photo:()=>"scene.jpg",fade:()=>0,key:"wed"};</script>
+<script>window.SceneryHost={photo:()=>"scene.jpg",fade:()=>0,key:"wed",banner:()=>{ const t=new Date(); t.setHours(0,0,0,0); const n=Math.round((new Date(2027,5,19)-t)/864e5); return n>1? n.toLocaleString()+" days to go" : n===1? "Tomorrow we wed" : n===0? "Today we wed" : ""; }};</script>   <!-- the bluebirds carry this on their ribbon -->
 <script src="scenery.js"></script>
 <script>
 const b=document.getElementById("snd");
