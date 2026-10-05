@@ -1880,7 +1880,7 @@ const ambient=(function(){
       ctx.globalAlpha=1; return;
     }
     /* the big one: comes in from right beside you, huge and soft, wings flashing, and flutters off into the evening toward the light */
-    nextHero-=dt; if(!hero&&nextHero<=0){ const sd=Math.random()<.5?-1:1; lunaDir=lunaDir==="out"?"in":"out"; hero={t:0,sp:"luna",dir:forceDir||lunaDir,X0:sd*rnd(.18,.3),Y0:rnd(.06,.16),ph:rnd(0,6),fl:0}; forceDir=null; }
+    nextHero-=dt; if(!hero&&nextHero<=0&&stageBusy()) nextHero=rnd(12,25); if(!hero&&nextHero<=0){ const sd=Math.random()<.5?-1:1; lunaDir=lunaDir==="out"?"in":"out"; hero={t:0,sp:"luna",dir:forceDir||lunaDir,X0:sd*rnd(.18,.3),Y0:rnd(.06,.16),ph:rnd(0,6),fl:0}; forceDir=null; }
     if(!hero) return; const h=hero; h.t+=dt; h.fl+=dt*Math.PI*2*(6.5+Math.sin(h.t*1.3)*1.5);
     const z=h.dir==="in"? 11*Math.exp(-h.t*.42) : .32*Math.exp(h.t*.42), F=H*.5, cx=W/2, cy=H*.52, pull=ease((z-.32)/2.4);   /* out: from beside you toward the sun; in: out of the sunset straight at you */
     const tX=(sp.x-cx)*z/F, tY=(sp.y+H*.08-cy)*z/F;
@@ -1955,7 +1955,7 @@ const ambient=(function(){
     wing(dl>dr? 1 : -1);
   }
   function drawFlock(dt,dark){
-    nextBB-=dt; if(!bbFlock&&nextBB<=0) startFlock(); if(!bbFlock) return;
+    nextBB-=dt; if(!bbFlock&&nextBB<=0){ if(stageBusy()) nextBB=rnd(12,25); else startFlock(); } if(!bbFlock) return;
     const f=bbFlock; f.t+=dt; const T=f.t, sp=sun(), F=H*.5, cx=W/2, cy=H*.52;
     const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(fcv.width!==cw||fcv.height!==ch){ fcv.width=cw; fcv.height=ch; }
     const x=fcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
@@ -2006,7 +2006,7 @@ const ambient=(function(){
     wing(-farS);
   }
   function drawPecker(dt,dark){
-    nextPecker-=dt; if(!pecker&&nextPecker<=0) startPecker(); if(!pecker) return;
+    nextPecker-=dt; if(!pecker&&nextPecker<=0){ if(stageBusy()) nextPecker=rnd(12,25); else startPecker(); } if(!pecker) return;
     const p=pecker; p.t+=dt; p.st+=dt; const A=scr(TRUNK[0][0],TRUNK[0][1]), B=scr(TRUNK[1][0],TRUNK[1][1]), L=Math.hypot(B[0]-A[0],B[1]-A[1]), sc=Math.max(.6,L/60);
     const at=u=>[lerp(A[0],B[0],u)-3*sc,lerp(A[1],B[1],u)];
     let peck=0; p.m=1; p.back=false;
@@ -2322,7 +2322,7 @@ const ambient=(function(){
     wing(-farS,fl);
   }
   function drawJays(dt,dark){
-    nextJays-=dt; if(!jays&&nextJays<=0) startJays(); if(!jays) return;
+    nextJays-=dt; if(!jays&&nextJays<=0){ if(stageBusy()) nextJays=rnd(12,25); else startJays(); } if(!jays) return;
     const J=jays; J.t+=dt; const T=J.t, u=T/J.dur, F=H*.5, cx=W/2, cy=H*.52;
     if(u>=1){ jays=null; nextJays=rnd(150,280); return; }
     const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(jcv.width!==cw||jcv.height!==ch){ jcv.width=cw; jcv.height=ch; }
@@ -2352,7 +2352,7 @@ const ambient=(function(){
   function blitRegion(cv,cxp,cyp,rad,blur,alpha){                       /* only the patch around the bird, so the blur doesn't run over the whole frame */
     const k=.6, x0=Math.max(0,Math.floor((cxp-rad)*k)), y0=Math.max(0,Math.floor((cyp-rad)*k)), x1=Math.min(cv.width,Math.ceil((cxp+rad)*k)), y1=Math.min(cv.height,Math.ceil((cyp+rad)*k));
     if(x1<=x0||y1<=y0) return; ctx.save(); ctx.globalAlpha=alpha; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`; ctx.drawImage(cv,x0,y0,x1-x0,y1-y0,x0/k,y0/k,(x1-x0)/k,(y1-y0)/k); ctx.restore(); ctx.filter="none"; }
-  let pf=null, nextPF=45, pfBits=[]; const pfcv=document.createElement("canvas"), pfcx=pfcv.getContext("2d");
+  let pf=null, nextPF=80, pfBits=[]; const pfcv=document.createElement("canvas"), pfcx=pfcv.getContext("2d");
   /* how a flushed rooster really goes: an explosive near-vertical climb on whirring wings, a moment hanging and flailing as it swings round to pick its line,
      then off low and fast, a burst of beats and a long glide on bowed wings, another burst, another glide */
   function startPF(){ const sd=Math.random()<.5?-1:1;
@@ -2409,7 +2409,7 @@ const ambient=(function(){
   function drawPheasFront(dt,dark){
     for(let i=pfBits.length-1;i>=0;i--){ const b=pfBits[i]; b.vy+=430*dt; b.vx*=.99; b.x+=b.vx*dt; b.y+=b.vy*dt; b.rot+=b.vr*dt; b.life-=dt; if(b.life<=0){ pfBits.splice(i,1); continue; }
       ctx.save(); ctx.globalAlpha=Math.min(1,b.life*2)*.8; ctx.translate(b.x,b.y); ctx.rotate(b.rot); ctx.fillStyle=b.c; ctx.fillRect(-b.r,-b.r*.3,b.r*2,b.r*.6); ctx.restore(); }
-    nextPF-=dt; if(!pf&&nextPF<=0) startPF(); if(!pf) return;
+    nextPF-=dt; if(!pf&&nextPF<=0){ if(stageBusy()) nextPF=rnd(12,25); else startPF(); } if(!pf) return;
     const p=pf; p.t+=dt; const T=p.t, F=H*.5, cx=W/2, cy=H*.52;
     let h, pitch, spd, amp, glide=false, hz;
     if(T<.8){ h=p.h0; pitch=1.05; spd=.85; amp=1; hz=17; }                                                              /* the explosive climb */
@@ -2479,7 +2479,7 @@ const ambient=(function(){
     return parts;
   }
   function drawHawkG(dt,dark,layer){
-    if(layer==="near"){ nextHawkG-=dt; if(!hawkG&&nextHawkG<=0) startHawkG(); }
+    if(layer==="near"){ nextHawkG-=dt; if(!hawkG&&nextHawkG<=0){ if(stageBusy()) nextHawkG=rnd(12,25); else startHawkG(); } }
     if(!hawkG) return; const h=hawkG, inAir=h.state==="approach"||h.state==="leave";
     if(layer==="near"&&!inAir) return;
     const F=H*.5, cx=W/2, cy=H*.52, sk=Math.max(.5,(h.ty-gnd().vy)/150), zT=6, kL=.16*toScreen(h.Xw,h.Dw).g/26*.85, Kw=kL*zT/F;
@@ -2685,6 +2685,8 @@ const ambient=(function(){
   function deerPose(o,scale,spots){ const s=toScreen(o.Xw,o.Dw); return {x:s.x,y:s.y,g:s.g*scale,Xw:o.Xw,Dw:o.Dw,lift:0,leapU:null,stand:!o.walking,walk:!!o.walking,antlers:false,hd:o.hd,hy:o.hy,q:o.q,spots}; }
   /* ---- a ruby-throated hummingbird, in true 3D: it shoots in out of the evening toward you, stops dead and hovers an arm's length away,
      body tilted up, wings a blur, turning to look you over, then darts off back into the distance ---- */
+  /* the close-up visitors take turns: only one at a time comes past the camera */
+  function stageBusy(){ return !!(hero||bbFlock||(pecker&&pecker.state==="approach")||jays||pf||hum||(hawkG&&hawkG.state==="approach")); }
   let hum=null, nextHum=45; const hcv=document.createElement("canvas"), hcx=hcv.getContext("2d");
   function hum3D(x,P,f0,beat,proj,C){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -2734,7 +2736,7 @@ const ambient=(function(){
     return parts;
   }
   function drawHum(dt,dark){
-    nextHum-=dt; if(!hum&&nextHum<=0){ const sp=sun(); hum={t:0,fx:sp.x+rnd(-W*.25,W*.15),fy:sp.y+H*rnd(.1,.25),hx:W*rnd(.3,.7),hy:H*rnd(.32,.55),ex:Math.random()<.5? -.2*W : 1.2*W,ey:H*rnd(.15,.4),beat:0}; }
+    nextHum-=dt; if(!hum&&nextHum<=0&&stageBusy()) nextHum=rnd(12,25); if(!hum&&nextHum<=0){ const sp=sun(); hum={t:0,fx:sp.x+rnd(-W*.25,W*.15),fy:sp.y+H*rnd(.1,.25),hx:W*rnd(.3,.7),hy:H*rnd(.32,.55),ex:Math.random()<.5? -.2*W : 1.2*W,ey:H*rnd(.15,.4),beat:0}; }
     if(!hum) return; const h=hum; h.t+=dt; h.beat+=dt*Math.PI*2*28; const T=h.t, F=H*.5, cx=W/2, cy=H*.52, zH=.5;
     let z, sx, sy, look=0;
     if(T<1.3){ const u=T/1.3, e=u*u*(3-2*u); z=9*Math.pow(zH/9,e); const ev=(1/9-1/z)/(1/9-1/zH); sx=lerp(h.fx,h.hx,ev); sy=lerp(h.fy,h.hy,ev)-Math.sin(ev*Math.PI)*30; }   /* shooting in toward you */
