@@ -682,8 +682,8 @@ const ambient=(function(){
   }
   /* the lens flare: a chain of ghosts strung along the line from the sun through the frame, sliding as the "camera" sways and fading in and out as the light shifts */
   const GHOSTS=[ /* k along sun→flare (1 = the flare in the photo), size, rgb, kind, strength */
-    [.2,1.1,[255,190,120],"glow",.3],[.36,.5,[190,140,255],"hex",.36],[.5,.8,[255,170,90],"disc",.3],[.62,1.35,[140,220,170],"ring",.4],
-    [.74,.32,[200,255,230],"disc",.6],[.85,1.05,[255,120,200],"disc",.24],[.93,.6,[255,200,120],"hex",.3],[1,1,[170,240,120],"main",1],[1.16,2,[150,190,255],"ring",.18]];
+    [.2,1.1,[255,190,120],"glow",.3],[.36,.5,[190,140,255],"hex",.36],[.5,.8,[255,170,90],"disc",.3],
+    [.74,.32,[200,255,230],"disc",.6],[.85,1.05,[255,120,200],"disc",.24],[.93,.6,[255,200,120],"hex",.3],[1,1,[170,240,120],"main",1]];
   function drawFlare(welcome){
     if(!flarePatch) return;
     const F=flarePatch; ctx.drawImage(F.c,F.x+F.dx,F.y);
@@ -3965,17 +3965,21 @@ const ambient=(function(){
       x.globalCompositeOperation="source-over";
       blitRegion(rvcv,sx,sy,rad,.45+Math.max(0,b.Z-6)*.08,b.alpha); }
   }
-  function startRavens(){ const ltr=Math.random()<.5, Z=rnd(4.2,5.4), v=vanish(), X0=((ltr?-80:W+80)-v[0])*Z/FOC(), hd=ltr? -rnd(.02,.12) : Math.PI+rnd(.02,.12), Y=rnd(2.1,2.6);
+  function startRavens(){ { const c=diagCourse(rnd(2.4,3),rnd(14,20),H*rnd(.18,.28),gnd().vy-H*rnd(.06,.14),180), dv=[c.B[0]-c.A[0],c.B[1]-c.A[1],c.B[2]-c.A[2]], len=Math.hypot(...dv), hd=Math.atan2(dv[2],dv[0]);
+      const pair={rollAt:rnd(4,8),tumbleAt:rnd(10,16),callAt:rnd(1,3)};
+      for(let i=0;i<2;i++){ const o=[-.5*i*dv[0]/len, .1*i, -.5*i*dv[2]/len+.25*i]; soarers.push(soarBird("raven",{X:c.A[0]+o[0],Y:c.A[1]+o[1],Z:c.A[2]+o[2],off:o,course:c,dur:len/.75,hd,sp:0,life:60,pair,lead:i===0,roll:null,ph:i*1.3})); } return; }
+    const ltr=Math.random()<.5, Z=rnd(4.2,5.4), v=vanish(), X0=((ltr?-80:W+80)-v[0])*Z/FOC(), hd=ltr? -rnd(.02,.12) : Math.PI+rnd(.02,.12), Y=rnd(2.1,2.6);
     const pair={rollAt:rnd(4,8),tumbleAt:rnd(10,16),callAt:rnd(1,3)};
     for(let i=0;i<2;i++) soarers.push(soarBird("raven",{X:X0-Math.cos(hd)*i*.55,Z:Z+i*.25,Y:Y+i*.12,hd,sp:rnd(.55,.7),life:40,pair,lead:i===0,roll:null,ph:i*1.3})); }
   function stepRaven(b,dt){ const p=b.pair;
-    b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.Y+=Math.sin(b.t*.5+b.ph)*.03*dt;
+    if(b.course){ const C=b.course, e=Math.min(1,b.t/b.dur); b.X=lerp(C.A[0],C.B[0],e)+b.off[0]; b.Z=lerp(C.A[2],C.B[2],e)+b.off[2]; b.Y=lerp(C.A[1],C.B[1],e)+b.off[1]+Math.sin(b.t*.5+b.ph)*.05+(b.dropY||0); if(e>=1) b.done=true; }
+    else { b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.Y+=Math.sin(b.t*.5+b.ph)*.03*dt; }
     const cyc=(b.t+b.ph*.4)%5.5, row=cyc<2.2; b.wph=(b.wph||0)+dt*(row||Math.cos(b.wph||0)<.97? Math.PI*2*1.5 : 0); b.amp=(b.amp||0)+((row? .6 : 0)-(b.amp||0))*Math.min(1,dt*(row?4:2)); b.curl=row? .3 : .6;   /* slow, deep rowing beats, then a glide on flat wings */
     const y0=b.Y; b.hy=Math.sin(b.t*.7+b.ph)*.4;
     let bank=Math.sin(b.t*.45+b.ph)*.12;
     if(b.lead&&b.t>p.rollAt){ p.rollAt=b.t+rnd(6,11); b.roll={t:0,dur:rnd(.9,1.3),turns:Math.random()<.3?2:1,dir:Math.random()<.5?1:-1}; if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,"knock"); }
     if(!b.lead&&b.t>p.tumbleAt){ p.tumbleAt=b.t+rnd(12,20); b.roll={t:0,dur:1.6,turns:1,dir:-1,drop:.5}; }     /* the follower tumbles and drops, then catches up */
-    if(b.roll){ const r=b.roll; r.t+=dt; const u=Math.min(1,r.t/r.dur), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u); bank+=r.dir*e*Math.PI*2*r.turns; b.amp*=.85; b.curl=.9; if(r.drop) b.Y-=Math.sin(u*Math.PI)*r.drop*dt*2.2; if(u>=1) b.roll=null; }   /* flipped right over onto its back, wings folding, and out again */
+    if(b.roll){ const r=b.roll; r.t+=dt; const u=Math.min(1,r.t/r.dur), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u); bank+=r.dir*e*Math.PI*2*r.turns; b.amp*=.85; b.curl=.9; if(r.drop) b.dropY=-Math.sin(u*Math.PI)*r.drop*.6; if(u>=1) b.roll=null; }   /* flipped right over onto its back, wings folding, and out again */
     b.bank=bank; b.vy=(b.Y-y0)/Math.max(dt,1e-3);
     if(b.lead&&b.t>p.callAt){ p.callAt=b.t+rnd(2.5,6); if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,Math.random()<.75?"croak":"knock"); }
   }
@@ -3995,10 +3999,19 @@ const ambient=(function(){
     b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.Y+=b.vy*dt; b.hp=b.st==="stoop"? .5 : .12; }
   /* a great blue heron: slow, deep, deliberate beats on huge bowed wings, neck folded back, legs trailing, flying low and steady across the field;
      it lets out its deep, harsh croak as it goes */
-  function startHeron(){ const ltr=Math.random()<.5, Z=rnd(5.5,7.5), v=vanish(), X0=((ltr?-120:W+120)-v[0])*Z/FOC();
+  function diagCourse(nearZ,farZ,nearSY,farSY,pad){ const v=vanish(), f=FOC(), left=Math.random()<.5, inbound=Math.random()<.5;   /* a point on screen at a depth, back into the world */
+    const W3=(sx,sy,Z)=>[(sx-v[0])*Z/f, 1-(sy-v[1])*Z/f, Z];
+    const near=W3(left? -pad : W+pad, nearSY, nearZ), far=W3(left? W*rnd(.72,.9) : W*rnd(.1,.28), farSY, farZ);
+    return inbound? {A:far,B:near,inbound} : {A:near,B:far,inbound}; }
+  function startHeron(){ const c=diagCourse(rnd(2,2.6),rnd(16,22),H*rnd(.2,.32),gnd().vy-H*rnd(.04,.1),220), len=Math.hypot(c.B[0]-c.A[0],c.B[1]-c.A[1],c.B[2]-c.A[2]);
+    soarers.push(soarBird("heron",{X:c.A[0],Y:c.A[1],Z:c.A[2],course:c,cu:0,dur:len/1.15,hd:Math.atan2(c.B[2]-c.A[2],c.B[0]-c.A[0]),sp:0,life:60,wph:0,amp:.55,curl:.15,callAt:rnd(1.5,4)})); return;
+    const ltr=Math.random()<.5, Z=rnd(5.5,7.5), v=vanish(), X0=((ltr?-120:W+120)-v[0])*Z/FOC();
     soarers.push(soarBird("heron",{X:X0,Z,Y:rnd(1.5,1.9),hd:ltr? -rnd(.02,.1) : Math.PI+rnd(.02,.1),sp:rnd(.95,1.15),life:45,wph:0,amp:.55,curl:.15,callAt:rnd(1.5,4)})); }
   function stepHeron(b,dt){ const glide=(b.t%9)>7.2; b.wph+=dt*Math.PI*2*(glide&&Math.cos(b.wph)>.95? 0 : 1.9); b.amp+=((glide?.02:.58)-b.amp)*Math.min(1,dt*3); b.curl=.1;
-    b.bank=Math.sin(b.t*.4)*.06; b.vy=Math.sin(b.wph)*.08; b.Y+=b.vy*dt*.6; b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.hy=Math.sin(b.t*.3)*.15; b.hp=-.05;
+    b.bank=Math.sin(b.t*.4)*.06; b.hy=Math.sin(b.t*.3)*.15; b.hp=-.05;
+    if(b.course){ const C=b.course; b.cu=Math.min(1,b.t/b.dur); const e=b.cu, bob=Math.sin(b.wph)*.03; const y0=b.Y;          /* steady along its line; the beats lift it a touch each stroke */
+      b.X=lerp(C.A[0],C.B[0],e); b.Z=lerp(C.A[2],C.B[2],e); b.Y=lerp(C.A[1],C.B[1],e)+bob; b.vy=(b.Y-y0)/Math.max(dt,1e-3)*.3; b.hd=Math.atan2(C.B[2]-C.A[2],C.B[0]-C.A[0]); if(b.cu>=1) b.done=true; }
+    else { b.vy=Math.sin(b.wph)*.08; b.Y+=b.vy*dt*.6; b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; }
     if(b.t>b.callAt){ b.callAt=b.t+rnd(5,10); natureSfx.heron&&natureSfx.heron(b._pan||0); } }
   function drawRaptors(dt,dark){
     nextFalcon-=dt; if(nextFalcon<=0){ nextFalcon=rnd(200,380); if(!soarers.some(b=>b.kind==="falcon")) startFalcon(); }
