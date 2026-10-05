@@ -2240,7 +2240,7 @@ const ambient=(function(){
   }
   /* ---- a pair of blue jays: one chasing the other in tight loops across the field, calling "jeer! jeer!", crests up ---- */
   let jays=null, nextJays=55; const jcv=document.createElement("canvas"), jcx=jcv.getContext("2d");
-  function startJays(){ const dir=Math.random()<.5?1:-1; jays={t:0,dir,dur:rnd(8,10),z0:rnd(1.6,2),y0:rnd(.22,.4),call:rnd(.3,1)}; }
+  function startJays(){ const dir=Math.random()<.5?1:-1; jays={t:0,dir,dur:rnd(8,10),z0:rnd(1.25,1.5),y0:rnd(.28,.45),call:rnd(.3,1)}; }
   function jay3D(x,P,V,flap,glide,proj){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const f=nrm([V[0],V[1]*.5,V[2]*.6]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=1.25;
@@ -2268,6 +2268,53 @@ const ambient=(function(){
     const bk=pt(.075,0,.004); x.strokeStyle=rgb(DK); x.lineWidth=Math.max(.7,w0*.3); x.beginPath(); x.moveTo(head[0],head[1]); x.lineTo(bk[0],bk[1]); x.stroke();
     wing(dl>dr? 1 : -1);
   }
+  /* a blue jay built like the pheasant: a solid shaded body, real wing and tail feathering, white face and the black necklace, crest raised */
+  function jayBird(x,P,f,flap,glide,proj,Kw){
+    const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; };
+    const r=nrm(crs(f,[0,-1,0])), u=crs(r,f);
+    const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw];
+    const pt=(a,b,c)=>{ const w=W3(a,b,c); return proj(w[0],w[1],w[2]); };
+    const sc=a=>{ const w=W3(a,0,0), p0=proj(w[0],w[1],w[2]), p1=proj(w[0]+Kw,w[1],w[2]); return Math.hypot(p1[0]-p0[0],p1[1]-p0[1]); };
+    const under=P[1]<0&&-(P[0]*u[0]+P[1]*u[1]+P[2]*u[2])<0;                                              /* low over the field you look down on their blue backs */
+    const smooth=(pts,col)=>{ x.fillStyle=col; x.beginPath(); const n=pts.length, m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2]; let q=m(pts[n-1],pts[0]); x.moveTo(q[0],q[1]); for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n], mm=m(a,b); x.quadraticCurveTo(a[0],a[1],mm[0],mm[1]); } x.closePath(); x.fill(); };
+    const line=(a,b,col,w)=>{ x.strokeStyle=col; x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
+    const BLU=[44,96,204], BLU2=[84,146,236], DEEP=[26,54,140], BACK=[84,108,184], BLK=[18,20,30], WH=[238,238,236], UGRY=[206,210,218], BELLY=[226,226,228], CHEST=[200,200,208];
+    const lw=k=>Math.max(.5,sc(0)*k);
+    x.lineCap="round"; x.lineJoin="round";
+    const wing=(sd,fl)=>{ const h=k=>fl*k, bend=Math.abs(fl)*.4;
+      const S=pt(2.6,sd*1.8,.6), Wr=pt(1.6,sd*7.6,h(5)+bend), Tp=pt(-2.8,sd*16,h(10)), T2=pt(-6,sd*13.5,h(8.4)), Tr=pt(-6.6,sd*7.5,h(4.6)), R0=pt(-4.4,sd*1.8,.4);
+      if(under){ const g=x.createLinearGradient(S[0],S[1],Tp[0],Tp[1]); g.addColorStop(0,rgb(UGRY)); g.addColorStop(1,rgb(mulv(UGRY,.82))); smooth([S,Wr,pt(-.4,sd*12.5,h(7.8)),Tp,T2,Tr,R0],g);
+        const e0=pt(-6.4,sd*7.5,h(4.6)), e1=pt(-5.8,sd*13.6,h(8.4)); line(e0,e1,rgb([120,126,140],.6),lw(.7)); return; }   /* pale grey underwing with a darker trailing edge */
+      const g=x.createLinearGradient(S[0],S[1],Tp[0],Tp[1]); g.addColorStop(0,rgb(BLU2)); g.addColorStop(.5,rgb(BLU)); g.addColorStop(1,rgb(DEEP)); smooth([S,Wr,pt(-.4,sd*12.5,h(7.8)),Tp,T2,Tr,R0],g);
+      for(let i=0;i<6;i++){ const a0=pt(-1-i*.6,sd*(8+i*.9),h(5.6+i*.6)), a1=pt(-3-i*.45,sd*(11.8+i*.75),h(7.6+i*.4)); line(a0,a1,rgb(BLK,.55),lw(.32)); }   /* black barring across the blue */
+      const wb0=pt(-5.6,sd*3,h(1.6)), wb1=pt(-6.2,sd*7.4,h(4.4)), wb2=pt(-5.2,sd*7.6,h(4.5)), wb3=pt(-4.6,sd*3,h(1.6)); smooth([wb0,wb1,wb2,wb3],rgb(WH,.9));   /* the white wing bar along the trailing edge */
+      line(pt(-2.6,sd*14.8,h(9.4)),pt(-5.4,sd*13.4,h(8.4)),rgb(BLK,.7),lw(.5)); };   /* dark primary tips */
+    const dl=(P[0]-r[0]*.05)**2+(P[1]-r[1]*.05)**2+(P[2]-r[2]*.05)**2, dr=(P[0]+r[0]*.05)**2+(P[1]+r[1]*.05)**2+(P[2]+r[2]*.05)**2, farS=dl>dr? -1 : 1;
+    const fl=glide? .14 : Math.sin(flap)*.95+.06;
+    wing(farS,fl);
+    /* the long, rounded tail: blue barred with black, white corners */
+    const t0=pt(-4.4,-1.8,0), t1=pt(-4.4,1.8,0), t2=pt(-14,3.3,-.4), t3=pt(-15,0,-.5), t4=pt(-14,-3.3,-.4);
+    { const tm=pt(-4.4,0,.3), te=pt(-14.6,0,-.5); x.strokeStyle=rgb(under? [150,166,196] : BLU); x.lineWidth=Math.max(1,Math.hypot(...[0,1].map(i=>pt(-4.4,0,1.5)[i]-tm[i]))); x.beginPath(); x.moveTo(tm[0],tm[1]); x.lineTo(te[0],te[1]); x.stroke(); }   /* the tail has some depth edge-on */
+    smooth([t0,t4,t3,t2,t1],rgb(under? [150,166,196] : BLU));
+    for(let a=-6.6;a>-14;a-=1.5){ const w=1.8+(a+4.4)/-10*1.4; line(pt(a,-w,-.2),pt(a,w,-.2),rgb(BLK,under?.3:.5),lw(.28)); }
+    for(const sd of [-1,1]){ const c=pt(-14,sd*2.8,-.4); x.fillStyle=rgb(WH); x.beginPath(); x.arc(c[0],c[1],Math.max(.6,sc(-15)*.75),0,6.283); x.fill(); }
+    /* body: one smooth silhouette, shaded */
+    const body=new Path2D(); for(let a=-4.8;a<=4.4;a+=.5){ const rr=2.7*Math.sqrt(Math.max(.2,1-((a+.2)/5)**2)), q=pt(a,0,.3); body.moveTo(q[0]+Math.max(.6,sc(a)*rr),q[1]); body.arc(q[0],q[1],Math.max(.6,sc(a)*rr),0,6.283); }
+    x.fillStyle=rgb(under? BELLY : BACK); x.fill(body);
+    x.save(); x.clip(body);
+    { const tp=pt(0,0,3.2), bt=pt(0,0,-2.6), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]); g.addColorStop(0,"rgba(255,232,200,.3)"); g.addColorStop(.5,"rgba(255,220,180,0)"); g.addColorStop(1,"rgba(30,30,50,.35)"); x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); }
+    if(under){ const c=pt(3,0,-.6), rr=Math.max(1,sc(3)*2.4), g=x.createRadialGradient(c[0],c[1],0,c[0],c[1],rr); g.addColorStop(0,rgb(CHEST,.7)); g.addColorStop(1,rgb(CHEST,0)); x.fillStyle=g; x.fillRect(c[0]-rr,c[1]-rr,rr*2,rr*2); }
+    x.restore();
+    /* head: blue crown and crest, white face, black necklace and eye line */
+    const hd=pt(5.6,0,1.2), rH=Math.max(.8,sc(5.6)*2.1);
+    { const g=x.createRadialGradient(hd[0]-rH*.3,hd[1]-rH*.3,0,hd[0],hd[1],rH); g.addColorStop(0,rgb(under? WH : BLU2)); g.addColorStop(1,rgb(under? mulv(WH,.86) : BLU)); x.fillStyle=g; x.beginPath(); x.arc(hd[0],hd[1],rH,0,6.283); x.fill(); }
+    const crest=[pt(6.4,0,2.8),pt(3.2,0,5.2),pt(4.4,0,2.4)]; smooth([...crest,pt(5.8,0,2)],rgb(BLU));
+    for(const sd of [-1,1]){ const fc=pt(6.6,sd*1.4,.6); x.fillStyle=rgb(WH); x.beginPath(); x.ellipse(fc[0],fc[1],Math.max(.6,sc(6)*1.1),Math.max(.6,sc(6)*.85),0,0,6.283); x.fill(); }   /* white cheeks */
+    { const n0=pt(4,-2,0), n1=pt(4,2,0), nm=pt(4.3,0,-1.8); x.strokeStyle=rgb(BLK); x.lineWidth=lw(.55); x.beginPath(); x.moveTo(n0[0],n0[1]); x.quadraticCurveTo(nm[0],nm[1],n1[0],n1[1]); x.stroke(); }   /* the black necklace */
+    for(const sd of [-1,1]) line(pt(7.6,sd*1.1,1.6),pt(5.2,sd*1.9,.6),rgb(BLK,.85),lw(.35));
+    line(hd,pt(9,0,.9),rgb([30,30,34]),lw(.55));                                                                               /* the stout black bill */
+    wing(-farS,fl);
+  }
   function drawJays(dt,dark){
     nextJays-=dt; if(!jays&&nextJays<=0) startJays(); if(!jays) return;
     const J=jays; J.t+=dt; const T=J.t, u=T/J.dur, F=H*.5, cx=W/2, cy=H*.52;
@@ -2277,10 +2324,10 @@ const ambient=(function(){
     const z=J.z0-Math.sin(u*Math.PI)*.5, sxC=lerp(J.dir>0? -W*.12 : W*1.12, J.dir>0? W*1.12 : -W*.12, u), syC=gnd().vy+(H-gnd().vy)*J.y0-Math.sin(u*Math.PI*2)*H*.04;   /* the pair crosses, swinging nearer in the middle */
     const Xc=(sxC-cx)*z/F, Yc=(syC-cy)*z/F; let zs=0, n=0, ax=0, ay=0;
     for(let i=0;i<2;i++){ const th=T*2.4-i*1.1, rad=.32+.08*Math.sin(T*.9+i);                                              /* loops: the second bird a beat behind the first, chasing */
-      const Pn=[Xc+Math.cos(th)*rad, Yc+Math.sin(th)*rad*.55-Math.abs(Math.sin(T*3+i))*.04, Math.max(.95,z+Math.sin(th)*.14)], b=J["b"+i]||(J["b"+i]={});
+      const Pn=[Xc+Math.cos(th)*rad, Yc+Math.sin(th)*rad*.55-Math.abs(Math.sin(T*3+i))*.04, Math.max(.8,z+Math.sin(th)*.14)], b=J["b"+i]||(J["b"+i]={});
       const V=b.pp? [Pn[0]-b.pp[0],Pn[1]-b.pp[1],Pn[2]-b.pp[2]] : [J.dir,0,0]; b.pp=Pn; if(Math.hypot(...V)>1e-6) b.V=b.V? b.V.map((v,k)=>lerp(v,V[k],.3)) : V;
       const glide=Math.sin(T*2.1+i*2)>.6, flap=T*(13+i)+i;
-      jay3D(x,Pn,b.V||V,flap,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)]);
+      { const v0=b.V||V, ln=Math.hypot(v0[0],v0[1]*.5,v0[2]*.6)||1; jayBird(x,Pn,[v0[0]/ln,v0[1]*.5/ln,v0[2]*.6/ln],flap,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],.011); }
       zs+=Pn[2]; n++; ax+=cx+Pn[0]*F/Pn[2]; ay+=cy+Pn[1]*F/Pn[2]; }
     zs/=n; ax/=n; ay/=n;
     J.call-=dt; if(J.call<=0){ J.call=rnd(1.1,2.4); natureSfx.jay&&natureSfx.jay((ax/W*2-1)*.9); }
@@ -2293,7 +2340,7 @@ const ambient=(function(){
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
-    blitRegion(jcv,ax,ay,(.5+.4)*F/Math.max(.6,zs)+40,zs<1.3?(1.3-zs)*3+.6:.6,Math.min(1,T/.4,(J.dur-T)/.4));
+    blitRegion(jcv,ax,ay,(.5+.4)*F/Math.max(.6,zs)+40,.5+Math.max(0,.95-zs)*3,Math.min(1,T/.4,(J.dur-T)/.4));
   }
   /* ---- a rooster pheasant explodes out of the grass right in front of you: wings whirring, copper and green and a long barred tail, crowing, then sailing away low over the field ---- */
   function blitRegion(cv,cxp,cyp,rad,blur,alpha){                       /* only the patch around the bird, so the blur doesn't run over the whole frame */
