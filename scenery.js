@@ -2049,16 +2049,15 @@ const ambient=(function(){
     const A=beak(birds[1]), Bk=beak(birds[0]);   /* the trailing bird's bill to the leader's */
     /* the ribbon: hangs between the two bills, sags in the middle, ripples in the wind of their flight */
     const N=44, hgt=span*.12, sag=span*.07, pts=[];
-    for(let i=0;i<=N;i++){ const s=i/N, w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*Math.sin(s*Math.PI), tw=Math.sin(s*Math.PI*1.6-B.t*3.2)*.62*Math.sin(s*Math.PI);
+    for(let i=0;i<=N;i++){ const s=i/N, w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*Math.sin(s*Math.PI), tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*Math.sin(s*Math.PI);
       const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],s)+sag*4*s*(1-s)+w, lerp(A[2],Bk[2],s)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*Math.sin(s*Math.PI)];
       const dn=[Math.sin(tw)*.0,Math.cos(tw),Math.sin(tw)];   /* the cloth's width hangs down, twisting a little toward and away from you */
       pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hgt,c[1]+dn[1]*hgt,c[2]+dn[2]*hgt), shade:.78+.22*Math.cos(tw*2.2)+(Math.sin(s*Math.PI*2.2-B.t*4.6))*.08}); }
     /* the lettering, set once per text and size into a strip that's wrapped onto the cloth */
-    const sx0=Math.min(pts[0].top[0],pts[N].top[0]), sx1=Math.max(pts[0].top[0],pts[N].top[0]), texW=Math.max(200,Math.round(Math.abs(sx1-sx0)*1.15)), texH=Math.max(30,Math.round(Math.hypot(pts[N>>1].bot[0]-pts[N>>1].top[0],pts[N>>1].bot[1]-pts[N>>1].top[1])*1.4));
+    const texW=1400, texH=Math.round(texW*.85*hgt/span);   /* a fixed size, set once: the lettering belongs to the cloth and moves only with it */
     const key=text+"|"+texW+"|"+texH; if(btex._k!==key){ btex._k=key; btex.width=texW; btex.height=texH; const tx=btex.getContext("2d");
       { const g=tx.createLinearGradient(0,0,0,texH); g.addColorStop(0,"#fbf4e4"); g.addColorStop(.18,"#fffaf0"); g.addColorStop(.55,"#f1e6d0"); g.addColorStop(.86,"#e2d3b6"); g.addColorStop(1,"#cdbb98"); tx.fillStyle=g; tx.fillRect(0,0,texW,texH); }   /* the cloth cups a little: bright along the top, shaded underneath */
-      tx.globalAlpha=.028; for(let yy=0;yy<texH;yy+=2){ tx.fillStyle=yy%4? "#7a6648" : "#ffffff"; tx.fillRect(0,yy,texW,1); } for(let xx2=0;xx2<texW;xx2+=3){ tx.fillStyle="#6a5638"; tx.fillRect(xx2,0,1,texH); } tx.globalAlpha=1;   /* the weave */
-      for(let k=0;k<texW/18;k++){ const xx2=Math.random()*texW; tx.fillStyle=`rgba(${Math.random()<.5?"255,255,255":"110,90,60"},${(.04+Math.random()*.05).toFixed(3)})`; tx.fillRect(xx2,0,1+Math.random()*3,texH); }   /* slubs in the silk */
+      tx.globalAlpha=.028; for(let yy=0;yy<texH;yy+=2){ tx.fillStyle=yy%4? "#7a6648" : "#ffffff"; tx.fillRect(0,yy,texW,1); } tx.globalAlpha=1;   /* a fine weave along the cloth */
       tx.strokeStyle="rgba(122,35,24,.6)"; tx.lineWidth=Math.max(1,texH*.025); for(const yy of [texH*.13,texH*.87]){ tx.beginPath(); tx.moveTo(texW*.03,yy); tx.lineTo(texW*.97,yy); tx.stroke(); }   /* a fine woven border */
       tx.setLineDash([Math.max(2,texH*.05),Math.max(2,texH*.04)]); tx.strokeStyle="rgba(150,120,80,.45)"; tx.lineWidth=Math.max(.6,texH*.012); for(const yy of [texH*.05,texH*.95]){ tx.beginPath(); tx.moveTo(0,yy); tx.lineTo(texW,yy); tx.stroke(); } tx.setLineDash([]);   /* the stitched hem */
       const caps=(getComputedStyle(document.documentElement).getPropertyValue("--caps")||"").trim()||'"Cormorant Garamond",Georgia,serif';
