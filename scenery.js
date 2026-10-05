@@ -2036,7 +2036,7 @@ const ambient=(function(){
     let text=""; try{ text=String(host.banner()||""); }catch(e){} if(!text){ ban=null; nextBan=rnd(200,360); return; }
     const F=H*.5, cx=W/2, cy=H*.52, proj=(X,Y,Z)=>[cx+X*F/Math.max(.05,Z),cy+Y*F/Math.max(.05,Z)];
     const z=B.z0+Math.sin(u*Math.PI)*-.15, span=Math.min(.62,Math.max(.3,560/W))*W*z/F, Kw=.0165*Math.max(.8,Math.min(1.25,W/1200));   /* the ribbon spans about a third of a wide screen, more of a narrow one */
-    const mg=Math.max(160,W*.12), xL=(-cx-mg)*z/F-(B.dir>0? 0 : -span), xR=(W-cx+mg)*z/F+(B.dir>0? span : 0);   /* starts and ends fully off the screen, tails and wings and all */
+    const mg=Math.max(160,W*.12), xL=(-cx-mg)*z/F-(B.dir>0? 0 : span), xR=(W-cx+mg)*z/F+(B.dir>0? span : 0);   /* starts and ends fully off the screen, tails and wings and all */
     const lead=B.dir>0? lerp(xL,xR,u) : lerp(xR,xL,u), Y0=(B.fy*H-cy)*z/F;
     const birds=[0,1].map(i=>{ const bob=Math.sin(B.t*2.2+B.ph[i])*.035+Math.sin(B.t*.7+i)*.02;
       return {P:[lead-B.dir*span*i, Y0+bob, z+(i? .05 : 0)], V:[B.dir,Math.cos(B.t*2.2+B.ph[i])*.08,0], flap:B.t*(7.2+i*.6)+B.ph[i], glide:Math.sin(B.t*1.3+i*2.1)>.72}; });
@@ -2082,7 +2082,7 @@ const ambient=(function(){
       x.restore();
     }
     { const xa=pts[0].top[0], xb=pts[N].top[0]; if(Math.abs(xb-xa)>2){ const g=x.createLinearGradient(xa,0,xb,0);   /* the folds catch the light and fall into shadow along its length */
-        for(let i=0;i<=N;i+=2){ const sh=pts[i].shade; g.addColorStop(i/N, sh<1? `rgba(40,22,10,${Math.min(.5,(1-sh)*1.1).toFixed(3)})` : `rgba(255,232,196,${Math.min(.35,(sh-1)*1.4).toFixed(3)})`); }
+        for(let i=0;i<=N;i+=2){ const sh=pts[i].shade; g.addColorStop(i/N, sh<1? `rgba(70,44,20,${Math.min(.28,(1-sh)*.7).toFixed(3)})` : `rgba(255,236,204,${Math.min(.4,(sh-1)*1.6).toFixed(3)})`); }
         x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=g; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].top[0],pts[i].top[1]) : x.moveTo(pts[i].top[0],pts[i].top[1]); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]); x.closePath(); x.fill();
         { const rr=Math.max(W,H)*.32, gl=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,rr); gl.addColorStop(0,"rgba(255,196,110,.42)"); gl.addColorStop(.5,"rgba(255,180,100,.14)"); gl.addColorStop(1,"rgba(255,170,90,0)"); x.fillStyle=gl; x.fill(); }   /* where the sun is behind it, the silk glows */
         x.restore(); } }
@@ -2112,10 +2112,10 @@ const ambient=(function(){
     const X0=Math.max(0,Math.min(...xs)), X1=Math.min(W,Math.max(...xs)), Y0b=Math.max(0,Math.min(...ys)), Y1=Math.min(H,Math.max(...ys)); if(X1<=X0||Y1<=Y0b) return;
     const RX=X0*.6, RY=Y0b*.6, RW=(X1-X0)*.6, RH=(Y1-Y0b)*.6, mx=(X0+X1)/2, my=(Y0b+Y1)/2;
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
-    x.fillStyle="rgba(44,26,12,.2)"; x.fillRect(RX,RY,RW,RH); x.fillStyle="rgba(255,164,84,.14)"; x.fillRect(RX,RY,RW,RH);              /* in the shade of the evening, warmed by it */
-    { const rl=x.createLinearGradient(RX,0,RX+RW,0), k=sp.x>mx?1:0; rl.addColorStop(k,"rgba(255,196,120,.16)"); rl.addColorStop(1-k,"rgba(20,12,8,.12)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH); }
+    x.fillStyle="rgba(255,206,140,.14)"; x.fillRect(RX,RY,RW,RH);                                                                   /* caught in the low golden light */
+    { const rl=x.createLinearGradient(RX,0,RX+RW,0), k=sp.x>mx?1:0; rl.addColorStop(k,"rgba(255,220,160,.26)"); rl.addColorStop(1-k,"rgba(255,200,140,.04)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH); }   /* brightest on the side toward the sun */
     if(!B.skyC||(B.skyT=(B.skyT||0)-1)<=0){ B.skyT=8; const ip=toImg(mx,my); B.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
-    x.fillStyle=rgb(B.skyC,.2); x.fillRect(RX,RY,RW,RH);                                                                         /* a little of the sky's air between us */
+    x.fillStyle=rgb(B.skyC,.08); x.fillRect(RX,RY,RW,RH);                                                                         /* a little of the sky's air between us */
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
@@ -3400,7 +3400,7 @@ const ambient=(function(){
     for(let i=glints.length-1;i>=0;i--){ const g=glints[i]; g.t+=dt; const u=g.t/g.life; if(u>=1){ glints.splice(i,1); continue; }
       const k=Math.sin(u*Math.PI)**2*g.pk*(.8+.2*Math.sin(g.t*9))*Math.min(1,.5+st*1.5)*dk, a=g.a+g.dr*g.t, ex=sp.x+Math.cos(a)*L, ey=sp.y+Math.sin(a)*L;
       if(ey>vy+H*.3&&Math.sin(a)>.2) { /* mostly up in the sky */ }
-      const gr=ctx.createLinearGradient(sp.x,sp.y,ex,ey); gr.addColorStop(0,"rgba(255,236,200,0)"); gr.addColorStop(.04,`rgba(255,236,196,${(.5*k).toFixed(3)})`); gr.addColorStop(.3,`rgba(255,214,160,${(.22*k).toFixed(3)})`); gr.addColorStop(.7,"rgba(255,200,140,0)");
+      const gr=ctx.createLinearGradient(sp.x,sp.y,ex,ey); gr.addColorStop(0,"rgba(255,236,200,0)"); gr.addColorStop(.04,`rgba(255,236,196,${(.34*k).toFixed(3)})`); gr.addColorStop(.3,`rgba(255,214,160,${(.15*k).toFixed(3)})`); gr.addColorStop(.7,"rgba(255,200,140,0)");
       ctx.fillStyle=gr; ctx.beginPath(); ctx.moveTo(sp.x,sp.y); ctx.lineTo(sp.x+Math.cos(a-g.w)*L,sp.y+Math.sin(a-g.w)*L); ctx.lineTo(sp.x+Math.cos(a+g.w)*L,sp.y+Math.sin(a+g.w)*L); ctx.closePath(); ctx.fill(); }
     ctx.restore();
   }
@@ -3415,7 +3415,7 @@ const ambient=(function(){
     const L=Math.hypot(W,H)*1.15;
     RAYS.forEach((r,i)=>{ let k=Math.pow(.5+.5*Math.sin(rayT*r.sp*1.6+r.ph),1.6); if(k<.02) return;                        /* each beam swells and fades on its own */
       k*=.72+.28*Math.sin(rayT*(1.1+i*.13)+r.ph*3)*Math.sin(rayT*(.53+i*.07)+r.ph);                                            /* and shimmers as the cloud edges move across the sun */
-      const a=r.a+Math.sin(rayT*.11+r.ph)*.09+Math.sin(rayT*.37+r.ph*2)*.015+rayT*r.dr, amt=.62*r.pk*k*Math.min(1,.55+st*1.4);
+      const a=r.a+Math.sin(rayT*.11+r.ph)*.09+Math.sin(rayT*.37+r.ph*2)*.015+rayT*r.dr, amt=.4*r.pk*k*Math.min(1,.55+st*1.4);
       for(const [wm,am] of [[2.2,.25],[1.4,.35],[.8,.4]]){ const w=r.w*wm, g=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,L);
         g.addColorStop(0,"rgba(255,214,150,0)"); g.addColorStop(.05,`rgba(255,212,148,${(amt*am).toFixed(3)})`); g.addColorStop(.35,`rgba(255,200,130,${(amt*am*.55).toFixed(3)})`); g.addColorStop(1,"rgba(255,190,120,0)");
         x.fillStyle=g; x.beginPath(); x.moveTo(sp.x,sp.y); x.lineTo(sp.x+Math.cos(a-w)*L,sp.y+Math.sin(a-w)*L); x.lineTo(sp.x+Math.cos(a+w)*L,sp.y+Math.sin(a+w)*L); x.closePath(); x.fill(); } });
