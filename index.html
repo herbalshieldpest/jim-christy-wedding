@@ -65,11 +65,14 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 <script>
 /* centre the names by their actual ink, not their text box: the script's swashes reach well outside the letters */
 (function(){ const h=document.querySelector("h1"), lk=document.querySelector(".lockup"); if(!h||!lk) return;
-  function fit(){ lk.style.marginLeft=""; const r=document.createRange(); r.selectNodeContents(h);
+  function ink(){ const r=document.createRange(); r.selectNodeContents(h);
     const c=document.createElement("canvas").getContext("2d"), cs=getComputedStyle(h); const hr=h.getBoundingClientRect(), S=parseFloat(cs.scale)||1; let L=Infinity, R=-Infinity, x=hr.left+hr.width*(1-1/S)/2+parseFloat(cs.paddingLeft);   /* measured as it will sit, even mid-intro while it's still scaled */
     for(const node of h.childNodes){ const el=node.nodeType===1?node:h, st=getComputedStyle(el); c.font=st.fontStyle+" "+st.fontWeight+" "+st.fontSize+" "+st.fontFamily;
       const txt=node.textContent, m=c.measureText(txt); L=Math.min(L,x-m.actualBoundingBoxLeft); R=Math.max(R,x+m.actualBoundingBoxRight); x+=(node.nodeType===1? node.getBoundingClientRect().width : (()=>{ const rr=document.createRange(); rr.selectNodeContents(node); return rr.getBoundingClientRect().width; })())/S; }
-    const shift=innerWidth/2-(L+R)/2; if(Math.abs(shift)<200) lk.style.marginLeft=`${(2*shift).toFixed(1)}px`; }
+    return (L+R)/2; }
+  function fit(){ lk.style.marginLeft=""; const c0=ink(), want=innerWidth/2+parseFloat(getComputedStyle(h).fontSize)*.035;   /* a hair right of true centre: the long swash of the J pulls the eye left */ if(Math.abs(want-c0)>200) return;      /* measure, nudge, measure again, then set it exactly */
+    let m=2*(want-c0); lk.style.marginLeft=`${m.toFixed(1)}px`; const c1=ink(), k=Math.abs(m)>.5? (c1-c0)/m : .5;
+    if(k>.1&&k<2){ m=(want-c0)/k; lk.style.marginLeft=`${m.toFixed(1)}px`; } }
   (document.fonts?document.fonts.ready:Promise.resolve()).then(fit); addEventListener("resize",fit); })();
 </script>
 <script>window.SceneryHost={photo:()=>"scene.jpg",fade:()=>0,key:"wed",banner:()=>{ const t=new Date(); t.setHours(0,0,0,0); const n=Math.round((new Date(2027,5,19)-t)/864e5); return n>1? n.toLocaleString()+" days to go" : n===1? "Tomorrow we wed" : n===0? "Today we wed" : ""; }};</script>   <!-- the bluebirds carry this on their ribbon -->
