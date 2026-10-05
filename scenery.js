@@ -94,16 +94,19 @@ var natureSfx=(function(){
   /* a hummingbird's wings: a soft, fast-throbbing hum, panned and swelling with how close it is, and a few high chips */
   let humN=null;
   function humSet(pan,vol){ if(!ctx||!live){ return; }
-    if(!humN&&vol>0){ const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=180; bp.Q.value=1.2;
-      const o=ctx.createOscillator(); o.type="triangle"; o.frequency.value=53; const og=ctx.createGain(); og.gain.value=.35;
-      const am=ctx.createGain(); am.gain.value=.5; const lfo=ctx.createOscillator(); lfo.frequency.value=53; const lg=ctx.createGain(); lg.gain.value=.5; lfo.connect(lg); lg.connect(am.gain);
-      const g=ctx.createGain(); g.gain.value=0; const p=ctx.createStereoPanner? ctx.createStereoPanner() : null;
-      src.connect(bp); bp.connect(am); o.connect(og); og.connect(am); am.connect(g); if(p){ g.connect(p); p.connect(master); } else g.connect(master);
-      src.start(); o.start(); lfo.start(); humN={src,o,lfo,g,p,bp}; }
+    if(!humN&&vol>0){                                                                                             /* a buzzy whir: a low sawtooth throb plus breathy wing noise, high enough to hear on small speakers */
+      const g=ctx.createGain(); g.gain.value=0; const p=ctx.createStereoPanner? ctx.createStereoPanner() : null; if(p){ g.connect(p); p.connect(master); } else g.connect(master);
+      const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=420; bp.Q.value=.7; bp.connect(g);
+      const o1=ctx.createOscillator(); o1.type="sawtooth"; o1.frequency.value=52; const g1=ctx.createGain(); g1.gain.value=.55; o1.connect(g1); g1.connect(bp);
+      const o2=ctx.createOscillator(); o2.type="sawtooth"; o2.frequency.value=104.6; const g2=ctx.createGain(); g2.gain.value=.3; o2.connect(g2); g2.connect(bp);
+      const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true; const nb=ctx.createBiquadFilter(); nb.type="bandpass"; nb.frequency.value=900; nb.Q.value=.9; const ng=ctx.createGain(); ng.gain.value=1.4;
+      const am=ctx.createGain(); am.gain.value=.6; const lfo=ctx.createOscillator(); lfo.frequency.value=52; const lg=ctx.createGain(); lg.gain.value=.4; lfo.connect(lg); lg.connect(am.gain);
+      src.connect(nb); nb.connect(am); am.connect(ng); ng.connect(g);
+      src.start(); o1.start(); o2.start(); lfo.start(); humN={src,o1,o2,lfo,g,p,bp}; }
     if(!humN) return; const now=ctx.currentTime; humN.g.gain.setTargetAtTime(vol,now,.08); if(humN.p) humN.p.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),now,.06);
-    humN.bp.frequency.setTargetAtTime(150+vol*400,now,.1);
-    if(vol<=0){ const n=humN; humN=null; n.g.gain.setTargetAtTime(0,now,.06); setTimeout(()=>{ try{ n.src.stop(); n.o.stop(); n.lfo.stop(); }catch(e){} },500); } }
-  function humChip(pan){ if(!ctx||!live) return; const out=voice(master,pan), at=ctx.currentTime+.02; for(let i=0;i<2+Math.floor(Math.random()*2);i++) tone(at+i*.09,R(5200,6000),R(4200,4800),.05,.03,out); }
+    humN.bp.frequency.setTargetAtTime(320+vol*900,now,.1); humN.o1.frequency.setTargetAtTime(50+vol*12,now,.2); humN.o2.frequency.setTargetAtTime(101+vol*24,now,.2);
+    if(vol<=0){ const n=humN; humN=null; n.g.gain.setTargetAtTime(0,now,.06); setTimeout(()=>{ try{ n.src.stop(); n.o1.stop(); n.o2.stop(); n.lfo.stop(); }catch(e){} },500); } }
+  function humChip(pan){ if(!ctx||!live) return; const out=voice(master,pan), at=ctx.currentTime+.02; for(let i=0;i<2+Math.floor(Math.random()*2);i++) tone(at+i*.09,R(5200,6000),R(4200,4800),.05,.06,out); }
   /* a single peck at the bark: a dry, hollow knock with a little woody thump under it */
   function peck(xf){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1000,1500); bp.Q.value=4; bp.connect(out);
     const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=R(.35,.5); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
@@ -2362,7 +2365,7 @@ const ambient=(function(){
     if(T<1.3){ const u=T/1.3, e=u*u*(3-2*u); z=9*Math.pow(zH/9,e); const ev=(1/9-1/z)/(1/9-1/zH); sx=lerp(h.fx,h.hx,ev); sy=lerp(h.fy,h.hy,ev)-Math.sin(ev*Math.PI)*30; }   /* shooting in toward you */
     else if(T<4.6){ z=zH+Math.sin(T*1.7)*.05; sx=h.hx+Math.sin(T*2.6)*16+Math.sin(T*9)*3; sy=h.hy+Math.sin(T*2.1)*9+Math.cos(T*11)*2; look=Math.sin(T*1.9)*.7; }   /* hovering, darting a little, turning its head to you */
     else { const u=Math.min(1,(T-4.6)/.8), e=u*u; z=zH*Math.pow(10/zH,e); const ev=(1/zH-1/z)/(1/zH-1/10); sx=lerp(h.hx,h.ex,ev); sy=lerp(h.hy,h.ey,ev); if(u>=1){ hum=null; nextHum=rnd(90,170); natureSfx.humSet&&natureSfx.humSet(0,0); return; } }
-    { const pan=(sx/W*2-1)*.95, vol=Math.min(.14,.03/z); natureSfx.humSet&&natureSfx.humSet(pan,vol); h.chT=(h.chT||rnd(.8,2))-dt; if(h.chT<=0){ h.chT=rnd(1.2,2.6); natureSfx.humChip&&natureSfx.humChip(pan); } }   /* heard where it is, louder up close */
+    { const pan=(sx/W*2-1)*.95, vol=Math.min(.38,.15/z); natureSfx.humSet&&natureSfx.humSet(pan,vol); h.chT=(h.chT||rnd(.8,2))-dt; if(h.chT<=0){ h.chT=rnd(1.2,2.6); natureSfx.humChip&&natureSfx.humChip(pan); } }   /* heard where it is, louder up close */
     const P=[(sx-cx)*z/F,(sy-cy)*z/F,z], V=h.pp? [P[0]-h.pp[0],P[1]-h.pp[1],P[2]-h.pp[2]] : [0,0,-1]; h.pp=P; h.sx=sx; h.sy=sy;
     if(Math.hypot(...V)>1e-7) h.V=h.V? h.V.map((v,i)=>lerp(v,V[i],.2)) : V;
     let fdir=h.V||V; const hov=T>=1.3&&T<4.6; if(hov) fdir=[Math.sin(look)*.6,0,-1];                           /* hovering: it faces you */
