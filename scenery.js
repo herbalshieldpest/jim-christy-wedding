@@ -3372,7 +3372,7 @@ const ambient=(function(){
     const u=utv; u.t+=dt;
     /* speed: idles out of the gap, rolls down the trail, slows for the turn, then accelerates away across the field */
     const frac=u.d/u.len, V0=u.len/21, target= u.away? (()=>{ const h=d=>{ const a=utvAt(u,d), b=utvAt(u,d+.2); return Math.atan2(b[0]-a[0],b[1]-a[1]); }; let dh=h(u.d+.5)-h(u.d); dh=Math.abs(Math.atan2(Math.sin(dh),Math.cos(dh))); return V0*1.15/(1+dh*2.2); })() : frac<.2? V0*.45 : frac<.45? V0 : frac<.62? V0*.7 : V0*1.7;   /* sized to the scene: the whole run takes ten or twelve seconds */ u.v+=(target-u.v)*Math.min(1,dt*(target>u.v?.7:1.4)); u.d+=u.v*dt;
-    const S=.27, p=utvAt(u,u.d), q=utvAt(u,u.d+.25), hd=Math.atan2(q[0]-p[0],q[1]-p[1]), slope=(q[2]-p[2])/Math.max(1e-4,Math.hypot(q[0]-p[0],q[1]-p[1]));
+    const S=.47, p=utvAt(u,u.d), q=utvAt(u,u.d+.25), hd=Math.atan2(q[0]-p[0],q[1]-p[1]), slope=(q[2]-p[2])/Math.max(1e-4,Math.hypot(q[0]-p[0],q[1]-p[1]));
     if(u.yaw==null) u.yaw=hd; let dy=hd-u.yaw; while(dy>Math.PI) dy-=6.283; while(dy<-Math.PI) dy+=6.283; u.yaw+=dy*Math.min(1,dt*1.6);
     u.roll+=((-dy*1.2*Math.min(1,u.v/V0))-u.roll)*Math.min(1,dt*3);                                                            /* leans out in the turn */
     u.ps=(u.ps??slope)+(slope-(u.ps??slope))*Math.min(1,dt*2); u.pitch=u.ps+Math.sin(u.t*5.3)*.006*u.v/V0+Math.sin(u.t*2.1)*.004;   /* follows the lie of the ground, with small bumps */                                                                /* bumps in the field */
