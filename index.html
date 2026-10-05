@@ -11,6 +11,7 @@
 :root{ --ink:#fffaf2; --ink-soft:rgba(255,250,242,.82); --shade:rgba(22,15,8,.5); --edge:rgba(255,250,242,.24); --ground:#3b2f22;
   --script:"Aerotis","Mrs Saint Delafield","Pinyon Script","Great Vibes","Snell Roundhand",cursive; --caps:"Cormorant Garamond","Cormorant",Georgia,"Times New Roman",serif; --body:"Jost","Avenir Next","Segoe UI",system-ui,sans-serif; color-scheme:dark }
 html,body{height:100%}
+html,body,main,.lockup,.lockup *{cursor:default}   /* an arrow everywhere, not the text cursor */
 body{margin:0;background:var(--ground) url("scene.jpg") center/cover no-repeat fixed;color:var(--ink);font-family:var(--body);overflow-x:hidden}
 /* a faint pool of shade behind the names so the fine script holds up against the bright sky */
 .veil{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 60% 34% at 50% 50%,rgba(20,13,6,.32) 0%,rgba(20,13,6,.12) 55%,rgba(20,13,6,0) 100%)}
@@ -33,7 +34,7 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
   .lockup{--size:min(11.4vw,168px);--x:0;--y:-.04}
   .kicker{left:0;top:-15px;font-size:13px;letter-spacing:.26em;margin-bottom:8px}
   h1{top:0}
-  .line{left:0;top:0;margin-top:22px;font-size:16px;font-weight:400;letter-spacing:.08em;color:var(--ink)}
+  .line{left:0;top:0;margin-top:42px;font-size:16px;font-weight:400;letter-spacing:.08em;color:var(--ink)}
 }
 
 </style>
