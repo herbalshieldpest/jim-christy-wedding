@@ -3340,7 +3340,7 @@ const ambient=(function(){
   }
   /* ---- a side-by-side (a farm UTV) coming out of the gap in the brush, down the mown trail toward us, then swinging off across the field to the left.
      Built in 3D from its panels, roll cage, seats, two riders and four turning wheels, lit by the low sun, kicking up golden dust, with haze by distance ---- */
-  let utv=null, utvFirst=true, nextUtv=rnd(3,5);   /* TESTING: comes right away (normally rnd(70,130)) */ const utcv=document.createElement("canvas"), utcx=utcv.getContext("2d");
+  let utv=null, utvFirst=false, nextUtv=rnd(70,130); const utcv=document.createElement("canvas"), utcx=utcv.getContext("2d");
   const UTV_PATH=[[.305,.637],[.292,.64],[.281,.644],[.273,.651],[.262,.659],[.24,.665],[.207,.668],[.177,.67],[.13,.674],[.08,.677],[.02,.68],[-.08,.683],[-.25,.686]];   /* out from behind the brush at the trail's mouth, swinging toward us down the mown path, then left along the foot of the brush behind the tree */   /* out of the gap and along the foot of the brush, behind the apple tree */
   /* the other way round: in from the right along the front of the brush, then up the trail into the gap and away from us behind the brush */
   const UTV_PATH2=[[1.25,.835],[1.05,.81],[.88,.764],[.7,.722],[.52,.697],[.4,.68],[.32,.664],[.292,.654],[.278,.647],[.285,.642],[.297,.639],[.312,.636]];
