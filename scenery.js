@@ -1350,6 +1350,20 @@ const ambient=(function(){
   }
   /* ---- when the page opens, the Brittany and the Lab tear in together and chase each other around the lawn, taking turns being "it" ---- */
   let rompAt=1.2;
+  let cur=null; const trail=[], puffs=[];
+  document.addEventListener("pointermove",e=>{ if(!on) return; const x=(e.clientX-(1-camZ)*W/2-camX)/camZ, y=(e.clientY-(1-camZ)*H/2-camY)/camZ;
+    cur={x,y,t}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) trail.push({x,y,t,r:rnd(1.6,3)}); if(trail.length>60) trail.shift();
+    if(!dog&&!lab&&rompAt==null&&t-(cur.callT||-99)>0&&(window.__lastCall||0)<t-60){ window.__lastCall=t; startRomp(); } },{passive:true});
+  const chasing=()=>cur&&t-cur.t<2.2;
+  function chaseTarget(d){ const lo=lawnMinG(cur.x)+10, hi=foxBounds().gmax-6, g=Math.max(lo,Math.min(hi,cur.y-gnd().vy)), p=toGround(cur.x+(d.lab?-50:50),gnd().vy+g+(d.lab?14:-10)); d.tX=p.Xw; d.tD=p.Dw; }
+  function drawTrail(dt,dark){                                                                    /* the cursor's trail: little motes of light that drift and fade */
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    for(let i=trail.length-1;i>=0;i--){ const p=trail[i], a=1-(t-p.t)/.9; if(a<=0){ trail.splice(i,1); continue; } p.y-=dt*8;
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*4); g.addColorStop(0,`rgba(255,236,190,${(.55*a).toFixed(2)})`); g.addColorStop(1,"rgba(255,220,160,0)"); ctx.fillStyle=g; ctx.fillRect(p.x-p.r*4,p.y-p.r*4,p.r*8,p.r*8); }
+    ctx.restore();
+    for(let i=puffs.length-1;i>=0;i--){ const p=puffs[i], a=1-(t-p.t)/.7; if(a<=0){ puffs.splice(i,1); continue; } p.r+=dt*14*p.k; p.y-=dt*5*p.k;      /* dust and bits of grass kicked up behind the running dogs */
+      ctx.fillStyle=rgb(dark?[90,80,60]:[196,176,130],.22*a); ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*.55,0,0,6.283); ctx.fill(); }
+  }
   function startRomp(){
     const b=foxBounds(), side=Math.random()<.5, x0=side? W+70 : -70, g=rnd(Math.max(b.gmin,lawnMinG(side?W*.9:W*.1))+40,b.gmax-30);
     const p=toGround(x0,gnd().vy+g), q=toGround(side? W+170 : -170,gnd().vy+g+rnd(-25,25)), len=rnd(26,34);
@@ -1389,9 +1403,12 @@ const ambient=(function(){
     if(Math.random()<.5){ const a=rnd(.7,1.4); d.scr=[a,a+rnd(1.4,2.6)]; } else d.scr=null; }
   function stepDog(d,dt){
     d.t+=dt; d.sitA=(d.sitA||0)+((d.state==="sit"?1:0)-(d.sitA||0))*Math.min(1,dt*5);
-    const romping=d.state==="run"&&d.romp>0&&stepRomp(d,dt);
+    const wasChase=d.chase; d.chase=chasing()&&!d.flee&&d.state!=="leave"&&d.state!=="greet"&&!d.toViewer;
+    if(d.chase){ chaseTarget(d); if(d.state!=="run") { d.state="run"; d.scratching=false; } }
+    else if(wasChase&&d.state==="run"){ if(d.romp>0) rompTarget(d); else dogTarget(d); }
+    const romping=!d.chase&&d.state==="run"&&d.romp>0&&stepRomp(d,dt);
     if(d.state==="run"||d.state==="leave"){
-      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=d.flee? 1.6 : romping? (d.it?1.3:1.12)*(d.sm||1) : d.toViewer? 1.05 : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
+      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=d.flee? 1.6 : d.chase? 1.45 : romping? (d.it?1.3:1.12)*(d.sm||1) : d.toViewer? 1.05 : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
       const pr=d.lp? Math.hypot(d.Xw-d.lp[0],(d.Dw-d.lp[1])*.25) : 1; d.lp=[d.Xw,d.Dw]; d.stl= pr<sp*dt*.2? (d.stl||0)+dt : 0;
       if(d.stl>.8){ d.stl=0; if(d.state==="leave") d.fade=true; else { d.tX=d.Xw; d.tD=d.Dw; } }
       if(d.fade){ d.alpha-=dt*2.5; if(d.alpha<=0){ d.gone=true; return; } }
@@ -1399,6 +1416,7 @@ const ambient=(function(){
       if(dist<=sp*dt){ d.Xw=d.tX; d.Dw=d.tD; } else { d.Xw+=dX/dist*sp*dt; const sD=dD/dist*sp*dt*4; d.Dw+=Math.sign(sD)*Math.min(Math.abs(sD),Math.abs(dD)); }
       d.ph+=dt*(d.lab?4.6:4.2)*(romping?1.45:1); d.head+=((d.state==="run"&&!romping&&!d.toViewer? (d.lab?.25:.45) : 0)-d.head)*Math.min(1,dt*6);               /* nose down, working the scent */
       if(d.state==="leave"){ const s=toScreen(d.Xw,d.Dw); if(s.x<-90||s.x>W+90||dist<.02){ d.alpha-=dt*3; if(d.alpha<=0) d.gone=true; } return; }
+      if(d.chase){ if(dist<.03) d.ph-=dt*(d.lab?4.6:4.2)*.9; else { d.puffT=(d.puffT||0)-dt; if(d.puffT<=0){ d.puffT=.07; const s2=toScreen(d.Xw,d.Dw), k=s2.g/400; puffs.push({x:s2.x+rnd(-6,6)*k,y:s2.y+rnd(-2,2),r:3*k,k,t}); } } return; }   /* at the cursor they stand and wait; running, they kick up dust */
       if(romping){ if(dist<.02&&!d.it) rompArrive(d); return; }
       if(d.toViewer){ if(dist<.02){ d.toViewer=false; d.state="greet"; d.t=0; startGreet(d); } return; }
       if(dist<.02){ d.legs--;
@@ -1903,7 +1921,16 @@ const ambient=(function(){
       const X=(m.sx-cx)*m.z/F, Y=(m.sy-cy)*m.z/F, Pn=[X,Y,m.z], Vn=m.pp? [X-m.pp[0],Y-m.pp[1],m.z-m.pp[2]] : [m.dir,0,0]; m.pp=Pn;
       if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((v,j)=>lerp(v,Vn[j],.08)) : Vn;
       const a=Math.min(1,m.t/1)*Math.min(1,(m.life-m.t)/1.2); x.globalAlpha=Math.max(0,a);
-      monarch3D(x,Pn,m.V||Vn,m.ang,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz,cy+Y3*F/zz]; });
+      const sz=Math.ceil(Math.min(600,60*.0074*F/m.z+10)), mx=mncx; if(mncv.width<sz||mncv.height<sz){ mncv.width=mncv.height=Math.max(sz,mncv.width); }
+      mx.setTransform(1,0,0,1,0,0); mx.clearRect(0,0,sz,sz); mx.globalCompositeOperation="source-over"; mx.imageSmoothingEnabled=true; mx.imageSmoothingQuality="high";
+      monarch3D(mx,Pn,m.V||Vn,m.ang,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz-m.sx+sz/2,cy+Y3*F/zz-m.sy+sz/2]; });
+      /* in the evening air: backlit and warm, hazing toward whatever is behind it the farther off it is */
+      mx.globalCompositeOperation="source-atop"; mx.fillStyle="rgba(40,24,12,.1)"; mx.fillRect(0,0,sz,sz); mx.fillStyle="rgba(255,140,40,.1)"; mx.fillRect(0,0,sz,sz);
+      if(!m.bg||(m.bgT=(m.bgT||0)-1)<=0){ m.bgT=8; const ip=toImg(m.sx,m.sy); m.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,130,90]; }
+      mx.fillStyle=rgb(m.bg,Math.min(.25,.03+(m.z-1.6)*.035)); mx.fillRect(0,0,sz,sz);
+      if(SC.dim()){ mx.fillStyle="rgba(20,14,6,.14)"; mx.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ mx.globalAlpha=tn.a; mx.fillStyle=tn.c; mx.fillRect(0,0,sz,sz); mx.globalAlpha=1; } }
+      if(dark){ mx.fillStyle="rgba(10,8,14,.28)"; mx.fillRect(0,0,sz,sz); }
+      x.filter=m.z>4.5? "blur(.5px)" : "none"; x.drawImage(mncv,0,0,sz,sz,m.sx-sz/2,m.sy-sz/2,sz,sz); x.filter="none";
       zs+=m.z; }
     x.globalAlpha=1; x.restore();
   }
@@ -2536,7 +2563,7 @@ const ambient=(function(){
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
-    ctx.globalAlpha=1; if(img){ drawGreet(dt,dark); drawBats(dt,dark); drawMoths(dt,dark,"near"); drawFlock(dt,dark); drawHawkG(dt,dark,"near"); drawHum(dt,dark); collectTags(); } ctx.globalAlpha=1;
+    ctx.globalAlpha=1; if(img){ drawGreet(dt,dark); drawTrail(dt,dark); drawBats(dt,dark); drawMoths(dt,dark,"near"); drawFlock(dt,dark); drawHawkG(dt,dark,"near"); drawHum(dt,dark); collectTags(); } ctx.globalAlpha=1;
     ctx.setTransform(1,0,0,1,0,0);
     raf=requestAnimationFrame(frame);
   }
