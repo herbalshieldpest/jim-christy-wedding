@@ -84,13 +84,13 @@ var natureSfx=(function(){
   function startChorus(){ clearTimeout(chorT); clearTimeout(katT); clearTimeout(peepT); clearTimeout(wpwT); clearTimeout(bowlT);
     chorT=setTimeout(cricket,600); katT=setTimeout(katydid,2000); peepT=setTimeout(peeper,1500); wpwT=setTimeout(whippoorwill,R(25,50)*1000); bowlT=setTimeout(barredOwl,R(40,80)*1000); }
   /* paws on the turf: a soft low thump with a brush of grass, panned to where the dog is; and the quick scratch of a hind foot on fur */
-  function paw(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.005, out=voice(master,pan), lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=R(260,420); lp.connect(out);
-    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.004); g.gain.exponentialRampToValueAtTime(.001,at+.07); s.connect(g); g.connect(lp); s.start(at,R(0,2.5),.09);
-    tone(at,R(80,110),R(50,60),.06,v*.5,out);
-    const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=2400; hp.connect(out); const s2=ctx.createBufferSource(); s2.buffer=noiseBuf; const g2=ctx.createGain(); g2.gain.setValueAtTime(0,at); g2.gain.linearRampToValueAtTime(v*.18,at+.01); g2.gain.exponentialRampToValueAtTime(.001,at+.09); s2.connect(g2); g2.connect(hp); s2.start(at,R(0,2.5),.1); }
-  function scratch(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.005, out=voice(master,pan), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1800,3200); bp.Q.value=1.4; bp.connect(out);
-    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.008); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
-    tone(at,R(160,200),R(120,140),.04,v*.4,out); }
+  function paw(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,pan*.8);           /* a soft, rounded thump: no sharp edges, so nothing clicks */
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=R(180,260); lp.Q.value=.5; lp.connect(out);
+    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.018); g.gain.linearRampToValueAtTime(0,at+.11); s.connect(g); g.connect(lp); s.start(at,R(0,2.5),.13);
+    const o=ctx.createOscillator(), og=ctx.createGain(); o.type="sine"; o.frequency.setValueAtTime(R(70,90),at); o.frequency.linearRampToValueAtTime(48,at+.09);
+    og.gain.setValueAtTime(0,at); og.gain.linearRampToValueAtTime(v*.45,at+.015); og.gain.linearRampToValueAtTime(0,at+.1); o.connect(og); og.connect(out); o.start(at); o.stop(at+.12); }
+  function scratch(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,pan*.8), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1400,2200); bp.Q.value=1; bp.connect(out);
+    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.015); g.gain.linearRampToValueAtTime(0,at+.07); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.09); }
   /* a single peck at the bark: a dry, hollow knock with a little woody thump under it */
   function peck(xf){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1000,1500); bp.Q.value=4; bp.connect(out);
     const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=R(.35,.5); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
@@ -2396,8 +2396,8 @@ const ambient=(function(){
     if(d.hidden) return;
     const s=toScreen(d.Xw,d.Dw), k=.16*s.g/26, moving=d.state==="run"||d.state==="leave";
     { const pan=Math.max(-1,Math.min(1,s.x/W*2-1))*.9, near=Math.min(1,Math.max(.15,(s.g-180)/260)), a=d.alpha==null?1:d.alpha;   /* footfalls and scratching, placed in stereo where the dog is */
-      if(moving){ const step=Math.floor(d.ph*Math.PI*.9/(Math.PI/2)); if(d.lastStep!=null&&step!==d.lastStep) natureSfx.paw&&natureSfx.paw(pan,(.07+.16*near)*a*(d.lab?1.15:1)*(step%4===0?1.25:.85)); d.lastStep=step; } else d.lastStep=null;
-      if(d.scratching){ d.scrT=(d.scrT||0)-dt; if(d.scrT<=0){ d.scrT=.085; natureSfx.scratch&&natureSfx.scratch(pan,(.05+.1*near)*a); } } }
+      if(moving){ const step=Math.floor(d.ph*Math.PI*.9/Math.PI); if(d.lastStep!=null&&step!==d.lastStep) natureSfx.paw&&natureSfx.paw(pan,(.05+.1*near)*a*(d.lab?1.1:1)*(step%2===0?1.15:.85)); d.lastStep=step; } else d.lastStep=null;
+      if(d.scratching){ d.scrT=(d.scrT||0)-dt; if(d.scrT<=0){ d.scrT=.11; natureSfx.scratch&&natureSfx.scratch(pan,(.03+.06*near)*a); } } }
     if(d.pw){ const dX=d.Xw-d.pw[0], dZ=trueZ(d.Dw)-d.pw[1]; if(moving&&Math.hypot(dX,dZ)>1e-5) d.yaw=angTo(d.yaw,Math.atan2(dZ,dX),dt*8); } keepOnLawn(d); d.pw=[d.Xw,trueZ(d.Dw)];
     d.ct=(d.ct||0)-dt;
     if(d.ct<=0||!d.pal){ d.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.66;
@@ -2515,7 +2515,7 @@ const ambient=(function(){
     if(last && ts-last<30){ raf=requestAnimationFrame(frame); return; }   /* ~30 frames a second is plenty for drifting things */
     const dt=Math.min(.07,(ts-(last||ts))/1000); last=ts; t+=dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
-    camX=(Math.sin(t*.23)*9+Math.sin(t*.61+1)*4)*.9; camY=(Math.cos(t*.19+.5)*6+Math.sin(t*.47)*3)*.9; camZ=1+30/Math.min(W,H);   /* the hand-held drift: the whole view sways together */
+    camX=(Math.sin(t*.23)*9+Math.sin(t*.61+1)*4)*.9; camY=(Math.cos(t*.19+.5)*6+Math.sin(t*.47)*3)*.9; camZ=1+30/Math.min(W,H)+.035*(.5-.5*Math.cos(t*2*Math.PI/48));   /* and slowly breathes in and out, about once every 48 seconds */   /* the hand-held drift: the whole view sways together */
     if(SC.shown()) ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY);
     const dark=document.documentElement.dataset.theme==="dark"||(document.documentElement.dataset.theme!=="light"&&darkQ.matches);
     const sp=sun(), R=Math.max(W,H)*.6, img=SC.shown();
