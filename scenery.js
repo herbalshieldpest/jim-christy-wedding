@@ -91,6 +91,19 @@ var natureSfx=(function(){
     og.gain.setValueAtTime(0,at); og.gain.linearRampToValueAtTime(v*.45,at+.015); og.gain.linearRampToValueAtTime(0,at+.1); o.connect(og); og.connect(out); o.start(at); o.stop(at+.12); }
   function scratch(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,pan*.8), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1400,2200); bp.Q.value=1; bp.connect(out);
     const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.015); g.gain.linearRampToValueAtTime(0,at+.07); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.09); }
+  /* a hummingbird's wings: a soft, fast-throbbing hum, panned and swelling with how close it is, and a few high chips */
+  let humN=null;
+  function humSet(pan,vol){ if(!ctx||!live){ return; }
+    if(!humN&&vol>0){ const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=180; bp.Q.value=1.2;
+      const o=ctx.createOscillator(); o.type="triangle"; o.frequency.value=53; const og=ctx.createGain(); og.gain.value=.35;
+      const am=ctx.createGain(); am.gain.value=.5; const lfo=ctx.createOscillator(); lfo.frequency.value=53; const lg=ctx.createGain(); lg.gain.value=.5; lfo.connect(lg); lg.connect(am.gain);
+      const g=ctx.createGain(); g.gain.value=0; const p=ctx.createStereoPanner? ctx.createStereoPanner() : null;
+      src.connect(bp); bp.connect(am); o.connect(og); og.connect(am); am.connect(g); if(p){ g.connect(p); p.connect(master); } else g.connect(master);
+      src.start(); o.start(); lfo.start(); humN={src,o,lfo,g,p,bp}; }
+    if(!humN) return; const now=ctx.currentTime; humN.g.gain.setTargetAtTime(vol,now,.08); if(humN.p) humN.p.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),now,.06);
+    humN.bp.frequency.setTargetAtTime(150+vol*400,now,.1);
+    if(vol<=0){ const n=humN; humN=null; n.g.gain.setTargetAtTime(0,now,.06); setTimeout(()=>{ try{ n.src.stop(); n.o.stop(); n.lfo.stop(); }catch(e){} },500); } }
+  function humChip(pan){ if(!ctx||!live) return; const out=voice(master,pan), at=ctx.currentTime+.02; for(let i=0;i<2+Math.floor(Math.random()*2);i++) tone(at+i*.09,R(5200,6000),R(4200,4800),.05,.03,out); }
   /* a single peck at the bark: a dry, hollow knock with a little woody thump under it */
   function peck(xf){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1000,1500); bp.Q.value=4; bp.connect(out);
     const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=R(.35,.5); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
@@ -173,7 +186,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, bluebird, setDusk(d){ dusk=d; } };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, humSet, humChip, bluebird, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -391,13 +404,17 @@ const ambient=(function(){
     x.fillStyle="rgba(150,146,140,.28)"; for(const [a,b,r] of [[-.3,-.35,.22],[.1,-.1,.28],[.35,.25,.18],[-.2,.3,.16],[.42,-.36,.12],[-.48,.05,.1]]){ x.beginPath(); x.ellipse(o+a*R,o+b*R,r*R,r*R*.85,a,0,6.283); x.fill(); }   /* the maria */
     x.globalCompositeOperation="destination-out"; const sh=x.createRadialGradient(o-R*1.55,o,R*.4,o-R*1.55,o,R*1.25); sh.addColorStop(0,"rgba(0,0,0,.9)"); sh.addColorStop(.75,"rgba(0,0,0,.75)"); sh.addColorStop(1,"rgba(0,0,0,0)");   /* the unlit sliver on the side away from the sun */
     x.fillStyle=sh; x.fillRect(0,0,c.width,c.height); return c; })();
-  const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
+  const moonCv=document.createElement("canvas"); const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
   function drawMoon(){
     const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.08, d=Math.min(1,duskV/.62), a=.55+.4*d;
     const veil=.25+.35*Math.max(0,Math.sin(t*.045+1)*.5+Math.sin(t*.11)*.5);                                           /* thin cloud drifting across it */
     ctx.save(); ctx.globalAlpha=a*(1-veil*.55);
-    const gl=ctx.createRadialGradient(p[0],p[1],R*.8,p[0],p[1],R*4); gl.addColorStop(0,`rgba(255,246,226,${(.22*a).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* glow in the haze */
-    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ ctx.globalAlpha=Math.min(1,a*1.25*(1-veil*.35)); ctx.translate(p[0],p[1]); ctx.rotate(110*Math.PI/180); ctx.drawImage(moonImg,-R,-R,R*2,R*2); ctx.globalAlpha*=.6; ctx.drawImage(moonImg,-R,-R,R*2,R*2); ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
+    const gl=ctx.createRadialGradient(p[0],p[1],R*.6,p[0],p[1],R*2.6); gl.addColorStop(0,`rgba(255,246,226,${(.12*a).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* glow in the haze */
+    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ ctx.globalAlpha=Math.min(1,(.8+.2*d)*(1-veil*.45)); ctx.translate(p[0],p[1]); ctx.rotate(110*Math.PI/180);
+      const ip0=toImg(p[0],p[1]), sk=(ip0&&sampleAt(Math.max(0,Math.min(1,ip0[0])),Math.max(0,Math.min(1,ip0[1]))))||[200,180,160], S2=Math.ceil(R*2);
+      if(moonCv.width!==S2){ moonCv.width=moonCv.height=S2; } const mx=moonCv.getContext("2d"); mx.globalCompositeOperation="source-over"; mx.clearRect(0,0,S2,S2); mx.drawImage(moonImg,0,0,S2,S2);
+      mx.globalCompositeOperation="source-atop"; mx.fillStyle=rgb(mixv([255,236,214],sk,.4),.32); mx.fillRect(0,0,S2,S2);   /* tinted by the evening air it's seen through, only where the moon is lit */
+      ctx.globalCompositeOperation="source-over"; ctx.filter="blur(.5px)"; ctx.drawImage(moonCv,-R,-R,R*2,R*2); ctx.filter="none";   /* laid over the sky, so its dark seas and bright craters keep their contrast */ ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
     ctx.restore();
     if(skyTile){ const ip=toImg(p[0],p[1]); const c=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[120,110,110];
       const v=ctx.createRadialGradient(p[0]+Math.sin(t*.07)*R,p[1],0,p[0],p[1],R*2.2); v.addColorStop(0,rgb(c,.4*veil)); v.addColorStop(1,rgb(c,0)); ctx.fillStyle=v; ctx.fillRect(p[0]-R*2.5,p[1]-R*2.5,R*5,R*5); }   /* the veil itself */
@@ -2328,7 +2345,8 @@ const ambient=(function(){
     let z, sx, sy, look=0;
     if(T<1.3){ const u=T/1.3, e=u*u*(3-2*u); z=9*Math.pow(zH/9,e); const ev=(1/9-1/z)/(1/9-1/zH); sx=lerp(h.fx,h.hx,ev); sy=lerp(h.fy,h.hy,ev)-Math.sin(ev*Math.PI)*30; }   /* shooting in toward you */
     else if(T<4.6){ z=zH+Math.sin(T*1.7)*.05; sx=h.hx+Math.sin(T*2.6)*16+Math.sin(T*9)*3; sy=h.hy+Math.sin(T*2.1)*9+Math.cos(T*11)*2; look=Math.sin(T*1.9)*.7; }   /* hovering, darting a little, turning its head to you */
-    else { const u=Math.min(1,(T-4.6)/.8), e=u*u; z=zH*Math.pow(10/zH,e); const ev=(1/zH-1/z)/(1/zH-1/10); sx=lerp(h.hx,h.ex,ev); sy=lerp(h.hy,h.ey,ev); if(u>=1){ hum=null; nextHum=rnd(90,170); return; } }
+    else { const u=Math.min(1,(T-4.6)/.8), e=u*u; z=zH*Math.pow(10/zH,e); const ev=(1/zH-1/z)/(1/zH-1/10); sx=lerp(h.hx,h.ex,ev); sy=lerp(h.hy,h.ey,ev); if(u>=1){ hum=null; nextHum=rnd(90,170); natureSfx.humSet&&natureSfx.humSet(0,0); return; } }
+    { const pan=(sx/W*2-1)*.95, vol=Math.min(.14,.03/z); natureSfx.humSet&&natureSfx.humSet(pan,vol); h.chT=(h.chT||rnd(.8,2))-dt; if(h.chT<=0){ h.chT=rnd(1.2,2.6); natureSfx.humChip&&natureSfx.humChip(pan); } }   /* heard where it is, louder up close */
     const P=[(sx-cx)*z/F,(sy-cy)*z/F,z], V=h.pp? [P[0]-h.pp[0],P[1]-h.pp[1],P[2]-h.pp[2]] : [0,0,-1]; h.pp=P; h.sx=sx; h.sy=sy;
     if(Math.hypot(...V)>1e-7) h.V=h.V? h.V.map((v,i)=>lerp(v,V[i],.2)) : V;
     let fdir=h.V||V; const hov=T>=1.3&&T<4.6; if(hov) fdir=[Math.sin(look)*.6,0,-1];                           /* hovering: it faces you */
