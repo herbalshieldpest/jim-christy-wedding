@@ -2183,8 +2183,8 @@ const ambient=(function(){
       x.beginPath(); x.moveTo(p.top[0]+ux,p.top[1]+uy+(p.bot[1]-p.top[1])*.08); x.lineTo(ap[0],ap[1]); x.lineTo(p.bot[0]+ux,p.bot[1]+uy-(p.bot[1]-p.top[1])*.08); x.lineTo(p.bot[0]+ux*3,p.bot[1]+uy*3); x.lineTo(p.top[0]+ux*3,p.top[1]+uy*3); x.closePath(); x.fill(); }
     x.restore();
     /* little brass weights hanging on short cords from the lower edge, swinging as the birds fly and the cloth ripples */
-    const wts=[]; for(const [k,sw] of [[.04,0],[.27,1],[.5,2],[.73,3],[.96,4]]){ const i=Math.round((k+E)/(1+2*E)*N), P=pts[i], ht=Math.hypot(P.bot[0]-P.top[0],P.bot[1]-P.top[1]);
-      const th=-B.dir*.16+Math.sin(B.t*2.7+sw*1.9)*.22+Math.sin(B.t*4.6+sw)*.06, L=ht*.5, r=Math.max(1.4,ht*.085), ex=P.bot[0]+Math.sin(th)*L, ey=P.bot[1]+Math.cos(th)*L;
+    const wts=[]; for(const [k,sw,cl] of [[.04,0,.55],[.27,1,.95],[.5,2,.4],[.73,3,.75],[.96,4,.5]]){ const i=Math.round((k+E)/(1+2*E)*N), P=pts[i], ht=Math.hypot(P.bot[0]-P.top[0],P.bot[1]-P.top[1]);
+      const th=-B.dir*.16+Math.sin(B.t*(3.4-cl*1.2)+sw*1.9)*.22+Math.sin(B.t*4.6+sw)*.06, L=ht*cl, r=Math.max(1.4,ht*.085), ex=P.bot[0]+Math.sin(th)*L, ey=P.bot[1]+Math.cos(th)*L;
       x.strokeStyle="rgba(70,52,30,.9)"; x.lineWidth=Math.max(.6,ht*.025); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+Math.sin(th)*L*.45,P.bot[1]+Math.cos(th)*L*.55,ex,ey); x.stroke();   /* the cord */
       x.fillStyle="#7a5a24"; x.beginPath(); x.ellipse(ex,ey+r*.15,r*.42,r*.3,th,0,6.283); x.fill();                                                      /* the cap */
       const cxw=ex+Math.sin(th)*r*1.1, cyw=ey+Math.cos(th)*r*1.1, g=x.createRadialGradient(cxw-r*.4,cyw-r*.45,r*.1,cxw,cyw,r*1.15);
