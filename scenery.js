@@ -1496,16 +1496,16 @@ const ambient=(function(){
     ctx.save(); ctx.globalAlpha=1; ctx.imageSmoothingQuality="high"; ctx.drawImage(gcv,0,0,cw,ch,0,0,W,H); ctx.restore();
   }
   /* ---- moths at dusk: a few small ones fluttering over the field toward the last light, and now and then a big one that comes in right past you and flies off into the evening ---- */
-  const motes2=[]; let nextMothSmall=2, hero=null, nextHero=22, forceMoth=null;
+  const motes2=[], mcv=document.createElement("canvas"), mcx=mcv.getContext("2d"); let nextMothSmall=2, hero=null, nextHero=22, forceMoth=null;
   const MOTH={
-    luna:{fw:[176,214,150],fw2:[150,196,132],edge:[150,104,140],hw:[170,210,146],tail:true,spot:[[12,-1,2.6,[236,214,120],[110,80,110]],[9,11,2.4,[236,214,120],[110,80,110]]],body:[236,234,220]},
+    luna:{fw:[186,214,164],fw2:[160,196,146],edge:[156,112,132],hw:[178,208,158],tail:true,spot:[[12,-1,1.7,[226,206,140],[120,96,96]],[9,11,1.6,[226,206,140],[120,96,96]]],veins:true,body:[230,228,214]},
     rosy:{fw:[228,122,158],fw2:[244,214,104],edge:[214,96,140],hw:[246,226,150],band:true,body:[248,226,120]},
     io:{fw:[226,186,62],fw2:[200,150,52],edge:[170,110,40],hw:[238,206,80],eye:true,body:[214,170,60]}};
   function mothWings(x,sp,flap){
     const M=MOTH[sp], wf=Math.max(.12,Math.abs(Math.cos(flap)));
     for(const sd of [-1,1]){ x.save(); x.scale(sd*wf,1);
       /* hindwing */
-      x.fillStyle=rgb(M.hw); x.beginPath(); x.moveTo(1,2);
+      const hg=x.createLinearGradient(0,0,14,28); hg.addColorStop(0,rgb(mulv(M.hw,.82))); hg.addColorStop(1,rgb(mixv(M.hw,[236,232,170],.35))); x.fillStyle=hg; x.beginPath(); x.moveTo(1,2);
       if(M.tail){ x.bezierCurveTo(14,2,20,10,15,16); x.bezierCurveTo(13,22,12,30,9,36); x.bezierCurveTo(7,30,5,20,1,12); }
       else { x.bezierCurveTo(14,1,21,9,17,16); x.bezierCurveTo(13,22,5,20,1,12); }
       x.closePath(); x.fill();
@@ -1515,6 +1515,7 @@ const ambient=(function(){
       x.beginPath(); x.moveTo(1,-3); x.bezierCurveTo(10,-9,20,-12,25,-10); x.bezierCurveTo(24,-4,21,3,17,6); x.bezierCurveTo(11,7,5,6,1,4); x.closePath(); x.fill();
       if(M.band){ x.fillStyle=rgb(M.fw2); x.beginPath(); x.moveTo(6,-4); x.bezierCurveTo(11,-7,16,-7,19,-6); x.bezierCurveTo(18,-1,15,3,11,4); x.bezierCurveTo(8,3,6,0,6,-4); x.fill(); }
       x.strokeStyle=rgb(M.edge); x.lineWidth=1.3; x.beginPath(); x.moveTo(1,-3); x.bezierCurveTo(10,-9,20,-12,25,-10); x.stroke();
+      if(M.veins){ x.strokeStyle="rgba(70,96,60,.35)"; x.lineWidth=.45; for(const [ex,ey] of [[24,-9],[22,-3],[18,4],[14,6]]){ x.beginPath(); x.moveTo(1,0); x.quadraticCurveTo(ex*.5,ey*.5-1,ex,ey); x.stroke(); } for(const [ex,ey] of [[16,12],[12,22],[9,32]]){ x.beginPath(); x.moveTo(1,4); x.quadraticCurveTo(ex*.45,ey*.5,ex,ey); x.stroke(); } }
       if(M.spot) for(const [a,b,r,c1,c2] of M.spot){ x.fillStyle=rgb(c2); x.beginPath(); x.ellipse(a,b,r*1.2,r,0,0,6.283); x.fill(); x.fillStyle=rgb(c1); x.beginPath(); x.ellipse(a,b,r*.7,r*.6,0,0,6.283); x.fill(); }
       if(!M.spot&&!M.eye){ x.fillStyle="rgba(120,40,70,.55)"; x.beginPath(); x.arc(13,-2,1.2,0,6.283); x.fill(); }
       x.restore(); }
@@ -1535,19 +1536,32 @@ const ambient=(function(){
       ctx.globalAlpha=1; return;
     }
     /* the big one: comes in from right beside you, huge and soft, wings flashing, and flutters off into the evening toward the light */
-    nextHero-=dt; if(!hero&&nextHero<=0){ const sd=Math.random()<.5?-1:1; hero={t:0,sp:forceMoth||pick(["luna","rosy","io"]),X0:sd*rnd(.18,.3),Y0:rnd(.06,.16),ph:rnd(0,6),fl:0}; }
+    nextHero-=dt; if(!hero&&nextHero<=0){ const sd=Math.random()<.5?-1:1; hero={t:0,sp:"luna",X0:sd*rnd(.18,.3),Y0:rnd(.06,.16),ph:rnd(0,6),fl:0}; }
     if(!hero) return; const h=hero; h.t+=dt; h.fl+=dt*Math.PI*2*(6.5+Math.sin(h.t*1.3)*1.5);
     const z=.32*Math.exp(h.t*.42), F=H*.5, cx=W/2, cy=H*.52, pull=ease(h.t/5.5);
     const tX=(sp.x-cx)*z/F, tY=(sp.y+H*.08-cy)*z/F;
     const X=lerp(h.X0+Math.sin(h.t*1.9+h.ph)*.06*Math.min(1,z),tX,pull)+Math.sin(h.t*3.3)*.025*z, Y=lerp(h.Y0+Math.cos(h.t*2.3+h.ph)*.05*Math.min(1,z),tY,pull)+Math.cos(h.t*2.9)*.02*z;
     const sx=cx+X*F/z, sy=cy+Y*F/z, s=.0068*F/z, a=z<.5? ease((z-.32)/.18) : z>9? Math.max(0,1-(z-9)/3) : 1;
     if(z>12.5||a<=0&&h.t>2){ hero=null; nextHero=rnd(90,180); return; }
-    const head=Math.atan2(Math.cos(h.t*1.4+h.ph)*.4,1)-.0;
-    ctx.save(); ctx.globalAlpha=a*.95; if(z<.9) ctx.filter=`blur(${((.9-z)*9).toFixed(1)}px)`;
-    ctx.translate(sx,sy); ctx.rotate(head*.5+Math.sin(h.t*2.1)*.15); ctx.scale(s,s);
-    mothWings(ctx,h.sp,h.fl);
-    ctx.restore(); ctx.filter="none";
-    if(dark||SC.dim()){ /* dim it with the rest of the scene */ }
+    const head=Math.atan2(Math.cos(h.t*1.4+h.ph)*.4,1)*.5+Math.sin(h.t*2.1)*.15;
+    /* paint it into its own sprite, then set it in the evening light: backlit by the low sun, glowing through the thin wings, hazing into the distance */
+    const sz=Math.ceil(84*s), hx=mcx; if(mcv.width<sz||mcv.height<sz){ mcv.width=Math.max(mcv.width,sz); mcv.height=Math.max(mcv.height,sz); }
+    hx.setTransform(1,0,0,1,0,0); hx.clearRect(0,0,mcv.width,mcv.height); hx.translate(sz/2,sz/2); hx.rotate(head); hx.scale(s,s);
+    mothWings(hx,h.sp,h.fl);
+    hx.setTransform(1,0,0,1,0,0); hx.globalCompositeOperation="source-atop";
+    const dx=sp.x-sx, dy=sp.y-sy, dl=Math.hypot(dx,dy)||1, near=Math.max(0,1-dl/(W*.45));
+    hx.fillStyle=`rgba(40,28,18,${(.56-near*.2).toFixed(2)})`; hx.fillRect(0,0,sz,sz);                     /* we see the shaded side: the sun is behind it */
+    const rl=hx.createLinearGradient(sz/2-dx/dl*sz*.5,sz/2-dy/dl*sz*.5,sz/2+dx/dl*sz*.5,sz/2+dy/dl*sz*.5);
+    rl.addColorStop(0,"rgba(20,12,8,.25)"); rl.addColorStop(.55,"rgba(255,190,110,0)"); rl.addColorStop(1,`rgba(255,196,112,${(.38+near*.3).toFixed(2)})`); hx.fillStyle=rl; hx.fillRect(0,0,sz,sz);   /* warm light catching the sun-side edges */
+    const gw=hx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz*.42); gw.addColorStop(0,`rgba(255,214,150,${(.12+near*.22).toFixed(2)})`); gw.addColorStop(1,"rgba(255,214,150,0)"); hx.fillStyle=gw; hx.fillRect(0,0,sz,sz);   /* light glowing through the wings */
+    if(!h.skyC||(h.skyT=(h.skyT||0)-1)<=0){ h.skyT=6; const ip=toImg(sx,sy); h.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
+    hx.fillStyle="rgba(255,168,84,.22)"; hx.fillRect(0,0,sz,sz);   /* bathed in the orange evening light */
+    const haze=Math.min(.78,Math.max(0,(z-.8)/6)); if(haze>0){ hx.fillStyle=rgb(h.skyC,haze); hx.fillRect(0,0,sz,sz); }   /* the farther it flies, the more it melts into the evening air */
+    if(SC.dim()){ hx.fillStyle="rgba(20,14,6,.18)"; hx.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ hx.globalAlpha=tn.a; hx.fillStyle=tn.c; hx.fillRect(0,0,sz,sz); hx.globalAlpha=1; } }
+    if(dark){ hx.fillStyle="rgba(10,8,14,.3)"; hx.fillRect(0,0,sz,sz); }
+    hx.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=a*.82; ctx.filter=`blur(${(z<.9? (.9-z)*9+.5 : .5+haze*.6).toFixed(1)}px)`; ctx.drawImage(mcv,0,0,sz,sz,sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
+    if(near>.05){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*near*.35; const gl=ctx.createRadialGradient(sx,sy,0,sx,sy,sz*.45); gl.addColorStop(0,"rgba(255,200,130,.5)"); gl.addColorStop(1,"rgba(255,200,130,0)"); ctx.fillStyle=gl; ctx.fillRect(sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); }   /* a soft halo when it passes in front of the light */
   }
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
   let lab=null, nextLab=130;
