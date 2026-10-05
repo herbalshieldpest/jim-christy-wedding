@@ -83,6 +83,14 @@ var natureSfx=(function(){
     bowlT=setTimeout(barredOwl,R(60,150)*1000); }
   function startChorus(){ clearTimeout(chorT); clearTimeout(katT); clearTimeout(peepT); clearTimeout(wpwT); clearTimeout(bowlT);
     chorT=setTimeout(cricket,600); katT=setTimeout(katydid,2000); peepT=setTimeout(peeper,1500); wpwT=setTimeout(whippoorwill,R(25,50)*1000); bowlT=setTimeout(barredOwl,R(40,80)*1000); }
+  /* paws on the turf: a soft low thump with a brush of grass, panned to where the dog is; and the quick scratch of a hind foot on fur */
+  function paw(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.005, out=voice(master,pan), lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=R(260,420); lp.connect(out);
+    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.004); g.gain.exponentialRampToValueAtTime(.001,at+.07); s.connect(g); g.connect(lp); s.start(at,R(0,2.5),.09);
+    tone(at,R(80,110),R(50,60),.06,v*.5,out);
+    const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=2400; hp.connect(out); const s2=ctx.createBufferSource(); s2.buffer=noiseBuf; const g2=ctx.createGain(); g2.gain.setValueAtTime(0,at); g2.gain.linearRampToValueAtTime(v*.18,at+.01); g2.gain.exponentialRampToValueAtTime(.001,at+.09); s2.connect(g2); g2.connect(hp); s2.start(at,R(0,2.5),.1); }
+  function scratch(pan,v){ if(!ctx||!live) return; const at=ctx.currentTime+.005, out=voice(master,pan), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1800,3200); bp.Q.value=1.4; bp.connect(out);
+    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.008); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
+    tone(at,R(160,200),R(120,140),.04,v*.4,out); }
   /* a single peck at the bark: a dry, hollow knock with a little woody thump under it */
   function peck(xf){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1000,1500); bp.Q.value=4; bp.connect(out);
     const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=R(.35,.5); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
@@ -165,7 +173,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, bluebird, setDusk(d){ dusk=d; } };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, bluebird, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -2147,12 +2155,15 @@ const ambient=(function(){
     while(bats.length<want) bats.push({x:rnd(W*.1,W*.9),y:gnd().vy-rnd(20,120),z:rnd(2.5,6),vx:rnd(-60,60),vy:0,vz:0,ph:rnd(0,6),f:rnd(52,64),tw:0});
     if(bats.length>want) bats.length=want;
     const a=Math.min(1,(duskV-.22)/.15); if(a<=0) return;
-    ctx.save(); ctx.fillStyle=`rgba(22,16,14,${(.88*a).toFixed(2)})`; ctx.strokeStyle=ctx.fillStyle;
+    ctx.save();
     for(const b of bats){ b.tw-=dt; if(b.tw<=0){ b.tw=rnd(.15,.6); b.ax=rnd(-260,260); b.ay=rnd(-200,200); b.az=rnd(-3,3); }             /* sudden jinks after insects, in every direction */
       b.vx+=(b.ax||0)*dt; b.vy+=(b.ay||0)*dt; b.vz+=(b.az||0)*dt; b.vx*=.94; b.vy*=.94; b.vz*=.92; b.x+=b.vx*dt*(4/b.z); b.y+=b.vy*dt*(4/b.z); b.z=Math.max(1.6,Math.min(8,b.z+b.vz*dt));
       const top=gnd().vy-170, bot=gnd().vy+60; if(b.y<top) b.vy+=200*dt; if(b.y>bot) b.vy-=200*dt; if(b.x<-20) b.x=W+20; if(b.x>W+20) b.x=-20;
       b.ph+=dt*b.f; const P=[(b.x-cx)*b.z/F,(b.y-cy)*b.z/F,b.z], V=b.pp? [P[0]-b.pp[0],P[1]-b.pp[1],P[2]-b.pp[2]] : [1,0,0]; b.pp=P;
       if(Math.hypot(...V)>1e-7) b.V=b.V? b.V.map((v,i)=>lerp(v,V[i],.25)) : V;
+      if(!b.sky||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=10; const ip=toImg(b.x,b.y); b.sky=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,120,100]; }
+      const hz=Math.min(.7,.12+(b.z-1.6)/9), sp=sun(), glow=Math.max(0,1-Math.hypot(b.x-sp.x,b.y-sp.y)/(W*.35));         /* hazed toward the sky behind it, more with distance and near the sun */
+      ctx.fillStyle=ctx.strokeStyle=rgb(mixv([22,16,14],b.sky,Math.min(.85,hz+glow*.25)),.88*a); ctx.filter=b.z>4.5? "blur(.6px)" : "none";
       bat3D(ctx,P,b.V||V,b.ph,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz,cy+Y3*F/zz]; },.0105); }
     ctx.restore();
   }
@@ -2221,12 +2232,13 @@ const ambient=(function(){
     const hc=[3.0*ct-.2,3.0*st+.6,0];                                                                                                  /* the head sits nearly level whatever the body does */
     parts.push({p:[[hc[0],hc[1],0,1.42]],c:C(G),sh});
     for(const sd of [-1,1]){ parts.push({p:[[hc[0]+.45,hc[1]+.25,sd*1.05,.26]],c:"rgba(8,6,6,.96)",bias:-.2}); parts.push({p:[[hc[0]-.25,hc[1]+.2,sd*1.12,.14]],c:C(WH),bias:-.18}); }
+    parts.push({p:[S(-2.2,-.9,0,.9),S(.2,-1.1,0,1.05)],c:C([92,150,96]),bias:-.03});                                                     /* the bright iridescent back */
     parts.push({p:[[hc[0]+1.2,hc[1]-.15,0,.22],[hc[0]+6.2,hc[1]-.35,0,.07]],c:C([24,20,20]),bias:-.1});                                  /* the needle bill, held level */
     /* wings: a figure-eight stroke, mostly forward and back, seen as a blur */
     const R=S(.3,-.4,0,0), wingAt=(sd,ph)=>{ const d=[Math.sin(ph)*.9,.18,sd*Math.cos(ph)], pp=[-Math.cos(ph)*.9,0,sd*Math.sin(ph)], P=(a,b,r)=>[R[0]+d[0]*a+pp[0]*b,R[1]+d[1]*a+pp[1]*b,R[2]+d[2]*a+pp[2]*b,r];
       return [P(.4,.5),P(2.4,1.25),P(5.2,1.1),[...P(7.6,.15).slice(0,3),-1],P(4.9,-.3),P(1.8,-.4)]; };
     for(const sd of [-1,1]){ const fan=[[R[0],R[1],R[2],0]]; for(let i=0;i<=8;i++){ const ph=-1.15+i/8*2.3; fan.push(wingAt(sd,ph)[3].slice(0,3).concat([0])); }
-      parts.push({poly:true,p:fan,c:"rgba(150,160,150,.3)",bias:.3}); parts.push({poly:true,p:wingAt(sd,Math.sin(beat)*1.15),c:"rgba(56,64,58,.55)",bias:.25}); }
+      parts.push({poly:true,p:fan,c:"rgba(150,160,150,.3)",bias:6}); parts.push({poly:true,p:wingAt(sd,Math.sin(beat)*1.15),c:"rgba(56,64,58,.55)",bias:5.5}); }
     return parts;
   }
   function drawHum(dt,dark){
@@ -2245,6 +2257,11 @@ const ambient=(function(){
     const yaw=hov? -Math.PI/2+look*.8 : Math.atan2(fdir[2],fdir[0]), pitch=Math.atan2(P[1],P[2])*.9;                       /* we see it from where we really are: from below when it's above us */
     rigDraw(x,humParts(hov?1.0:.35,h.beat,dark?.55:.78),rigView(yaw,pitch),u);
     x.setTransform(1,0,0,1,0,0); rigLight(x,sz/2,sz*.3,sz*.7,sz*.4,sun().x-sx,0);
+    if(u>3){ x.save(); x.globalCompositeOperation="source-atop";                                                       /* fine feathering: tiny scale-like marks, and a moving glint of iridescence */
+      if(!h.feath) h.feath=Array.from({length:90},()=>[rnd(-1,1),rnd(-1,1),rnd(.6,1.2),rnd(0,6.28)]);
+      x.lineWidth=Math.max(.5,u*.09); for(const [fx,fy,fr,fa] of h.feath){ x.strokeStyle=`rgba(20,36,24,${(.16).toFixed(2)})`; x.beginPath(); x.arc(sz/2+fx*u*3.2,sz/2+fy*u*5,u*.32*fr,fa,fa+2.2); x.stroke(); }
+      const gx=sz/2+Math.sin(T*2.2)*u*1.6, gy=sz/2-u*1.4, gl=x.createRadialGradient(gx,gy,0,gx,gy,u*3); gl.addColorStop(0,"rgba(200,255,190,.3)"); gl.addColorStop(1,"rgba(200,255,190,0)"); x.fillStyle=gl; x.fillRect(0,0,sz,sz);
+      x.restore(); }
     /* the evening light on it: warm on the sun side, hazing into the sky with distance, toned like the photo */
     x.globalCompositeOperation="source-atop"; const sp=sun(), sdx=Math.sign(sp.x-sx)||1;
     x.fillStyle="rgba(255,160,76,.2)"; x.fillRect(0,0,sz,sz);
@@ -2351,6 +2368,9 @@ const ambient=(function(){
   function paintDog(d,dt,dark){
     if(d.hidden) return;
     const s=toScreen(d.Xw,d.Dw), k=.16*s.g/26, moving=d.state==="run"||d.state==="leave";
+    { const pan=Math.max(-1,Math.min(1,s.x/W*2-1))*.9, near=Math.min(1,Math.max(.15,(s.g-180)/260)), a=d.alpha==null?1:d.alpha;   /* footfalls and scratching, placed in stereo where the dog is */
+      if(moving){ const step=Math.floor(d.ph*Math.PI*.9/(Math.PI/2)); if(d.lastStep!=null&&step!==d.lastStep) natureSfx.paw&&natureSfx.paw(pan,(.07+.16*near)*a*(d.lab?1.15:1)*(step%4===0?1.25:.85)); d.lastStep=step; } else d.lastStep=null;
+      if(d.scratching){ d.scrT=(d.scrT||0)-dt; if(d.scrT<=0){ d.scrT=.085; natureSfx.scratch&&natureSfx.scratch(pan,(.05+.1*near)*a); } } }
     if(d.pw){ const dX=d.Xw-d.pw[0], dZ=trueZ(d.Dw)-d.pw[1]; if(moving&&Math.hypot(dX,dZ)>1e-5) d.yaw=angTo(d.yaw,Math.atan2(dZ,dX),dt*8); } keepOnLawn(d); d.pw=[d.Xw,trueZ(d.Dw)];
     d.ct=(d.ct||0)-dt;
     if(d.ct<=0||!d.pal){ d.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.66;
