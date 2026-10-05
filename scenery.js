@@ -1230,7 +1230,8 @@ const ambient=(function(){
   /* only one of the ground hunters and wanderers is out at a time */
   /* a newcomer scares off whoever is already out: they bolt away from it, off the far side */
   let lastArrive=-99;
-  const groundBusy=()=>t-lastArrive<25;
+  const dogOut=d=>d&&!d.gone&&d.state!=="leave";
+  const groundBusy=()=>t-lastArrive<25||dogOut(dog)||dogOut(lab);
   function arrive(x,self){ lastArrive=t; const away=sx=>sx<x? -150 : W+150;
     for(const f of [fox,skunk,cub,mom,bobcat,pheasW,coyote]) if(f&&f!==self&&!f.gone){ const s=toScreen(f.Xw,f.Dw), p=toGround(away(s.x),gnd().vy+s.g); f.state="leave"; f.tX=p.Xw; f.tD=p.Dw; f.ang=null; f.spd=Math.max(f.spd||1,1.3); f.cad=Math.max(f.cad||1,1); f.head=0; }
     for(const dd of [lab]) if(dd&&dd!==self){ const s=toScreen(dd.Xw,dd.Dw), p=toGround(away(s.x),gnd().vy+s.g); dd.state="leave"; dd.tX=p.Xw; dd.tD=p.Dw; }
@@ -1318,7 +1319,7 @@ const ambient=(function(){
   function stepRomp(d,dt){
     const m=d.mate&&!d.mate.gone&&d.mate.romp>0? d.mate : null; d.romp-=dt;
     const a=toScreen(d.Xw,d.Dw); (d.hist||(d.hist=[])).push([t,a.x,a.g]); while(d.hist.length&&d.hist[0][0]<t-2) d.hist.shift();   /* where this dog has been, so the other can follow a beat late */
-    if(!m||d.romp<=0){ d.romp=0; d.it=false; dogTarget(d); return false; }
+    if(!m||d.romp<=0){ d.romp=0; d.it=false; if(!d.lab) d.legs=Math.min(d.legs,3); dogTarget(d); return false; }
     if(d.it){ d.chase-=dt;
       if(d.chase<=0){ d.it=false; rompTarget(d); return true; }
       /* chasing: head for where the other dog was a moment ago, in its own lane, so it reacts late and turns on its own beat */
