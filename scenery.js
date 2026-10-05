@@ -218,6 +218,14 @@ var natureSfx=(function(){
     note(at,.34,t=>f1*(.84+.16*sm(t/.07))*(1+.03*sm((t-.1)/.2))*(1-.04*sm((t-.28)/.06)),.055);                         /* whee: scoops up, settles, drops off */
     note(at+.48,.95,t=>f2*(.84+.16*sm(t/.08))*(1+.04*sm((t-.1)/.3))*(1+1.8*Math.pow(sm((t-.42)/.5),1.3)),.065); }   /* wheeeeEEEET: holds, then climbs well over an octave right to the end */
   /* a flock of Canada geese going over: each goose honks from its own place in the V, panned hard across the stereo field, so you hear them spread out and moving */
+  /* ravens: a deep, rough, gurgling "gronk", or the odd hollow wooden knock "tok-tok-tok" */
+  function raven(pan,kind){ if(!ctx||!live) return; const out=voice(master,pan||0); let at=ctx.currentTime+.03;
+    if(kind==="knock"){ const n=3+Math.floor(Math.random()*3); for(let i=0;i<n;i++){ tone(at,R(900,1000),R(700,780),.05,.05,out,"triangle"); const s=ctx.createBufferSource(); s.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1100; bp.Q.value=6; const g=ctx.createGain(); g.gain.setValueAtTime(.06,at); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(bp); bp.connect(g); g.connect(out); s.start(at,R(0,2),.06); at+=R(.09,.12); } return; }
+    const n=1+Math.floor(Math.random()*2); for(let j=0;j<n;j++){ const d=R(.28,.4), o=ctx.createOscillator(); o.type="sawtooth"; const f0=R(330,400); o.frequency.setValueAtTime(f0*.85,at); o.frequency.linearRampToValueAtTime(f0,at+d*.3); o.frequency.exponentialRampToValueAtTime(f0*.7,at+d);
+      const lfo=ctx.createOscillator(); lfo.frequency.value=R(28,38); const lg=ctx.createGain(); lg.gain.value=R(40,70); lfo.connect(lg); lg.connect(o.frequency);     /* the rattle in its throat */
+      const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(700,900); bp.Q.value=1.4; const bp2=ctx.createBiquadFilter(); bp2.type="bandpass"; bp2.frequency.value=1700; bp2.Q.value=3; const g2=ctx.createGain(); g2.gain.value=.4;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09,at+.04); g.gain.setValueAtTime(.08,at+d*.6); g.gain.exponentialRampToValueAtTime(.0001,at+d);
+      o.connect(bp); o.connect(bp2); bp2.connect(g2); g2.connect(g); bp.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); at+=d+R(.15,.3); } }
   function honk(xFrac,near,spread){
     if(!ctx||!live) return; const now=ctx.currentTime+.02, base=Math.max(-1,Math.min(1,(xFrac*2-1)*1.4)), sp=Math.max(.35,spread||.5);
     const v=.075*Math.max(.35,near); let at=now; const n=2+Math.floor(Math.random()*4);
@@ -239,7 +247,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, whistle, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
+  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, whistle, raven, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -565,7 +573,7 @@ const ambient=(function(){
     if(!MN){ ctx.save(); ctx.globalAlpha=a*.85; ctx.translate(p[0],p[1]); ctx.rotate(110*Math.PI/180); ctx.drawImage(moonImg,-R,-R,R*2,R*2); ctx.restore(); return; }   /* the photo can't be read here: just the moon */
     if(t>=MN.next){ MN.next=t+.25; moonUpdate(); if(!MN) return; }
     const cov=MN.cov;
-    ctx.save(); const gl=ctx.createRadialGradient(p[0],p[1],R*.6,p[0],p[1],R*(2.6+cov*1.2)); gl.addColorStop(0,`rgba(255,246,226,${(.12*a*(1+cov*.6)).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* its glow spreads wider in cloud */
+    ctx.save(); const lx=p[0]+.94*R*.42, ly=p[1]+.34*R*.42, gl=ctx.createRadialGradient(lx,ly,R*.35,lx,ly,R*(2.3+cov*1.2));   /* the glow comes off the lit half only */ gl.addColorStop(0,`rgba(255,246,226,${(.12*a*(1+cov*.6)).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(lx-R*4,ly-R*4,R*8,R*8);   /* its glow spreads wider in cloud */
     ctx.globalAlpha=Math.min(1,.8+.2*d); ctx.drawImage(moonBl,p[0]-R,p[1]-R,R*2,R*2); ctx.restore();
   }
   function welcomeShade(){ /* the welcome screen darkens the middle of the photo a little; match it */
@@ -2959,7 +2967,7 @@ const ambient=(function(){
     if(t>starNext){ starNext=t+rnd(.5,2.2); const vis=stars.filter(s=>(d/.62-s.on)>.1); if(vis.length) pick(vis).burst=t; }       /* every so often one star flares */
     for(const s of stars){ const b0=Math.max(0,Math.min(1,(d/.62-s.on)/.25)); if(b0<=.02) continue;
       const tw=.62+.22*Math.sin(t*1.7+s.ph)+.16*Math.sin(t*(6.3+s.r*4)+s.ph*3)+(Math.random()-.5)*.14, a=b0*Math.max(0,tw), x=s.x*W, y=s.y*hz;   /* the air makes them scintillate */
-      if(Math.hypot(x-sp.x,y-sp.y)<W*.18) continue; ctx.fillStyle=`rgba(240,238,255,${(a*.8).toFixed(2)})`; ctx.beginPath(); ctx.arc(x,y,s.r,0,6.283); ctx.fill();
+      if(Math.hypot(x-sp.x,y-sp.y)<W*.18) continue; if(moonAt&&Math.hypot(x-moonAt[0],y-moonAt[1])<moonAt[2]*1.08) continue;   /* the dark side of the moon still hides the stars behind it */ ctx.fillStyle=`rgba(240,238,255,${(a*.8).toFixed(2)})`; ctx.beginPath(); ctx.arc(x,y,s.r,0,6.283); ctx.fill();
       if(s.burst!=null){ const u=(t-s.burst)/1.1; if(u>=1) s.burst=null; else starBurst(x,y,b0*Math.sin(Math.PI*u)**1.5,12+s.r*14); } }
     if(d>.18&&t>venNext){ venNext=t+rnd(9,20); venB=t; }
     if(venB!=null){ const u=(t-venB)/1.4; if(u>=1) venB=null; else starBurst(ve[0],ve[1],Math.min(1,(d-.18)/.15)*Math.sin(Math.PI*u)**1.5,16); }
@@ -3185,7 +3193,7 @@ const ambient=(function(){
     if(pf){ const F=H*.5; tag(W/2+pf.P[0]*F/pf.P[2],H*.52+pf.P[1]*F/pf.P[2],Math.min(260,.016*20*F/Math.max(.3,pf.P[2])),"Ring-necked pheasant"); }
     if(jays) for(const k of ["b0","b1"]){ const b=jays[k]; if(b&&b.pp){ const F=H*.5; tag(W/2+b.pp[0]*F/b.pp[2],H*.52+b.pp[1]*F/b.pp[2],Math.min(160,.011*18*F/Math.max(.3,b.pp[2])),"Blue jay"); } }
     if(ban&&ban.sx!=null) tag(ban.sx,ban.sy,90,"Eastern bluebirds"); if(moonAt) tag(moonAt[0],moonAt[1],moonAt[2],"Crescent moon");
-    for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,26,b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
+    for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,26,b.kind==="raven"?"Common raven":b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
   }
   document.addEventListener("click",e=>{
     if(SC.identify===false||!on) return; collectTags();
@@ -3378,6 +3386,7 @@ const ambient=(function(){
   const SOAR={
     vult:{half:.24, s:[.05,.3,.55,.8,.95,1], lead:[.12,.13,.12,.09,.04,-.01], trail:[-.15,-.17,-.16,-.13,-.09,-.05], tail:[[-.18,.05],[-.36,.07],[-.38,0],[-.36,-.07],[-.18,-.05]], head:.26, band:.42},
     hawk:{half:.16, s:[.05,.3,.55,.8,.95,1], lead:[.14,.15,.13,.09,.03,-.03], trail:[-.16,-.2,-.19,-.15,-.09,-.05], tail:[[-.16,.07],[-.4,.15],[-.44,0],[-.4,-.15],[-.16,-.07]], head:.24, band:0},
+    raven:{half:.17, s:[.05,.3,.55,.78,.92,1], lead:[.13,.15,.14,.11,.06,0], trail:[-.17,-.21,-.21,-.17,-.1,-.05], tail:[[-.16,.05],[-.36,.13],[-.48,0],[-.36,-.13],[-.16,-.05]], head:.3, band:0},
     owl: {half:.18, s:[.05,.3,.55,.8,.95,1], lead:[.14,.15,.13,.09,.02,-.04], trail:[-.18,-.22,-.22,-.18,-.1,-.05], tail:[[-.16,.06],[-.3,.08],[-.32,0],[-.3,-.08],[-.16,-.06]], head:.2, band:0}};
   let soarers=[], nextVult=90, nextHawkV=45, nextOwlV=120;
   function soarBird(kind,o){ return Object.assign({kind,t:0,ph:rnd(0,6),bank:0,alpha:0,flap:0},o); }
@@ -3400,9 +3409,10 @@ const ambient=(function(){
     if(!b.skyC||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=20; const ip=toImg(c0.x,c0.y); b.skyC=(ip&&ip[1]>0&&ip[1]<1&&sampleAt(Math.max(0,Math.min(1,ip[0])),ip[1]))||[206,180,140]; }
     const M=c=>{ const hz=dark? mulv(b.skyC,.45) : b.skyC; return rgb(mixv(c.map(v=>v*(dark?.7:1)),hz,Math.min(.88,haze+glow*.2))); };
     const pal= b.kind==="vult"? {w:M([30,24,21]),band:M([78,72,68]),body:M([26,21,18]),head:M([150,58,48]),tail:M([32,26,23])}
+             : b.kind==="raven"? {w:M([16,16,22]),band:M([46,52,74]),body:M([14,14,20]),head:M([18,18,24]),tail:M([16,16,22])}
              : b.kind==="hawk"? {w:M([196,178,150]),band:M([70,48,32]),body:M([206,190,166]),head:M([110,76,52]),tail:M([170,92,52])}
              : {w:M([150,120,86]),band:M([96,72,50]),body:M([160,128,92]),head:M([150,120,88]),tail:M([130,102,72])};
-    const dih=b.kind==="vult"? .32 : b.kind==="hawk"? .08 : .04, fl=b.flap;
+    const dih=b.kind==="vult"? .32 : b.kind==="hawk"? .08 : b.kind==="raven"? .06 : .04, fl=b.flap;
     ctx.save(); ctx.globalAlpha=b.alpha*(1-glow*.25)*(1-haze*(b.kind==="vult"?.15:.3)); ctx.lineJoin="round";
     const wing=(sd,lead,trail,col)=>{ const pts=[]; S.s.forEach((s,i)=>{ const up=s*Math.sin(dih+fl*(.4+.6*s)); pts.push(P(lead[i],sd*s,up)); });
       for(let i=S.s.length-1;i>=0;i--){ const s=S.s[i], up=s*Math.sin(dih+fl*(.4+.6*s)); pts.push(P(trail[i],sd*s,up)); }
@@ -3411,12 +3421,34 @@ const ambient=(function(){
     for(const sd of [-1,1]){ wing(sd,S.lead,S.trail,pal.w);
       if(S.band) wing(sd,S.lead.map((v,i)=>lerp(v,S.trail[i],S.band)),S.trail,pal.band);                 /* the vulture's silvery flight feathers */
       if(b.kind==="hawk") wing(sd,S.lead,S.lead.map((v,i)=>lerp(v,S.trail[i],.18)),pal.band);              /* the dark leading-edge bar of a red-tail */
+      if(b.kind==="raven"){ const up=s=>s*Math.sin(dih+fl*(.4+.6*s)); for(let i=0;i<5;i++){ const t=i/4, a0=lerp(.04,-.07,t), s0=.94, a1=a0+.035-t*.02, s1=1.13-Math.abs(t-.35)*.12;   /* the long, separated "fingers" of a raven's wingtip */
+          const A=P(a0+.015,sd*s0,up(s0)), B=P(a1,sd*s1,up(s1)), C=P(a0-.015,sd*s0,up(s0)); ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.lineTo(C.x,C.y); ctx.closePath(); ctx.fillStyle=pal.w; ctx.fill(); }
+        wing(sd,S.lead,S.lead.map((v,i)=>lerp(v,S.trail[i],.3)),rgb([0,0,0],0)); }
     }
+    if(b.kind==="raven"){ const sh=Math.max(0,Math.sin(b.bank+.6))*.5; ctx.globalAlpha*=.35*sh; for(const sd of [-1,1]) wing(sd,S.lead,S.lead.map((v,i)=>lerp(v,S.trail[i],.5)),pal.band); ctx.globalAlpha/=Math.max(.001,.35*sh); }   /* the glossy blue-purple sheen as it rolls toward the light */
     const bA=P(S.head,0,0), bB=P(-.2,0,0); ctx.strokeStyle=pal.body; ctx.lineWidth=Math.max(1,c0.k*S.half*.22); ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(bA.x,bA.y); ctx.lineTo(bB.x,bB.y); ctx.stroke();
-    ctx.fillStyle=pal.head; ctx.beginPath(); ctx.arc(bA.x,bA.y,Math.max(.8,c0.k*S.half*(b.kind==="owl"?.2:.1)),0,6.283); ctx.fill();
+    ctx.fillStyle=pal.head; ctx.beginPath(); ctx.arc(bA.x,bA.y,Math.max(.8,c0.k*S.half*(b.kind==="owl"?.2:b.kind==="raven"?.13:.1)),0,6.283); ctx.fill();
+    if(b.kind==="raven"){ const bk=P(S.head+.09,0,-.01); ctx.strokeStyle=pal.head; ctx.lineWidth=Math.max(1,c0.k*S.half*.12); ctx.beginPath(); ctx.moveTo(bA.x,bA.y); ctx.lineTo(bk.x,bk.y); ctx.stroke(); }   /* the heavy bill */
     ctx.restore(); return true;
   }
+  /* a pair of common ravens: they fly close together in step, rowing slowly then gliding, croaking back and forth;
+     now and then one flips right over onto its back and rolls out again, and sometimes they tumble together, just for the fun of it */
+  let nextRaven=rnd(50,100);
+  function startRavens(){ const ltr=Math.random()<.5, Z=rnd(4.2,5.4), v=vanish(), X0=((ltr?-80:W+80)-v[0])*Z/FOC(), hd=ltr? -rnd(.02,.12) : Math.PI+rnd(.02,.12), Y=rnd(2.1,2.6);
+    const pair={rollAt:rnd(4,8),tumbleAt:rnd(10,16),callAt:rnd(1,3)};
+    for(let i=0;i<2;i++) soarers.push(soarBird("raven",{X:X0-Math.cos(hd)*i*.55,Z:Z+i*.25,Y:Y+i*.12,hd,sp:rnd(.55,.7),life:40,pair,lead:i===0,roll:null,ph:i*1.3})); }
+  function stepRaven(b,dt){ const p=b.pair;
+    b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.Y+=Math.sin(b.t*.5+b.ph)*.03*dt;
+    const cyc=(b.t+b.ph*.4)%5.5, row=cyc<2.2; b.ph+=dt*(row? Math.PI*2*1.4 : 0); b.flap+=((row? Math.sin(b.ph)*.6 : -.06)-b.flap)*Math.min(1,dt*(row?12:3));   /* slow, deep rowing beats, then a glide on flat wings */
+    let bank=Math.sin(b.t*.45+b.ph)*.12;
+    if(b.lead&&b.t>p.rollAt){ p.rollAt=b.t+rnd(6,11); b.roll={t:0,dur:rnd(.9,1.3),turns:Math.random()<.3?2:1,dir:Math.random()<.5?1:-1}; if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,"knock"); }
+    if(!b.lead&&b.t>p.tumbleAt){ p.tumbleAt=b.t+rnd(12,20); b.roll={t:0,dur:1.6,turns:1,dir:-1,drop:.5}; }     /* the follower tumbles and drops, then catches up */
+    if(b.roll){ const r=b.roll; r.t+=dt; const u=Math.min(1,r.t/r.dur), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u); bank+=r.dir*e*Math.PI*2*r.turns; b.flap*=.3; if(r.drop) b.Y-=Math.sin(u*Math.PI)*r.drop*dt*2.2; if(u>=1) b.roll=null; }   /* flipped right over onto its back, wings folding, and out again */
+    b.bank=bank;
+    if(b.lead&&b.t>p.callAt){ p.callAt=b.t+rnd(2.5,6); if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,Math.random()<.75?"croak":"knock"); }
+  }
   function drawRaptors(dt,dark){
+    nextRaven-=dt; if(nextRaven<=0){ nextRaven=rnd(150,300); if(!soarers.some(b=>b.kind==="raven")) startRavens(); }
     nextVult-=dt; nextHawkV-=dt; nextOwlV-=dt;
     /* turkey vultures retired */
     if(nextHawkV<=0){ nextHawkV=rnd(120,260); if(!soarers.some(b=>b.kind==="hawk")) startHawk(); }
@@ -3430,6 +3462,7 @@ const ambient=(function(){
           if(!b.called && b.t>3 && typeof natureSfx!=="undefined"){ b.called=true; natureSfx.hawk(); } }
         else b.flap=0;
         if(b.t>b.life){ K.cz+=dt*.8; b.Y+=dt*.15; } }
+      else if(b.kind==="raven"){ stepRaven(b,dt); const c=w2s(b.X,b.Y,b.Z); b._pan=Math.max(-1,Math.min(1,c.x/W*2-1)); }
       else { b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.ph+=dt*2.3*Math.PI*2/2.3; b.flap=Math.sin(b.ph)*.55; b.Y+=Math.sin(b.t*.6)*.02*dt; b.bank=Math.sin(b.t*.5)*.08; }
       b.alpha= b.t>b.life? Math.max(0,b.alpha-dt*.25) : Math.min(1,b.alpha+dt*.5);
       const on=drawSoarer(b,dark); if((b.t>b.life&&b.alpha<=0) || (!b.kettle && !on && b.t>3)) b.done=true;
@@ -3605,5 +3638,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { ravDbg(){ return soarers.filter(b=>b.kind==="raven").map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,!!b.roll]; }); }, bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="ravens"){ soarers=soarers.filter(b=>b.kind!=="raven"); startRavens(); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
