@@ -2924,7 +2924,7 @@ const ambient=(function(){
     const poly=(pts,col)=>{ x.fillStyle=col; x.beginPath(); x.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) x.lineTo(pts[i][0],pts[i][1]); x.closePath(); x.fill(); };
     const line=(a,b,col,w)=>{ x.strokeStyle=col; x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
     const px=sc(0); x.lineCap="round"; x.lineJoin="round";
-    const BR=[60,40,26], BRD=[36,24,16], COV=[74,50,32], TAWNY=[140,102,62], REMU=[92,78,68], REMT=[34,25,18], FING=[26,20,16], WH=[246,242,232], BILL=[240,192,58], FEET=[236,198,72];
+    const BR=[60,40,26], BRD=[36,24,16], COV=[74,50,32], TAWNY=[140,102,62], REMU=[72,60,52], REMT=[34,25,18], FING=[26,20,16], WH=[246,242,232], BILL=[240,192,58], FEET=[236,198,72];
     /* the wing: a broad plank of an arm out to the wrist, then the hand, its primaries splayed into seven long slotted fingers, tips curling up under load */
     const A0=.07+Math.sin(e.t*1.7)*.012, A1=A0+e.amp*Math.cos(e.ph), A2=A1+e.amp*.5*Math.cos(e.ph-.75), up=Math.max(0,-Math.sin(e.ph))*Math.min(1,e.amp/.5);   /* the hand lags the arm and tucks a little on the upstroke */
     const WR=18;
@@ -2940,13 +2940,13 @@ const ambient=(function(){
         const at=(k,off)=>{ const da=Math.sin(ang)*len*k, ds=Math.cos(ang)*len*k, w=off*(1-k*.62); return wp(sd, ba+da+w*Math.cos(ang), bs+ds-w*Math.sin(ang), curl*(k*k)*2.6*(1+i*.05)); };
         return {i, pts:[wp(sd,P0[0],P0[1],0),at(.45,fw*1.35),at(.8,fw*1.05),at(1,fw*.35),at(1.03,0),at(1,-fw*.35),at(.8,-fw*1.05),at(.45,-fw*1.35),wp(sd,P1[0],P1[1],0)], tip:at(1.03,0), mid:at(.5,0), base:wp(sd,ba,bs,0)}; });
       /* each finger, the dark primaries — drawn first so the hand covers their roots */
-      for(const F of fingerPts){ const c=under? mixv(L(FING,1.1),[255,170,96],glow*.38) : L(FING,1.2); smooth(F.pts,rgb(c)); if(px>.5) line(F.base,F.mid,rgb(under? [150,128,110] : [80,64,50],.35),Math.max(.4,px*.18)); }
+      for(const F of fingerPts){ const c=under? mixv(L(FING,.8),[240,160,90],glow*.16) : L(FING,1.2); smooth(F.pts,rgb(c)); if(px>.5) line(F.base,F.mid,rgb(under? [150,128,110] : [80,64,50],.35),Math.max(.4,px*.18)); }
       /* the wing itself, with the scalloped trailing edge of its secondaries */
       const out=[]; for(const [a,s] of LE) out.push(wp(sd,a,s,0));
       const te=[]; for(let i=TE.length-1;i>0;i--){ const [a0,s0]=TE[i], [a1,s1]=TE[i-1]; const n=Math.max(1,Math.round(Math.abs(s1-s0)/1.7)); for(let k=0;k<n;k++){ const t=k/n, a=lerp(a0,a1,t)-(k%2? .0 : .42), s=lerp(s0,s1,t); te.push(wp(sd,a,s,0)); } } te.push(wp(sd,TE[0][0],TE[0][1],0));
       const base=under? L(BRD,1) : L(COV,1.15); { const r0=wp(sd,0,3,0), r1=wp(sd,0,34,0), g=x.createLinearGradient(r0[0],r0[1],r1[0],r1[1]); g.addColorStop(0,rgb(mixv(base,[255,214,170],lit*.12))); g.addColorStop(1,rgb(mulv(base,.82))); poly(out.concat(te),g); }
       /* the flight feathers: the back half of the wing, paler underneath and glowing where the sun shines through */
-      const remCol=under? mixv(L(REMU,1),[236,160,96],glow*.2) : L(REMT,1.1);
+      const remCol=under? mixv(L(REMU,.6),[236,160,96],glow*.14) : L(REMT,1.1);
       const band=[]; for(let i=0;i<TE.length;i++){ const [a,s]=TE[i]; band.push(wp(sd,lerp(LE[i][0],a,.48),lerp(LE[i][1],s,.48),0)); }
       { const g=x.createLinearGradient(band[0][0],band[0][1],te[0][0],te[0][1]); g.addColorStop(0,rgb(remCol)); g.addColorStop(1,rgb(mixv(remCol,under?[250,180,112]:remCol,glow*.16))); poly(band.concat(te),g); }
       /* the feather shafts and separations across the secondaries */
@@ -3028,7 +3028,7 @@ const ambient=(function(){
     const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(ecv.width!==cw||ecv.height!==ch){ ecv.width=cw; ecv.height=ch; }
     const x=ecx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0); x.globalAlpha=1;
     eagle3D(x,e,P,f,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],Kw,sunL);
-    const sx=cx+P[0]*F/P[2], sy=cy+P[1]*F/P[2], rad=40*Kw*F/P[2]+30, RR=rad*.6, RX=Math.max(0,sx*.6-RR), RY=Math.max(0,sy*.6-RR), RW=RR*2, RH=RR*2;
+    const sx=cx+P[0]*F/P[2], sy=cy+P[1]*F/P[2], rad=56*Kw*F/P[2]+30, RR=rad*.6, RX=Math.max(0,sx*.6-RR), RY=Math.max(0,sy*.6-RR), RW=RR*2, RH=RR*2;
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
     x.fillStyle="rgba(255,160,80,.08)"; x.fillRect(RX,RY,RW,RH);                                                                          /* the warm evening air */
     { const rl=x.createLinearGradient(sx*.6-RR,0,sx*.6+RR,0), k=sp.x>sx?1:0; rl.addColorStop(k,"rgba(255,190,110,.2)"); rl.addColorStop(1-k,"rgba(20,12,8,.12)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH); }   /* rim light from the sun's side */
