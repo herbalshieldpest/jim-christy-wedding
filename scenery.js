@@ -1833,6 +1833,60 @@ const ambient=(function(){
     x.globalCompositeOperation="source-over";
     ctx.save(); ctx.filter="blur(.35px)"; ctx.drawImage(mncv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
   }
+  /* ---- american woodcocks: plump, long-billed little birds that come out of the brush onto the lawn edge at dusk,
+     doing their funny rocking walk, probing the ground with their bills, then scuttling off in a quick run ---- */
+  const wcs=[]; let nextWc=25;
+  function startWoodcocks(){ const n=2+Math.floor(Math.random()*2), sx0=rnd(W*.2,W*.85);
+    for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-80,80))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(2,10));
+      wcs.push({Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.6,1.8),life:rnd(30,50),alpha:0,head:0,probe:0,turn:0}); } }
+  function wcTarget(w,far){ const s=toScreen(w.Xw,w.Dw), sx=Math.max(W*.04,Math.min(W*.96,s.x+rnd(-1,1)*(far?110:50))), g=lawnMinG(sx)+rnd(4,far?60:30), p=toGround(sx,gnd().vy+g); w.tX=p.Xw; w.tD=p.Dw; }
+  function woodcockParts(w,P){
+    const yaw=w.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], run=w.state==="run", walk=w.state==="walk"||run;
+    const q=w.ph, rock=w.state==="walk"? Math.sin(q*.5)*.9 : 0, bob=run? Math.abs(Math.sin(q))*.3 : 0;   /* the woodcock's slow back-and-forth rocking as it walks */
+    const B=(x,y,z,r)=>[x+rock,y+bob,z,r];
+    const back=rgb(P.back), body=rgb(P.body), buff=rgb(P.buff), dk=rgb(P.dark), leg=rgb(P.leg);
+    for(const [z,ph] of [[-.9,0],[.9,Math.PI]]){ const sw=walk?Math.sin(q+ph)*(run?.6:.35):0, lift=walk?Math.max(0,-Math.cos(q+ph))*.6:0;
+      const ch=legChain(.2+rock,2.4+bob,z,.45,[[1.3,.2+sw,.35],[1.2,-.3+sw-lift,.3]]); parts.push({p:ch,c:far(z)?rgb(mulv(P.leg,.75)):leg,bias:.02}); }
+    parts.push({p:[B(-4.4,4.2,0,1.6),B(-2,4.4,0,2.8),B(.8,4.4,0,3.1),B(2.6,4.6,0,2.5)],c:body,sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,200,140],.25))]});   /* plump round body */
+    parts.push({p:[B(-3.6,5.8,0,1.5),B(-.6,6.4,0,2.1),B(1.8,6,0,1.6)],c:back,bias:-.05});                       /* mottled dark back */
+    parts.push({p:[B(-.4,2.6,0,1.9),B(2,3.4,0,1.8)],c:buff,bias:-.03});                                          /* buffy breast */
+    parts.push({p:[B(-5.4,4.4,0,1.1),B(-6.6,4.1,0,.7)],c:back});                                                  /* stubby tail */
+    for(const sd of [-1,1]) for(const [x0,y0] of [[-2.6,6.6],[-.6,7],[1.2,6.6]]) parts.push({p:[B(x0,y0,sd*1.2,.42)],c:rgb(mulv(P.buff,.95)),bias:-.12});   /* pale back stripes */
+    const hp=w.head, hy=lerp(6.2,4.4,hp), hx=lerp(3.9,4.5,hp);
+    parts.push({p:[B(hx,hy,0,1.85)],c:body,sh:null});                                                             /* the big round head */
+    for(const [dx,dy] of [[-.9,1.5],[-.2,1.7],[.5,1.5]]) parts.push({p:[B(hx+dx,hy+dy,0,.5)],c:dk,bias:-.15});    /* dark crown bars */
+    for(const sd of [-1,1]) parts.push({p:[B(hx-.1,hy+.5,sd*1.25,.42)],c:"rgba(10,6,4,.95)",bias:-.3});           /* eyes set high and far back */
+    const bl=4.6, ba=lerp(-.35,-1.15,hp)-w.probe*.25, bx=hx+1.5, by=hy-.3;
+    parts.push({p:[B(bx,by,0,.42),B(bx+Math.cos(ba)*bl,by+Math.sin(ba)*bl,0,.16)],c:rgb(P.bill),bias:-.05});        /* the long straight bill */
+    return parts;
+  }
+  function stepWoodcock(w,dt){
+    w.t+=dt; if(w.t<0) return;
+    if(w.state==="wait"){ w.state="walk"; w.t=0; wcTarget(w); }
+    w.alpha= w.leaving? Math.max(0,w.alpha-dt*1.2) : Math.min(1,w.alpha+dt*1.2);
+    if(w.leaving&&w.alpha<=0){ w.gone=true; return; }
+    if(w.t>w.life&&!w.leaving&&w.state!=="run"){ w.leaving=true; w.state="walk"; const s=toScreen(w.Xw,w.Dw), p=toGround(s.x+rnd(-20,20),gnd().vy+lawnMinG(s.x)-4); w.tX=p.Xw; w.tD=p.Dw; }   /* back into the cover */
+    if(w.state==="walk"||w.state==="run"){
+      const sp=w.state==="run"? .5 : .1, dX=w.tX-w.Xw, dD=w.tD-w.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
+      if(dist<=sp*dt){ w.Xw=w.tX; w.Dw=w.tD; } else { w.Xw+=dX/dist*sp*dt; w.Dw+=dD/dist*sp*dt*4*(Math.abs(dD)>1e-6?1:0); }
+      const want=Math.atan2(trueZ(w.tD)-trueZ(w.Dw),w.tX-w.Xw); if(dist>.01) w.yaw=angTo(w.yaw,want,dt*(w.state==="run"?8:3));
+      w.ph+=dt*(w.state==="run"? 22 : 6.5); w.head+=((w.state==="run"?.1:.2)-w.head)*Math.min(1,dt*6); w.probe=0;
+      if(dist<.01&&!w.leaving){ const r=Math.random(); if(r<.55){ w.state="probe"; w.st=rnd(2,4.5); w.t2=0; } else if(r<.75){ w.state="pause"; w.st=rnd(.8,2); w.t2=0; } else if(r<.88){ w.state="run"; wcTarget(w,true); } else wcTarget(w); }
+      if(dist<.01&&w.state==="run"){ w.state="pause"; w.st=rnd(.6,1.4); w.t2=0; }
+    } else { w.t2+=dt;
+      if(w.state==="probe"){ w.head+=(.95-w.head)*Math.min(1,dt*5); w.probe=Math.max(0,Math.sin(w.t2*7))*(Math.sin(w.t2*1.3)>-.2?1:0); }   /* bill down, jabbing into the soft ground for worms */
+      else { w.head+=(0-w.head)*Math.min(1,dt*5); w.probe=0; w.ph+=dt*2; }
+      if(w.t2>w.st){ w.state="walk"; wcTarget(w); } }
+    keepOnLawn(w);
+  }
+  function drawWoodcock(w,dt,dark){
+    stepWoodcock(w,dt); if(w.gone||w.t<0) return;
+    const s=toScreen(w.Xw,w.Dw), k=.16*s.g/26*1.35;
+    w.ct=(w.ct||0)-dt; if(w.ct<=0||!w.pal){ w.ct=1.5; const G=groundPal(s,dark), lit=dark?.42:.6;
+      w.pal={...G, body:mulv([156,116,74],lit), back:mulv([92,66,44],lit), buff:mulv([200,164,114],lit), dark:mulv([40,28,20],lit), leg:mulv([186,140,120],lit), bill:mulv([150,120,96],lit)}; }
+    if(!w.blades) w.blades=Array.from({length:7},()=>({ox:rnd(-12,12),h:rnd(2,4),lean:rnd(-.5,.5),c:Math.random()}));
+    critterBlit(null,null,w,s,k,w.pal,()=>woodcockParts(w,w.pal),w.yaw,22,36,9,w.blades,w.alpha);
+  }
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
   let lab=null, nextLab=130;
   function startLab(){
@@ -2003,6 +2057,9 @@ const ambient=(function(){
       if(dog) L.push({y:toScreen(dog.Xw,dog.Dw).y,fn:()=>drawDog(dt,dark)}); else drawDog(dt,dark);
       if(lab) L.push({y:toScreen(lab.Xw,lab.Dw).y,fn:()=>drawLab(dt,dark)}); else drawLab(dt,dark);
       for(const bn of buns) L.push({y:bn.y||0,fn:()=>drawRabbit(bn,dt,dark)});
+      nextWc-=dt; if(nextWc<=0&&!wcs.length){ startWoodcocks(); nextWc=rnd(70,140); }
+      for(let i=wcs.length-1;i>=0;i--) if(wcs[i].gone) wcs.splice(i,1);
+      for(const w of wcs) L.push({y:toScreen(w.Xw,w.Dw).y,fn:()=>drawWoodcock(w,dt,dark)});
       turkeyQueue(dt,dark,L);
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
@@ -2018,5 +2075,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
