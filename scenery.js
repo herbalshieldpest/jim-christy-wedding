@@ -2847,7 +2847,7 @@ const ambient=(function(){
     if(bbFlock) for(const b of bbFlock.birds) if(b.sx!=null) tag(b.sx,b.sy,24,"Eastern bluebird");
     if(hum&&hum.sx!=null) tag(hum.sx,hum.sy,40,"Ruby-throated hummingbird"); for(const b of bats) tag(b.x,b.y,16,"Little brown bat");
     for(const c of cards) tag(c.x,gnd().vy+lawnMinG(c.x)-16,14,c.male?"Northern cardinal":"Northern cardinal (female)");
-    for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,26,b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
+    for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,26,b.kind==="eagle"?"Bald eagle":b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
   }
   document.addEventListener("click",e=>{
     if(SC.identify===false||!on) return;
@@ -2892,8 +2892,9 @@ const ambient=(function(){
   const SOAR={
     vult:{half:.24, s:[.05,.3,.55,.8,.95,1], lead:[.12,.13,.12,.09,.04,-.01], trail:[-.15,-.17,-.16,-.13,-.09,-.05], tail:[[-.18,.05],[-.36,.07],[-.38,0],[-.36,-.07],[-.18,-.05]], head:.26, band:.42},
     hawk:{half:.16, s:[.05,.3,.55,.8,.95,1], lead:[.14,.15,.13,.09,.03,-.03], trail:[-.16,-.2,-.19,-.15,-.09,-.05], tail:[[-.16,.07],[-.4,.15],[-.44,0],[-.4,-.15],[-.16,-.07]], head:.24, band:0},
+    eagle:{half:.42, s:[.04,.24,.46,.66,.8], lead:[.1,.12,.12,.115,.1], trail:[-.11,-.15,-.155,-.15,-.12], tail:[[-.16,.05],[-.38,.09],[-.42,.04],[-.43,0],[-.42,-.04],[-.38,-.09],[-.16,-.05]], head:.26, band:0},
     owl: {half:.18, s:[.05,.3,.55,.8,.95,1], lead:[.14,.15,.13,.09,.02,-.04], trail:[-.18,-.22,-.22,-.18,-.1,-.05], tail:[[-.16,.06],[-.3,.08],[-.32,0],[-.3,-.08],[-.16,-.06]], head:.2, band:0}};
-  let soarers=[], nextVult=90, nextHawkV=45, nextOwlV=120;
+  let soarers=[], nextVult=90, nextHawkV=45, nextOwlV=120, nextEagle=rnd(70,130);
   function soarBird(kind,o){ return Object.assign({kind,t:0,ph:rnd(0,6),bank:0,alpha:0,flap:0},o); }
   function startVultures(){
     const n=2+Math.floor(Math.random()*4), cz=rnd(14,26), cy=rnd(4.2,7), dir=Math.random()<.5?1:-1, v=vanish(), cx=(W*(dir>0?rnd(.1,.35):rnd(.65,.9))-v[0])*cz/FOC();
@@ -2904,6 +2905,9 @@ const ambient=(function(){
     soarers.push(soarBird("hawk",{kettle:{cx,cz,drift:dir*rnd(.1,.2)},r:rnd(1.1,1.8),w:rnd(.3,.4)*(Math.random()<.5?1:-1),a0:rnd(0,6.28),Y:rnd(3,4.6),life:rnd(30,45),called:false})); }
   function startOwl(){ const ltr=Math.random()<.5, Z=rnd(4.5,7), v=vanish(), X0=((ltr?-60:W+60)-v[0])*Z/FOC();
     soarers.push(soarBird("owl",{X:X0,Z,Y:rnd(1.5,2.1),hd:(ltr?0:Math.PI)+(ltr?1:-1)*rnd(.15,.4),sp:rnd(1.1,1.5),life:30})); }
+  /* a bald eagle sailing past close to the camera on flat plank wings: a few slow, deep strokes, then a long banked glide */
+  function startEagle(){ const ltr=Math.random()<.5, Z=rnd(2.6,3.1)*(W<H?1.9:1), v=vanish(), X0=((ltr?-130:W+130)-v[0])*Z/FOC();
+    soarers.push(soarBird("eagle",{X:X0,Z,Y:1+rnd(.55,.85)*(W<H?1.5:1),hd:ltr? -rnd(.04,.1) : Math.PI+rnd(.04,.1),turn:0,bk:rnd(.5,.62)*(ltr?-1:1),sp:rnd(.28,.34),life:80,beats:rnd(1.8,2.6)})); }
   function drawSoarer(b,dark){
     const S=SOAR[b.kind], F=[Math.cos(b.hd),Math.sin(b.hd)], Rt=[-Math.sin(b.hd),Math.cos(b.hd)];
     const cb=Math.cos(b.bank), sb=Math.sin(b.bank);
@@ -2914,10 +2918,11 @@ const ambient=(function(){
     if(!b.skyC||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=20; const ip=toImg(c0.x,c0.y); b.skyC=(ip&&ip[1]>0&&ip[1]<1&&sampleAt(Math.max(0,Math.min(1,ip[0])),ip[1]))||[206,180,140]; }
     const M=c=>{ const hz=dark? mulv(b.skyC,.45) : b.skyC; return rgb(mixv(c.map(v=>v*(dark?.7:1)),hz,Math.min(.88,haze+glow*.2))); };
     const pal= b.kind==="vult"? {w:M([30,24,21]),band:M([78,72,68]),body:M([26,21,18]),head:M([150,58,48]),tail:M([32,26,23])}
+             : b.kind==="eagle"? {w:M([50,34,22]),band:M([34,23,15]),body:M([44,30,19]),head:M([238,234,222]),tail:M([236,232,220]),beak:M([226,176,40])}
              : b.kind==="hawk"? {w:M([196,178,150]),band:M([70,48,32]),body:M([206,190,166]),head:M([110,76,52]),tail:M([170,92,52])}
              : {w:M([150,120,86]),band:M([96,72,50]),body:M([160,128,92]),head:M([150,120,88]),tail:M([130,102,72])};
-    const dih=b.kind==="vult"? .32 : b.kind==="hawk"? .08 : .04, fl=b.flap;
-    ctx.save(); ctx.globalAlpha=b.alpha*(1-glow*.25)*(1-haze*(b.kind==="vult"?.15:.3)); ctx.lineJoin="round";
+    const dih=b.kind==="vult"? .32 : b.kind==="hawk"? .08 : b.kind==="eagle"? .02 : .04, fl=b.flap;
+    ctx.save(); ctx.globalAlpha=b.alpha*(1-glow*(b.kind==="eagle"?.1:.25))*(1-haze*(b.kind==="vult"?.15:b.kind==="eagle"?.05:.3)); ctx.lineJoin="round";
     const wing=(sd,lead,trail,col)=>{ const pts=[]; S.s.forEach((s,i)=>{ const up=s*Math.sin(dih+fl*(.4+.6*s)); pts.push(P(lead[i],sd*s,up)); });
       for(let i=S.s.length-1;i>=0;i--){ const s=S.s[i], up=s*Math.sin(dih+fl*(.4+.6*s)); pts.push(P(trail[i],sd*s,up)); }
       ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); ctx.closePath(); ctx.fillStyle=col; ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(1.1,c0.k*.006); ctx.stroke(); };
@@ -2925,7 +2930,17 @@ const ambient=(function(){
     for(const sd of [-1,1]){ wing(sd,S.lead,S.trail,pal.w);
       if(S.band) wing(sd,S.lead.map((v,i)=>lerp(v,S.trail[i],S.band)),S.trail,pal.band);                 /* the vulture's silvery flight feathers */
       if(b.kind==="hawk") wing(sd,S.lead,S.lead.map((v,i)=>lerp(v,S.trail[i],.18)),pal.band);              /* the dark leading-edge bar of a red-tail */
+      if(b.kind==="eagle"){ const s0=.79, up=s=>s*Math.sin(dih+fl*(.4+.6*s)), N=6;                      /* the spread primaries: six long slotted 'fingers' */
+        for(let i=0;i<N;i++){ const a=(i+.15)/N, c=(i+.85)/N, fa=lerp(.1,-.11,a), fc=lerp(.1,-.11,c), fm=(fa+fc)/2, len=.2+.05*Math.sin((i+.5)/N*Math.PI)-.03*i/N, s1=s0+len, tip=fm+(.06-.024*i)+.012*Math.sin(b.t*3+i);
+          const q=[P(fa,sd*s0,up(s0)),P(fm+(.04-.016*i)*.6+.012,sd*(s0+len*.6),up(s0+len*.6)),P(tip,sd*s1,up(s1)),P(fm+(.04-.016*i)*.6-.012,sd*(s0+len*.6),up(s0+len*.6)),P(fc,sd*s0,up(s0))];
+          ctx.beginPath(); ctx.moveTo(q[0].x,q[0].y); for(let j=1;j<q.length;j++) ctx.lineTo(q[j].x,q[j].y); ctx.closePath(); ctx.fillStyle=pal.band; ctx.fill(); ctx.strokeStyle=pal.band; ctx.lineWidth=Math.max(1,c0.k*.004); ctx.stroke(); } }
     }
+    if(b.kind==="eagle"){                                                                                  /* tapered dark body, white hooded head, heavy yellow bill */
+      const poly=(pr,col)=>{ const L=pr.map(([f,w])=>P(f,w,0)), R=pr.map(([f,w])=>P(f,-w,0)).reverse(); ctx.beginPath(); ctx.moveTo(L[0].x,L[0].y); L.concat(R).forEach(q=>ctx.lineTo(q.x,q.y)); ctx.closePath(); ctx.fillStyle=col; ctx.fill(); };
+      poly([[.18,.075],[.1,.11],[.0,.13],[-.1,.12],[-.19,.09],[-.25,.07]],pal.body);
+      poly([[.34,.02],[.32,.055],[.28,.075],[.22,.07],[.17,.08],[.13,.09]],pal.head);
+      const t1=P(.385,0,-.012), b1=P(.325,.03,0), b2=P(.325,-.03,0); ctx.fillStyle=pal.beak; ctx.beginPath(); ctx.moveTo(b1.x,b1.y); ctx.lineTo(t1.x,t1.y); ctx.lineTo(b2.x,b2.y); ctx.closePath(); ctx.fill();
+      ctx.restore(); return true; }
     const bA=P(S.head,0,0), bB=P(-.2,0,0); ctx.strokeStyle=pal.body; ctx.lineWidth=Math.max(1,c0.k*S.half*.22); ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(bA.x,bA.y); ctx.lineTo(bB.x,bB.y); ctx.stroke();
     ctx.fillStyle=pal.head; ctx.beginPath(); ctx.arc(bA.x,bA.y,Math.max(.8,c0.k*S.half*(b.kind==="owl"?.2:.1)),0,6.283); ctx.fill();
     ctx.restore(); return true;
@@ -2934,6 +2949,7 @@ const ambient=(function(){
     nextVult-=dt; nextHawkV-=dt; nextOwlV-=dt;
     if(nextVult<=0){ nextVult=rnd(170,320); if(!soarers.some(b=>b.kind==="vult")) startVultures(); }
     if(nextHawkV<=0){ nextHawkV=rnd(120,260); if(!soarers.some(b=>b.kind==="hawk")) startHawk(); }
+    nextEagle-=dt; if(nextEagle<=0){ nextEagle=rnd(240,420); if(!soarers.some(b=>b.kind==="eagle")) startEagle(); }
     if(nextOwlV<=0){ nextOwlV=rnd(160,340); if(!soarers.some(b=>b.kind==="owl")) startOwl(); }
     for(const b of soarers){
       b.t+=dt;
@@ -2944,9 +2960,12 @@ const ambient=(function(){
           if(!b.called && b.t>3 && typeof natureSfx!=="undefined"){ b.called=true; natureSfx.hawk(); } }
         else b.flap=0;
         if(b.t>b.life){ K.cz+=dt*.8; b.Y+=dt*.15; } }
+      else if(b.kind==="eagle"){ b.hd+=b.turn*Math.sin(b.t*.22)*dt*2; b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt;
+        const cyc=b.t%14, beating=cyc<b.beats; b.ph+=dt*(beating?Math.PI*2*1.15:0); const tgt=beating? Math.sin(b.ph)*.62 : 0; b.flap+= (tgt-b.flap)*Math.min(1,dt*(beating?14:3));
+        if(!beating) b.ph=0; b.Y+=(beating? .03 : -.012)*dt + Math.sin(b.t*.4)*.012*dt; b.bank=b.bk+Math.sin(b.t*.35+1)*.1; }
       else { b.X+=Math.cos(b.hd)*b.sp*dt; b.Z+=Math.sin(b.hd)*b.sp*dt; b.ph+=dt*2.3*Math.PI*2/2.3; b.flap=Math.sin(b.ph)*.55; b.Y+=Math.sin(b.t*.6)*.02*dt; b.bank=Math.sin(b.t*.5)*.08; }
       b.alpha= b.t>b.life? Math.max(0,b.alpha-dt*.25) : Math.min(1,b.alpha+dt*.5);
-      const on=drawSoarer(b,dark); if((b.t>b.life&&b.alpha<=0) || (!b.kettle && !on && b.t>3)) b.done=true;
+      const on=drawSoarer(b,dark); if(on) b.seen=true; if((b.t>b.life&&b.alpha<=0) || (!b.kettle && !on && (b.kind==='eagle'? b.seen||b.t>40 : b.t>3))) b.done=true;
     }
     soarers=soarers.filter(b=>!b.done);
   }
@@ -3083,5 +3102,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="eagle"){ soarers=soarers.filter(b=>b.kind!=="eagle"); nextEagle=0; } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
