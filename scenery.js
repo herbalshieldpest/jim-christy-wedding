@@ -198,21 +198,25 @@ var natureSfx=(function(){
     const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09*v,at+.05); g.gain.setValueAtTime(.085*v,at+d*.6); g.gain.exponentialRampToValueAtTime(.0001,at+d);
     o.connect(am); am.connect(bp); am.connect(bp2); bp.connect(g); bp2.connect(g2); g2.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); }
   /* someone calling the dogs: a bright two-note finger whistle, wheet, whee-oo, with a little breath in it */
-  /* a person whistling the dogs in, lips pursed: breathy and human, lower than any bird, a short note and then a long one that sweeps right up at the end */
-  function whistle(pan){ if(!ctx||!live) return; const at=ctx.currentTime+.02, out=voice(master,pan||0);
-    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=5200; lp.connect(out);
-    const note=(t0,pts,vol)=>{ const end=t0+pts[pts.length-1][0];
-      for(const [mul,v] of [[1,1],[2,.12],[3,.04]]){ const o=ctx.createOscillator(), g=ctx.createGain(); o.type="sine";      /* a little body in the tone, as a mouth gives it */
-        o.frequency.setValueAtTime(pts[0][1]*mul,t0); for(const [dt2,f] of pts.slice(1)) o.frequency.exponentialRampToValueAtTime(f*mul,t0+dt2);
-        const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=4.2; vg.gain.value=6*mul; vib.connect(vg); vg.connect(o.frequency);
-        g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol*v,t0+.06); g.gain.setValueAtTime(vol*v*.95,end-.08); g.gain.exponentialRampToValueAtTime(.0001,end+.06);
-        o.connect(g); g.connect(lp); o.start(t0); vib.start(t0); o.stop(end+.08); vib.stop(end+.08); }
-      const n=ctx.createBufferSource(); n.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.Q.value=1.6;   /* the breath around the note, following its pitch */
-      bp.frequency.setValueAtTime(pts[0][1],t0); for(const [dt2,f] of pts.slice(1)) bp.frequency.exponentialRampToValueAtTime(f,t0+dt2);
-      const ng=ctx.createGain(); ng.gain.setValueAtTime(0,t0); ng.gain.linearRampToValueAtTime(vol*.9,t0+.05); ng.gain.exponentialRampToValueAtTime(.0001,end+.05); n.connect(bp); bp.connect(ng); ng.connect(lp); n.start(t0,R(0,2),end-t0+.1); };
-    const k=R(.95,1.05);
-    note(at,[[0,1180*k],[.2,1260*k]],.06);                                                  /* whee */
-    note(at+.3,[[0,1120*k],[.22,1180*k],[.6,2950*k]],.07); }                                /* wheeeEEET, rising more than an octave */
+  /* a person whistling the dogs in, lips pursed. What makes it human rather than a bird: it's slow, the pitch scoops up into each note and wavers
+     a little as the breath does, there's a rush of air before and around the tone, and the long note climbs smoothly and keeps going up to the very end */
+  function whistle(pan){ if(!ctx||!live) return; const at=ctx.currentTime+.08, out=voice(master,pan||0), SR=200;
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=6000; lp.connect(out);
+    const curve=(dur,fn)=>{ const n=Math.max(2,Math.round(dur*SR)), a=new Float32Array(n); for(let i=0;i<n;i++) a[i]=fn(i/(n-1)*dur); return a; };
+    const sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+    const note=(t0,dur,pitch,vol)=>{ const ph1=R(0,6), ph2=R(0,6), drift=R(-.01,.01);
+      const f=curve(dur,t=>pitch(t)*(1+.006*Math.sin(t*2*Math.PI*6.3+ph1)+.004*Math.sin(t*2*Math.PI*10.7+ph2)+drift*t));
+      const g=curve(dur,t=>vol*sm(t/.06)*(1-sm((t-(dur-.07))/.07))*(.9+.1*Math.sin(t*2*Math.PI*3+ph1)));
+      for(const [mul,v] of [[1,1],[2,.06]]){ const o=ctx.createOscillator(), gg=ctx.createGain(); o.type="sine";
+        o.frequency.setValueCurveAtTime(mul===1? f : f.map(x=>x*2),t0,dur); gg.gain.setValueAtTime(0,t0); gg.gain.setValueCurveAtTime(v===1? g : g.map(x=>x*v),t0,dur);
+        o.connect(gg); gg.connect(lp); o.start(t0); o.stop(t0+dur+.02); }
+      const n=ctx.createBufferSource(); n.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.Q.value=5; bp.frequency.setValueCurveAtTime(f,t0,dur);
+      const ng=ctx.createGain(); ng.gain.setValueAtTime(0,t0-.04); ng.gain.linearRampToValueAtTime(vol*.7,t0+.01); ng.gain.setValueCurveAtTime(curve(dur,t=>vol*(.3+.4*(1-sm(t/.12)))*(1-sm((t-(dur-.06))/.06))),t0+.012,dur-.012);   /* air first, then air around the tone */
+      const hiss=ctx.createBiquadFilter(); hiss.type="highpass"; hiss.frequency.value=2500; const hg=ctx.createGain(); hg.gain.setValueAtTime(0,t0-.05); hg.gain.linearRampToValueAtTime(vol*.12,t0); hg.gain.exponentialRampToValueAtTime(.0001,t0+.09);
+      n.connect(bp); bp.connect(ng); ng.connect(lp); n.connect(hiss); hiss.connect(hg); hg.connect(lp); n.start(t0-.05,R(0,2),dur+.1); };
+    const k=R(.93,1.07), f1=1350*k, f2=1250*k;
+    note(at,.34,t=>f1*(.84+.16*sm(t/.07))*(1+.03*sm((t-.1)/.2))*(1-.04*sm((t-.28)/.06)),.055);                         /* whee: scoops up, settles, drops off */
+    note(at+.48,.95,t=>f2*(.84+.16*sm(t/.08))*(1+.04*sm((t-.1)/.3))*(1+1.8*Math.pow(sm((t-.42)/.5),1.3)),.065); }   /* wheeeeEEEET: holds, then climbs well over an octave right to the end */
   function honk(xFrac,near){
     if(!ctx||!live||Math.random()<.15) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=950; bp.Q.value=1.6; bp.connect(o);
     const v=.075*Math.max(.35,near); let at=now; const n=1+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ const f=R(310,380); tone(at,f*.82,f,.05,v*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,v,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,v*.35,bp,"square"); at+=R(.24,.42); }   /* the two-part a-honk of a Canada goose */
