@@ -1516,9 +1516,9 @@ const ambient=(function(){
     io:{fw:[226,186,62],fw2:[200,150,52],edge:[170,110,40],hw:[238,206,80],eye:true,body:[214,170,60]}};
   /* a luna moth, drawn from life: broad pale-lime forewings with a maroon leading edge that runs right across the shoulders, small comma eyespots,
      long twisting hindwing tails, round yellow-ringed eyespots with a dark crescent and a pink centre, a white furry body and feathery tan antennae */
-  function lunaWings(x,flap){
-    const wf=Math.max(.12,Math.abs(Math.cos(flap))), G=[194,216,162], G2=[176,204,148], RIM=[226,224,176], COSTA=[104,70,92];
-    for(const sd of [-1,1]){ x.save(); x.scale(sd*wf,1);
+  function lunaWings(x,flap,only){
+    const wf=only? 1 : Math.max(.12,Math.abs(Math.cos(flap))), G=[194,216,162], G2=[176,204,148], RIM=[226,224,176], COSTA=[104,70,92];
+    for(const sd of (only?[1]:[-1,1])){ x.save(); x.scale(sd*wf,1);
       /* hindwing with its long tail */
       const hg=x.createLinearGradient(0,0,6,38); hg.addColorStop(0,rgb(G2)); hg.addColorStop(.6,rgb(G)); hg.addColorStop(1,rgb(mixv(G,RIM,.5))); x.fillStyle=hg;
       x.beginPath(); x.moveTo(1.5,-1); x.bezierCurveTo(9,-1,18,2,19,7); x.bezierCurveTo(20,12,15,16,12,19);
@@ -1542,10 +1542,35 @@ const ambient=(function(){
       /* the maroon leading edge */
       x.strokeStyle=rgb(COSTA); x.lineWidth=1.8; x.beginPath(); x.moveTo(0,-5.4); x.bezierCurveTo(10,-7.8,20,-10.2,25.6,-9.7); x.stroke();
       x.restore(); }
+    if(only) return;
     x.strokeStyle=rgb([104,70,92]); x.lineWidth=2.2; x.beginPath(); x.moveTo(-2.5,-5.2); x.lineTo(2.5,-5.2); x.stroke();   /* the band carries across the shoulders */
     const bg=x.createRadialGradient(0,-2,.5,0,0,5); bg.addColorStop(0,rgb([246,244,232])); bg.addColorStop(1,rgb([214,214,196])); x.fillStyle=bg;
     x.beginPath(); x.ellipse(0,-1.6,2.8,4,0,0,6.283); x.fill(); x.beginPath(); x.ellipse(0,5,2.1,6,0,0,6.283); x.fill();        /* white, furry thorax and abdomen */
     x.fillStyle=rgb([196,160,104]); for(const sd of [-1,1]){ x.save(); x.translate(sd*.8,-6.6); x.rotate(sd*.42); x.beginPath(); x.ellipse(0,-3.4,1.25,3.6,0,0,6.283); x.fill(); x.restore(); }   /* feathery antennae */
+  }
+  /* the luna moth in true 3D: each wing is a flat painted sheet hinged at the body, beating up and down about the body's axis,
+     the body pitched up as moths fly, heading the way it's moving, all projected with perspective */
+  let lunaSpr=null; const LR=6, LX0=0, LY0=-16;
+  function lunaSprite(){ if(lunaSpr) return lunaSpr; const c=document.createElement("canvas"); c.width=31*LR; c.height=60*LR; const x=c.getContext("2d");
+    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true); return lunaSpr=c; }
+  function luna3D(x,P,V,flap,proj){
+    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+    const v=nrm(V), f=nrm([v[0],v[1]-.55,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0068;               /* nose pitched up into the climb */
+    const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*K, P[1]+(f[1]*a+r[1]*b+u[1]*c)*K, P[2]+(f[2]*a+r[2]*b+u[2]*c)*K], S=p=>proj(p[0],p[1],p[2]);
+    const ang=.25+Math.sin(flap)*1.05, spr=lunaSprite();                                                     /* the wing beat, about a slight resting V */
+    const wingAt=sd=>{ /* local wing (x outward, y toward the tail) -> 3D: outward along r and up along u by the beat angle, back along -f */
+      const L=(lx,ly)=>W3(-ly,sd*lx*Math.cos(ang),lx*Math.sin(ang));
+      const O=S(L(0,0)), A=S(L(1,0)), B=S(L(0,1)), X=[A[0]-O[0],A[1]-O[1]], Y=[B[0]-O[0],B[1]-O[1]];
+      x.save(); x.setTransform(X[0]/LR,X[1]/LR,Y[0]/LR,Y[1]/LR,O[0]+X[0]*LX0+Y[0]*LY0,O[1]+X[1]*LX0+Y[1]*LY0); x.drawImage(spr,0,0); x.restore(); };
+    const dist=sd=>{ const p=W3(0,sd*10,0); return p[0]*p[0]+p[1]*p[1]+p[2]*p[2]; };
+    const far=dist(-1)>dist(1)? -1 : 1;
+    wingAt(far);
+    /* white furry body, maroon band at the shoulders, feathery antennae */
+    const hd=S(W3(9,0,0)), th=S(W3(2,0,0)), ab=S(W3(-8,0,0)), wd=Math.max(1,Math.hypot(...[0,1].map(i=>S(W3(2,2.6,0))[i]-th[i])));
+    x.lineCap="round"; x.strokeStyle=rgb([222,220,204]); x.lineWidth=wd*1.5; x.beginPath(); x.moveTo(ab[0],ab[1]); x.lineTo(th[0],th[1]); x.stroke();
+    x.strokeStyle=rgb([244,242,230]); x.lineWidth=wd*2; x.beginPath(); x.moveTo(th[0],th[1]); x.lineTo(hd[0]*.4+th[0]*.6,hd[1]*.4+th[1]*.6); x.stroke();
+    x.strokeStyle=rgb([196,160,104]); x.lineWidth=Math.max(.6,wd*.5); for(const sd of [-1,1]){ const a0=S(W3(6,sd*.8,0)), a1=S(W3(13,sd*4,2.5)); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.stroke(); }
+    wingAt(-far);
   }
   function mothWings(x,sp,flap){
     if(sp==="luna") return lunaWings(x,flap);
@@ -1593,8 +1618,9 @@ const ambient=(function(){
     const head=Math.atan2(Math.cos(h.t*1.4+h.ph)*.4,1)*.5+Math.sin(h.t*2.1)*.15;
     /* paint it into its own sprite, then set it in the evening light: backlit by the low sun, glowing through the thin wings, hazing into the distance */
     const sz=Math.ceil(84*s), hx=mcx; if(mcv.width<sz||mcv.height<sz){ mcv.width=Math.max(mcv.width,sz); mcv.height=Math.max(mcv.height,sz); }
-    hx.setTransform(1,0,0,1,0,0); hx.clearRect(0,0,mcv.width,mcv.height); hx.translate(sz/2,sz/2); hx.rotate(head); hx.scale(s,s);
-    mothWings(hx,h.sp,h.fl);
+    hx.setTransform(1,0,0,1,0,0); hx.clearRect(0,0,mcv.width,mcv.height);
+    const Pn=[X,Y,z], Vn=h.pp? [X-h.pp[0],Y-h.pp[1],z-h.pp[2]] : [0,0,1]; h.pp=Pn; if(Math.hypot(...Vn)>1e-7) h.V=h.V? h.V.map((v,i)=>lerp(v,Vn[i],.15)) : Vn;
+    luna3D(hx,Pn,h.V||Vn,h.fl,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz-sx+sz/2, cy+Y3*F/zz-sy+sz/2]; });
     hx.setTransform(1,0,0,1,0,0); hx.globalCompositeOperation="source-atop";
     const dx=sp.x-sx, dy=sp.y-sy, dl=Math.hypot(dx,dy)||1, near=Math.max(0,1-dl/(W*.45));
     hx.fillStyle=`rgba(40,28,18,${(.44-near*.18).toFixed(2)})`; hx.fillRect(0,0,sz,sz);                     /* we see the shaded side: the sun is behind it */
