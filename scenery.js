@@ -405,16 +405,32 @@ const ambient=(function(){
     x.globalCompositeOperation="destination-out"; const sh=x.createRadialGradient(o-R*1.55,o,R*.4,o-R*1.55,o,R*1.25); sh.addColorStop(0,"rgba(0,0,0,.9)"); sh.addColorStop(.75,"rgba(0,0,0,.75)"); sh.addColorStop(1,"rgba(0,0,0,0)");   /* the unlit sliver on the side away from the sun */
     x.fillStyle=sh; x.fillRect(0,0,c.width,c.height); return c; })();
   const moonCv=document.createElement("canvas"); const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
+  /* fold the moon into the photo: tinted toward the sky around it, its contrast eased to the photo's, a little film grain, and tucked behind the clouds where the photo has cloud */
+  let moonKey="";
+  function moonComp(p,R,S2){
+    moonCv.width=moonCv.height=S2; const mx=moonCv.getContext("2d"); mx.clearRect(0,0,S2,S2);
+    mx.save(); mx.translate(S2/2,S2/2); mx.rotate(110*Math.PI/180); mx.drawImage(moonImg,-S2/2,-S2/2,S2,S2); mx.restore();
+    const sky=document.createElement("canvas"); sky.width=sky.height=S2; const sx=sky.getContext("2d"), m=cover();
+    sx.drawImage(photo,(p[0]-R-m.ox)/m.s,(p[1]-R-m.oy)/m.s,(2*R)/m.s,(2*R)/m.s,0,0,S2,S2);
+    let A,B; try{ A=mx.getImageData(0,0,S2,S2); B=sx.getImageData(0,0,S2,S2); }catch(e){ mx.globalCompositeOperation="source-atop"; mx.fillStyle="rgba(214,180,140,.3)"; mx.fillRect(0,0,S2,S2); mx.globalCompositeOperation="source-over"; return; }   /* if the browser won't let us read the photo, a plain warm tint */
+    const a=A.data, b=B.data;
+    let ar=0,ag=0,ab=0,n=0,lm=[]; for(let k=0;k<b.length;k+=16){ ar+=b[k]; ag+=b[k+1]; ab+=b[k+2]; n++; lm.push(b[k]+b[k+1]+b[k+2]); } ar/=n; ag/=n; ab/=n; lm.sort((x,y)=>x-y); const clear=lm[Math.floor(lm.length*.85)]/3;   /* the open sky is the bright part here; the clouds are the darker, browner part */
+    for(let k=0;k<a.length;k+=4){ if(!a[k+3]) continue; const r=b[k], g=b[k+1], bl=b[k+2];
+      const lum=(r+g+bl)/3, cloud=Math.max(0,Math.min(1,(clear*.94-lum)/40))*Math.max(.3,Math.min(1,(r-bl+30)/50));
+      const L=(a[k]-128)*.82+128;                                                                                /* the photo's softer contrast */
+      const gr=(Math.random()-.5)*10;
+      a[k]=Math.min(255,L*.78+ar*.26+gr); a[k+1]=Math.min(255,L*.76+ag*.24+gr); a[k+2]=Math.min(255,L*.72+ab*.22+gr);   /* tinted toward the evening sky */
+      a[k+3]=a[k+3]*(1-.88*cloud); }
+    mx.putImageData(A,0,0);
+  }
   function drawMoon(){
     const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.08, d=Math.min(1,duskV/.62), a=.55+.4*d;
     const veil=.25+.35*Math.max(0,Math.sin(t*.045+1)*.5+Math.sin(t*.11)*.5);                                           /* thin cloud drifting across it */
     ctx.save(); ctx.globalAlpha=a*(1-veil*.55);
     const gl=ctx.createRadialGradient(p[0],p[1],R*.6,p[0],p[1],R*2.6); gl.addColorStop(0,`rgba(255,246,226,${(.12*a).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* glow in the haze */
-    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ ctx.globalAlpha=Math.min(1,(.8+.2*d)*(1-veil*.45)); ctx.translate(p[0],p[1]); ctx.rotate(110*Math.PI/180);
-      const ip0=toImg(p[0],p[1]), sk=(ip0&&sampleAt(Math.max(0,Math.min(1,ip0[0])),Math.max(0,Math.min(1,ip0[1]))))||[200,180,160], S2=Math.ceil(R*2);
-      if(moonCv.width!==S2){ moonCv.width=moonCv.height=S2; } const mx=moonCv.getContext("2d"); mx.globalCompositeOperation="source-over"; mx.clearRect(0,0,S2,S2); mx.drawImage(moonImg,0,0,S2,S2);
-      mx.globalCompositeOperation="source-atop"; mx.fillStyle=rgb(mixv([255,236,214],sk,.4),.32); mx.fillRect(0,0,S2,S2);   /* tinted by the evening air it's seen through, only where the moon is lit */
-      ctx.globalCompositeOperation="source-over"; ctx.filter="blur(.5px)"; ctx.drawImage(moonCv,-R,-R,R*2,R*2); ctx.filter="none";   /* laid over the sky, so its dark seas and bright craters keep their contrast */ ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
+    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ const S2=Math.ceil(R*2), key=[W,H,S2,Math.round(p[0]),Math.round(p[1])].join("|");
+      if(moonKey!==key){ moonKey=key; moonComp(p,R,S2); }                                                                   /* built once: the moon worked into the photo's own sky */
+      ctx.globalAlpha=Math.min(1,(.78+.2*d)*(1-veil*.4)); ctx.globalCompositeOperation="source-over"; ctx.filter="blur(.7px)"; ctx.drawImage(moonCv,p[0]-R,p[1]-R,R*2,R*2); ctx.filter="none"; ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
     ctx.restore();
     if(skyTile){ const ip=toImg(p[0],p[1]); const c=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[120,110,110];
       const v=ctx.createRadialGradient(p[0]+Math.sin(t*.07)*R,p[1],0,p[0],p[1],R*2.2); v.addColorStop(0,rgb(c,.4*veil)); v.addColorStop(1,rgb(c,0)); ctx.fillStyle=v; ctx.fillRect(p[0]-R*2.5,p[1]-R*2.5,R*5,R*5); }   /* the veil itself */
