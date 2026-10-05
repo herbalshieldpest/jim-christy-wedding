@@ -2036,7 +2036,7 @@ const ambient=(function(){
     let text=""; try{ text=String(host.banner()||""); }catch(e){} if(!text){ ban=null; nextBan=rnd(200,360); return; }
     const F=H*.5, cx=W/2, cy=H*.52, proj=(X,Y,Z)=>[cx+X*F/Math.max(.05,Z),cy+Y*F/Math.max(.05,Z)];
     const z=B.z0+Math.sin(u*Math.PI)*-.15, span=Math.min(.62,Math.max(.3,560/W))*W*z/F, Kw=.0165*Math.max(.8,Math.min(1.25,W/1200));   /* the ribbon spans about a third of a wide screen, more of a narrow one */
-    const xL=(-cx-60)*z/F-(B.dir>0? 0 : -span), xR=(W-cx+60)*z/F+(B.dir>0? span : 0);
+    const mg=Math.max(160,W*.12), xL=(-cx-mg)*z/F-(B.dir>0? 0 : -span), xR=(W-cx+mg)*z/F+(B.dir>0? span : 0);   /* starts and ends fully off the screen, tails and wings and all */
     const lead=B.dir>0? lerp(xL,xR,u) : lerp(xR,xL,u), Y0=(B.fy*H-cy)*z/F;
     const birds=[0,1].map(i=>{ const bob=Math.sin(B.t*2.2+B.ph[i])*.035+Math.sin(B.t*.7+i)*.02;
       return {P:[lead-B.dir*span*i, Y0+bob, z+(i? .05 : 0)], V:[B.dir,Math.cos(B.t*2.2+B.ph[i])*.08,0], flap:B.t*(7.2+i*.6)+B.ph[i], glide:Math.sin(B.t*1.3+i*2.1)>.72}; });
@@ -2048,9 +2048,10 @@ const ambient=(function(){
       return [0,1,2].map(i=>b.P[i]+(f[i]*8.4+uu[i]*.8)*Kw); };
     const A=beak(birds[1]), Bk=beak(birds[0]);   /* the trailing bird's bill to the leader's */
     /* the ribbon: hangs between the two bills, sags in the middle, ripples in the wind of their flight */
-    const N=44, hgt=span*.12, sag=span*.07, pts=[];
-    for(let i=0;i<=N;i++){ const s=i/N, w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*Math.sin(s*Math.PI), tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*Math.sin(s*Math.PI);
-      const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],s)+sag*4*s*(1-s)+w, lerp(A[2],Bk[2],s)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*Math.sin(s*Math.PI)];
+    const N=52, E=.05, hgt=span*.12, sag=span*.07, pts=[];
+    for(let i=0;i<=N;i++){ const s=-E+(1+2*E)*i/N, sc=Math.max(0,Math.min(1,s)), out=s<0? -s/E : s>1? (s-1)/E : 0, inn=Math.sin(sc*Math.PI);
+      const w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*inn, tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*inn+(s<0?-1:1)*out*.15*Math.sin(B.t*3+s*9);   /* the free ends flutter */
+      const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],sc)+sag*4*sc*(1-sc)+w+out*out*hgt*.35, lerp(A[2],Bk[2],sc)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*inn+out*hgt*.3];
       const dn=[Math.sin(tw)*.0,Math.cos(tw),Math.sin(tw)];   /* the cloth's width hangs down, twisting a little toward and away from you */
       pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hgt,c[1]+dn[1]*hgt,c[2]+dn[2]*hgt), shade:.78+.22*Math.cos(tw*2.2)+(Math.sin(s*Math.PI*2.2-B.t*4.6))*.08}); }
     /* the lettering, set once per text and size into a strip that's wrapped onto the cloth */
@@ -2062,16 +2063,22 @@ const ambient=(function(){
       tx.setLineDash([Math.max(2,texH*.05),Math.max(2,texH*.04)]); tx.strokeStyle="rgba(150,120,80,.45)"; tx.lineWidth=Math.max(.6,texH*.012); for(const yy of [texH*.05,texH*.95]){ tx.beginPath(); tx.moveTo(0,yy); tx.lineTo(texW,yy); tx.stroke(); } tx.setLineDash([]);   /* the stitched hem */
       const caps=(getComputedStyle(document.documentElement).getPropertyValue("--caps")||"").trim()||'"Cormorant Garamond",Georgia,serif';
       let fs=texH*.5; tx.font=`600 ${fs}px ${caps}`; const sp2=.22, wid=()=>tx.measureText(text.toUpperCase()).width+text.length*fs*sp2; while(wid()>texW*.84&&fs>8){ fs*=.94; tx.font=`600 ${fs}px ${caps}`; }
-      tx.textBaseline="middle"; const put=(col,dy)=>{ tx.fillStyle=col; let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toUpperCase()){ tx.fillText(ch,xx,texH*.53+dy); xx+=tx.measureText(ch).width+fs*sp2; } };
+      tx.textBaseline="alphabetic"; const capM=tx.measureText("H"), capH=capM.actualBoundingBoxAscent, mid=texH*.5;
+      const capsFont=tx.font, digFont=`500 ${fs}px "Times New Roman","Noto Serif","Liberation Serif",serif`;   /* this face only has old-style figures (some sit below the line), so the numbers come from a classic serif with lining figures, matched to the capitals' height */
+      tx.font=digFont; const dH=tx.measureText("0").actualBoundingBoxAscent||capH, dk=capH/dH; tx.font=capsFont;
+      const glyphs=[]; { let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toUpperCase()){ const dig=/[0-9]/.test(ch); tx.font=dig? digFont : capsFont; const m=tx.measureText(ch), ww=m.width*(dig? dk : 1);
+          glyphs.push({ch,x:xx,dig,y:mid+capH/2}); xx+=ww+fs*sp2; } tx.font=capsFont; }
+      const put=(col,dy)=>{ tx.fillStyle=col; for(const g of glyphs){ if(!g.dig) tx.fillText(g.ch,g.x,g.y+dy); else { tx.save(); tx.font=digFont; tx.translate(g.x,g.y+dy); tx.scale(dk,dk); tx.fillText(g.ch,0,0); tx.restore(); } } };   /* figures sit on the line with the capitals, everything centred top to bottom */
       put("rgba(255,255,255,.55)",Math.max(.6,fs*.03)); put("#6a1f14",0); tx.globalAlpha=.25; put("#2a0a04",-Math.max(.4,fs*.015)); tx.globalAlpha=1; }   /* the lettering, pressed into the silk */
     { const th=Math.max(1.2,hgt*F/z*.05); x.fillStyle="#a8916c"; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].bot[0],pts[i].bot[1]+th) : x.moveTo(pts[i].bot[0],pts[i].bot[1]+th); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]-.5); x.closePath(); x.fill(); }   /* the cloth has a thickness: its rolled lower hem */
     const lr=pts[0].top[0]<=pts[N].top[0];   /* read left to right whichever way they fly */
     for(let i=0;i<N;i++){ const p0=pts[i], p1=pts[i+1], s0=lr? i/N : 1-i/N, s1=lr? (i+1)/N : 1-(i+1)/N;
-      const u0=(.075+.85*s0)*texW, u1=(.075+.85*s1)*texW;
+      const ss0=-E+(1+2*E)*s0, ss1=-E+(1+2*E)*s1, u0=(.075+.85*ss0)*texW, u1=(.075+.85*ss1)*texW;
+      const exb=i>0? 2 : 0, ext=(P,Q,d)=>{ const l=Math.max(1,Math.hypot(P[0]-Q[0],P[1]-Q[1])); return [P[0]+(P[0]-Q[0])/l*d,P[1]+(P[1]-Q[1])/l*d]; }, q0t=ext(p0.top,p1.top,exb), q0b=ext(p0.bot,p1.bot,exb);
       const ex=i<N-1? 3 : 0, q1t=[p1.top[0]+(p1.top[0]-p0.top[0])/Math.max(1,Math.hypot(p1.top[0]-p0.top[0],p1.top[1]-p0.top[1]))*ex,p1.top[1]+(p1.top[1]-p0.top[1])/Math.max(1,Math.hypot(p1.top[0]-p0.top[0],p1.top[1]-p0.top[1]))*ex], q1b=[p1.bot[0]+(p1.bot[0]-p0.bot[0])/Math.max(1,Math.hypot(p1.bot[0]-p0.bot[0],p1.bot[1]-p0.bot[1]))*ex,p1.bot[1]+(p1.bot[1]-p0.bot[1])/Math.max(1,Math.hypot(p1.bot[0]-p0.bot[0],p1.bot[1]-p0.bot[1]))*ex];   /* each slice reaches a hair into the next, so no seams */
-      x.save(); x.beginPath(); x.moveTo(p0.top[0],p0.top[1]); x.lineTo(q1t[0],q1t[1]); x.lineTo(q1b[0],q1b[1]); x.lineTo(p0.bot[0],p0.bot[1]); x.closePath(); x.clip();
+      x.save(); x.beginPath(); x.moveTo(q0t[0],q0t[1]); x.lineTo(q1t[0],q1t[1]); x.lineTo(q1b[0],q1b[1]); x.lineTo(q0b[0],q0b[1]); x.closePath(); x.clip();
       const du=u1-u0||1e-3, a=(p1.top[0]-p0.top[0])/du, b=(p1.top[1]-p0.top[1])/du, c=(p0.bot[0]-p0.top[0])/texH, d=(p0.bot[1]-p0.top[1])/texH;
-      x.transform(a,b,c,d,p0.top[0]-a*u0,p0.top[1]-b*u0); { const su=Math.max(0,Math.floor(Math.min(u0,u1))-2), sw=Math.min(texW-su,Math.ceil(Math.abs(du))+10); if(sw>0) x.drawImage(btex,su,0,sw,texH,su,0,sw,texH); }
+      x.transform(a,b,c,d,p0.top[0]-a*u0,p0.top[1]-b*u0); { const su=Math.max(0,Math.floor(Math.min(u0,u1))-8), sw=Math.min(texW-su,Math.ceil(Math.abs(du))+16); if(sw>0) x.drawImage(btex,su,0,sw,texH,su,0,sw,texH); }
       x.restore();
     }
     { const xa=pts[0].top[0], xb=pts[N].top[0]; if(Math.abs(xb-xa)>2){ const g=x.createLinearGradient(xa,0,xb,0);   /* the folds catch the light and fall into shadow along its length */
@@ -2080,17 +2087,16 @@ const ambient=(function(){
         { const rr=Math.max(W,H)*.32, gl=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,rr); gl.addColorStop(0,"rgba(255,196,110,.42)"); gl.addColorStop(.5,"rgba(255,180,100,.14)"); gl.addColorStop(1,"rgba(255,170,90,0)"); x.fillStyle=gl; x.fill(); }   /* where the sun is behind it, the silk glows */
         x.restore(); } }
     /* pinch wrinkles fanning out from where each bill grips the cloth */
-    for(const [i0,dirn] of [[0,1],[N,-1]]){ const P0=pts[i0], ht=Math.hypot(P0.bot[0]-P0.top[0],P0.bot[1]-P0.top[1]);
+    for(const [i0,dirn] of [[Math.round(N*E/(1+2*E)),1],[N-Math.round(N*E/(1+2*E)),-1]]){ const P0=pts[i0], ht=Math.hypot(P0.bot[0]-P0.top[0],P0.bot[1]-P0.top[1]);
       for(let k=0;k<3;k++){ const j=Math.min(N,Math.max(0,i0+dirn*(2+k))), Q=pts[j], fy=.3+k*.2, tx0=P0.top[0]+(P0.bot[0]-P0.top[0])*.15, ty0=P0.top[1]+(P0.bot[1]-P0.top[1])*.15, tx1=Q.top[0]+(Q.bot[0]-Q.top[0])*fy, ty1=Q.top[1]+(Q.bot[1]-Q.top[1])*fy;
         x.strokeStyle="rgba(90,62,30,.22)"; x.lineWidth=Math.max(.6,ht*.035); x.beginPath(); x.moveTo(tx0,ty0); x.quadraticCurveTo((tx0+tx1)/2,(ty0+ty1)/2-ht*.08,tx1,ty1); x.stroke();
         x.strokeStyle="rgba(255,250,236,.35)"; x.lineWidth=Math.max(.4,ht*.02); x.beginPath(); x.moveTo(tx0,ty0+ht*.04); x.quadraticCurveTo((tx0+tx1)/2,(ty0+ty1)/2-ht*.04,tx1,ty1+ht*.04); x.stroke(); } }
-    /* swallow-tailed ends trailing from each bill: folded under, the inside of the fold in shadow */
-    for(const [i,dirn] of [[0,-1],[N,1]]){ const p=pts[i], q=pts[i+(dirn<0?2:-2)], hh=Math.hypot(p.bot[0]-p.top[0],p.bot[1]-p.top[1]), dl=Math.hypot(p.top[0]-q.top[0],p.top[1]-q.top[1])||1, ox=(p.top[0]-q.top[0])/dl*hh*1.1, oy=(p.top[1]-q.top[1])/dl*hh*1.1+hh*.55, mid=[(p.top[0]+p.bot[0])/2+ox*.55,(p.top[1]+p.bot[1])/2+oy*.55];
-      const T1=[p.top[0]+ox,p.top[1]+oy], B1=[p.bot[0]+ox,p.bot[1]+oy];
-      x.fillStyle="#b9a27c"; x.beginPath(); x.moveTo(p.top[0],p.top[1]); x.lineTo(p.top[0]+ox*.35,p.top[1]+oy*.35+(p.bot[1]-p.top[1])*.1); x.lineTo(p.bot[0]+ox*.35,p.bot[1]+oy*.35); x.lineTo(p.bot[0],p.bot[1]); x.closePath(); x.fill();   /* the shaded fold */
-      const g=x.createLinearGradient(p.top[0],p.top[1],T1[0],T1[1]); g.addColorStop(0,"#d9c7a4"); g.addColorStop(1,"#efe2c8"); x.fillStyle=g;
-      x.beginPath(); x.moveTo(p.top[0]+ox*.3,p.top[1]+oy*.3); x.lineTo(T1[0],T1[1]); x.lineTo(mid[0],mid[1]); x.lineTo(B1[0],B1[1]); x.lineTo(p.bot[0]+ox*.3,p.bot[1]+oy*.3); x.closePath(); x.fill();
-      x.strokeStyle="rgba(122,35,24,.4)"; x.lineWidth=Math.max(.6,Math.abs(p.bot[1]-p.top[1])*.025); x.beginPath(); x.moveTo(p.top[0]+ox*.3+(p.bot[0]-p.top[0])*.13,p.top[1]+oy*.3+(p.bot[1]-p.top[1])*.13); x.lineTo(T1[0]+(B1[0]-T1[0])*.13,T1[1]+(B1[1]-T1[1])*.13); x.stroke(); }
+    /* swallow-tailed ends: a V cut into each end of the cloth */
+    x.save(); x.globalCompositeOperation="destination-out";
+    for(const [i,q] of [[0,2],[N,N-2]]){ const p=pts[i], o=pts[q], m=[(p.top[0]+p.bot[0])/2,(p.top[1]+p.bot[1])/2], mo=[(o.top[0]+o.bot[0])/2,(o.top[1]+o.bot[1])/2], ap=[m[0]+(mo[0]-m[0])*.75,m[1]+(mo[1]-m[1])*.75];
+      const dx=m[0]-mo[0], dy=m[1]-mo[1], l=Math.hypot(dx,dy)||1, ux=dx/l*6, uy=dy/l*6;
+      x.beginPath(); x.moveTo(p.top[0]+ux,p.top[1]+uy+(p.bot[1]-p.top[1])*.08); x.lineTo(ap[0],ap[1]); x.lineTo(p.bot[0]+ux,p.bot[1]+uy-(p.bot[1]-p.top[1])*.08); x.lineTo(p.bot[0]+ux*3,p.bot[1]+uy*3); x.lineTo(p.top[0]+ux*3,p.top[1]+uy*3); x.closePath(); x.fill(); }
+    x.restore();
     for(const b of birds) blueBird3D(x,b.P,(()=>{ const l=Math.hypot(b.V[0],b.V[1]*.5,b.V[2])||1; return [b.V[0]/l,b.V[1]*.5/l,b.V[2]/l]; })(),b.flap,b.glide,proj,Kw,sunL);
     /* light and air, over the whole group */
     let xs=[], ys=[]; for(const p of pts){ xs.push(p.top[0],p.bot[0]); ys.push(p.top[1],p.bot[1]); } for(const b of birds){ const q=proj(...b.P); xs.push(q[0]-60,q[0]+60); ys.push(q[1]-60,q[1]+60); }
@@ -2104,7 +2110,7 @@ const ambient=(function(){
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=Math.min(1,B.t/1.2,(B.dur-B.t)/1.2); ctx.filter="blur(.55px)"; ctx.drawImage(bncv,RX,RY,RW,RH,X0,Y0b,X1-X0,Y1-Y0b); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=1; ctx.filter="blur(.55px)"; ctx.drawImage(bncv,RX,RY,RW,RH,X0,Y0b,X1-X0,Y1-Y0b); ctx.restore(); ctx.filter="none";
     B.sx=mx; B.sy=my;
   }
   function drawFlock(dt,dark){
