@@ -1639,7 +1639,7 @@ const ambient=(function(){
   /* ---- once in a while a little bbFlock of eastern bluebirds comes over your shoulder from behind and flies off over the field ---- */
   let bbFlock=null, nextBB=38; const fcv=document.createElement("canvas"), fcx=fcv.getContext("2d");
   function startFlock(){ const n=5+Math.floor(Math.random()*4), sd=Math.random()<.5?-1:1;
-    bbFlock={t:0,X0:sd*rnd(.05,.2),Y0:-rnd(.2,.3),wx:rnd(-1.6,1.6),wy:-rnd(.25,.6),birds:Array.from({length:n},(_,i)=>({ox:rnd(-.22,.22),oy:rnd(-.1,.1),oz:rnd(-.1,.35)+i*.04,ph:rnd(0,6),f:rnd(10,13),glide:rnd(0,6)}))};
+    bbFlock={t:0,X0:sd*rnd(.02,.1),Y0:-rnd(.1,.16),wx:rnd(-1.6,1.6),wy:-rnd(.25,.6),birds:Array.from({length:n},(_,i)=>({ox:rnd(-.22,.22),oy:rnd(-.1,.1),oz:rnd(-.1,.35)+i*.04,ph:rnd(0,6),f:rnd(10,13),glide:rnd(0,6)}))};
     natureSfx.bluebird&&natureSfx.bluebird(); }
   function bluebird(x,flap,glide){
     /* seen from behind and above as it flies away: swept, pointed wings beating up and down, blue back, rusty flanks */
@@ -1689,7 +1689,7 @@ const ambient=(function(){
     const x=fcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
     let zc=0, n=0, any=false, sxC=0, syC=0;
     for(const b of f.birds){
-      const z=Math.max(.18,(.3+b.oz)*Math.exp(T*.4)), pull=ease(T/3.5), tX=f.wx, tY=f.wy;   /* they hold their height above you and level off toward the horizon */
+      const z=Math.max(.06,(.09+b.oz*.25)*Math.exp(T*.55)), pull=ease(T/3.5), tX=f.wx, tY=f.wy;   /* they hold their height above you and level off toward the horizon */
       const X=lerp(f.X0+b.ox,tX+b.ox*1.5,pull), Y=lerp(f.Y0+b.oy,tY+b.oy*1.2,pull)+Math.sin(T*2.6+b.ph)*.03;   /* the bluebird's gentle bounding flight */
       const sx=cx+X*F/z, sy=cy+Y*F/z; if(z>14) continue; any=true;
       const glide=Math.sin(T*1.7+b.glide)>.55, flap=T*b.f+b.ph, Pn=[X,Y,z], V=b.pp? [Pn[0]-b.pp[0],Pn[1]-b.pp[1],Pn[2]-b.pp[2]] : [0,.1,1]; b.pp=Pn;
@@ -1705,8 +1705,8 @@ const ambient=(function(){
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(0,0,cw,ch); }
     x.globalCompositeOperation="source-over";
-    const a=Math.min(1,T/.5)*(zc>9? Math.max(0,1-(zc-9)/4) : 1);
-    ctx.save(); ctx.globalAlpha=a; ctx.filter=`blur(${(zc<1? (1-zc)*5+.4 : .4).toFixed(1)}px)`; ctx.drawImage(fcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+    const a=zc>9? Math.max(0,1-(zc-9)/4) : 1;   /* no fade in: they sweep in over your head from behind, huge at first */
+    ctx.save(); ctx.globalAlpha=a; ctx.filter=`blur(${(zc<.6? (.6-zc)*22+.4 : .4).toFixed(1)}px)`; ctx.drawImage(fcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
   }
   /* ---- a pileated woodpecker: bounds in from the woods on the left, lands on the lone tree, hitches up the trunk, drums, and flies off ---- */
   let pecker=null, nextPecker=55; const pcv=document.createElement("canvas"), pcx=pcv.getContext("2d"); const TRUNK=[[.187,.666],[.188,.612]];
@@ -1772,7 +1772,7 @@ const ambient=(function(){
     ctx.restore();
   }
   /* ---- monarch butterflies: a few drifting over the field and the lawn in 3D, flapping and then sailing on wings held in a shallow V ---- */
-  let monSpr=null; const MR=6, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
+  let monSpr=null; const MR=10, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
   function monarchSprite(){ if(monSpr) return monSpr; const c=document.createElement("canvas"); c.width=26*MR; c.height=34*MR; const x=c.getContext("2d");
     x.setTransform(MR,0,0,MR,-MX0*MR,-MY0*MR); const OR=[232,124,28], OR2=[244,156,52], BK=[24,18,16], WD=[246,240,226];
     /* hindwing: rounded, orange with a thick black border and black veins */
@@ -1791,7 +1791,7 @@ const ambient=(function(){
     return monSpr=c; }
   function monarch3D(x,P,V,ang,proj){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-    const v=nrm(V), f=nrm([v[0],v[1]-.3,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0062;
+    const v=nrm(V), f=nrm([v[0],v[1]-.3,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0074;
     const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*K, P[1]+(f[1]*a+r[1]*b+u[1]*c)*K, P[2]+(f[2]*a+r[2]*b+u[2]*c)*K], S=p=>proj(p[0],p[1],p[2]), spr=monarchSprite();
     const wingAt=sd=>{ const L=(lx,ly)=>W3(-ly,sd*lx*Math.cos(ang),lx*Math.sin(ang)); const O=S(L(0,0)), A=S(L(1,0)), B=S(L(0,1)), X=[A[0]-O[0],A[1]-O[1]], Y=[B[0]-O[0],B[1]-O[1]];
       x.save(); x.transform(X[0]/MR,X[1]/MR,Y[0]/MR,Y[1]/MR,O[0]+X[0]*MX0+Y[0]*MY0,O[1]+X[1]*MX0+Y[1]*MY0); x.drawImage(spr,0,0); x.restore(); };
@@ -1807,8 +1807,8 @@ const ambient=(function(){
     nextMon-=dt; if(nextMon<=0&&mons.length<3){ nextMon=rnd(12,28); const side=Math.random()<.5?-1:1;
       mons.push({t:0,life:rnd(22,40),sx:side<0? -30 : W+30,sy:g.vy+rnd(-30,90),z:rnd(2.2,6.5),dir:-side,ph:rnd(0,6),flapT:0,glide:0,ang:.4,tz:rnd(2,6),wy:rnd(0,6)}); }
     if(!mons.length) return;
-    const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(mncv.width!==cw||mncv.height!==ch){ mncv.width=cw; mncv.height=ch; }
-    const x=mncx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
+    const cw=W, ch=H; if(mncv.width!==cw||mncv.height!==ch){ mncv.width=cw; mncv.height=ch; }
+    const x=mncx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high";
     let zs=0;
     for(let i=mons.length-1;i>=0;i--){ const m=mons[i]; m.t+=dt;
       /* a lazy, wandering course: drifting across, rising and dipping, coming nearer and farther */
@@ -1826,12 +1826,12 @@ const ambient=(function(){
     x.globalAlpha=1; if(!mons.length) return; const zc=zs/mons.length;
     /* in the low evening sun: the light glows through the orange wings, the air hazes them a little with distance */
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
-    x.fillStyle="rgba(40,24,12,.18)"; x.fillRect(0,0,cw,ch); x.fillStyle="rgba(255,176,90,.16)"; x.fillRect(0,0,cw,ch);
-    x.fillStyle=`rgba(214,176,128,${Math.min(.35,zc*.04).toFixed(2)})`; x.fillRect(0,0,cw,ch);
+    x.fillStyle="rgba(255,150,40,.08)"; x.fillRect(0,0,cw,ch);
+    x.fillStyle=`rgba(214,176,128,${Math.min(.2,zc*.025).toFixed(2)})`; x.fillRect(0,0,cw,ch);
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.28)"; x.fillRect(0,0,cw,ch); }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.filter="blur(.35px)"; ctx.drawImage(mncv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.filter="blur(.25px)"; ctx.drawImage(mncv,0,0); ctx.restore(); ctx.filter="none";
   }
   /* ---- american woodcocks: plump, long-billed little birds that come out of the brush onto the lawn edge at dusk,
      doing their funny rocking walk, probing the ground with their bills, then scuttling off in a quick run ---- */
@@ -2075,5 +2075,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
