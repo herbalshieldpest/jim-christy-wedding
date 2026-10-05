@@ -1742,7 +1742,7 @@ const ambient=(function(){
     const f=nrm(V), r=nrm(crs(f,[0,-1,0])), u=crs(r,f);
     const pt=(a,b,c)=>proj(P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw);
     const under=-(P[0]*u[0]+P[1]*u[1]+P[2]*u[2])<0, fl=glide? -.15 : Math.sin(flap)*1.05+.1;
-    const BK=C([24,20,20]), WH=C([226,222,210]), RD=C([214,40,32]);
+    const BK=rgb([12,10,10]), WH=rgb([176,170,156]), RD=rgb([190,44,34]);
     const wing=sd=>{ const sh=pt(2,sd*1.4,0), wr=pt(1,sd*9,fl*4), tp=pt(-3,sd*17,fl*8), tr=pt(-6.5,sd*10,fl*4.2), rt=pt(-4.5,sd*1.4,0);
       x.fillStyle=BK; x.beginPath(); x.moveTo(sh[0],sh[1]); x.quadraticCurveTo(wr[0],wr[1],tp[0],tp[1]); x.quadraticCurveTo(tr[0],tr[1],rt[0],rt[1]); x.closePath(); x.fill();
       const a=pt(under?-.5:-1,sd*(under?4:9.5),fl*(under?2:4.3)), b=pt(under?-3.5:-2.2,sd*(under?11:13),fl*(under?5:5.8)), c=pt(under?-4.5:-3.6,sd*(under?6:11),fl*(under?3:4.8));
@@ -1752,9 +1752,9 @@ const ambient=(function(){
     const tail=pt(-10,0,0), mid=pt(-1,0,0), head=pt(6,0,.6), w0=Math.max(.8,Math.hypot(...[0,1].map(i=>pt(0,1.8,0)[i]-pt(0,0,0)[i])));
     x.lineCap="round"; x.strokeStyle=BK; x.lineWidth=w0*1.6; x.beginPath(); x.moveTo(tail[0],tail[1]); x.lineTo(mid[0],mid[1]); x.stroke();
     x.lineWidth=w0*2.2; x.beginPath(); x.moveTo(mid[0],mid[1]); x.lineTo(head[0],head[1]); x.stroke();
-    const hd=pt(7,0,.9), bk=pt(10.5,0,.4), cr=pt(6.4,0,3.2); x.fillStyle=BK; x.beginPath(); x.arc(hd[0],hd[1],w0*.85,0,6.283); x.fill();
+    const hd=pt(7,0,.9), bk=pt(10.5,0,.4), cr0=pt(4.6,0,1.9), cr1=pt(7.6,0,2.2); x.fillStyle=BK; x.beginPath(); x.arc(hd[0],hd[1],w0*.85,0,6.283); x.fill();
     x.strokeStyle=C([60,56,52]); x.lineWidth=Math.max(.6,w0*.45); x.beginPath(); x.moveTo(hd[0],hd[1]); x.lineTo(bk[0],bk[1]); x.stroke();
-    x.fillStyle=RD; x.beginPath(); x.ellipse(cr[0],cr[1],w0*.55,w0*.75,0,0,6.283); x.fill();                                    /* the flaming red crest */
+    x.strokeStyle=RD; x.lineWidth=Math.max(.6,w0*.55); x.beginPath(); x.moveTo(cr0[0],cr0[1]); x.lineTo(cr1[0],cr1[1]); x.stroke();      /* the red crest, a slim swept-back ridge */
     wing(-farS);
   }
   function drawPecker(dt,dark){
@@ -1797,11 +1797,11 @@ const ambient=(function(){
     else { x.save(); x.translate(sz/2,sz/2); x.scale(k*p.face*R2,k*R2); }
     if(p.three&&p.P3){}
     else if(p.wing==null){ x.rotate(-.12);                                                                         /* clinging upright against the bark, braced on its tail */
-      x.fillStyle=C([28,24,24]); x.beginPath(); x.ellipse(0,0,2.6,6.5,0,0,6.283); x.fill(); x.beginPath(); x.moveTo(-1,5); x.lineTo(-2.4,11); x.lineTo(.6,11); x.closePath(); x.fill();
-      x.fillStyle=rgb([236,232,220]); x.beginPath(); x.ellipse(.9,-1.4,.8,2.2,.2,0,6.283); x.fill();
-      x.save(); x.translate(peck*1.4,-7); x.fillStyle=C([30,26,26]); x.beginPath(); x.arc(0,0,2.3,0,6.283); x.fill();
-      x.fillStyle=rgb([238,52,40]); x.beginPath(); x.moveTo(-2.6,-.6); x.quadraticCurveTo(-1.6,-6.4,3,-2.4); x.lineTo(1.2,.2); x.closePath(); x.fill();   /* a big, bright red crest */
-      x.strokeStyle=rgb([246,242,232]); x.lineWidth=1.3; x.beginPath(); x.moveTo(2,.2); x.lineTo(-.4,3.2); x.lineTo(-1.4,6.4); x.stroke();          /* the bold white stripe down the neck */
+      x.fillStyle=rgb([12,10,10]); x.beginPath(); x.ellipse(0,0,2.6,6.5,0,0,6.283); x.fill(); x.beginPath(); x.moveTo(-1,5); x.lineTo(-2.4,11); x.lineTo(.6,11); x.closePath(); x.fill();   /* deep, near-true black */
+      x.fillStyle=rgb([172,166,152]); x.beginPath(); x.ellipse(.9,-1.4,.8,2.2,.2,0,6.283); x.fill();
+      x.save(); x.translate(peck*1.4,-7); x.fillStyle=rgb([14,12,12]); x.beginPath(); x.arc(0,0,2.3,0,6.283); x.fill();
+      x.fillStyle=rgb([196,44,34]); x.beginPath(); x.moveTo(-2.6,-.6); x.quadraticCurveTo(-1.6,-6.4,3,-2.4); x.lineTo(1.2,.2); x.closePath(); x.fill();   /* a big, bright red crest */
+      x.strokeStyle=rgb([176,170,156]); x.lineWidth=1.3; x.beginPath(); x.moveTo(2,.2); x.lineTo(-.4,3.2); x.lineTo(-1.4,6.4); x.stroke();          /* the bold white stripe down the neck */
       x.beginPath(); x.moveTo(-1.6,-.8); x.lineTo(1.6,-.9); x.stroke();
       x.strokeStyle=C([60,56,52]); x.lineWidth=1; x.beginPath(); x.moveTo(1.8,-.4); x.lineTo(4.6,-.2); x.stroke(); x.restore(); }
     else if(p.back){ const w=p.wing; x.scale(p.face,1);                                                        /* seen from behind as it flies away from you */
@@ -1821,10 +1821,10 @@ const ambient=(function(){
     x.fillStyle="rgba(255,168,84,.16)"; x.fillRect(0,0,sz,sz);
     const rl=x.createLinearGradient(sz/2-sdx*sz*.25,0,sz/2+sdx*sz*.25,0); rl.addColorStop(0,"rgba(20,12,6,.2)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,"rgba(255,196,120,.35)"); x.fillStyle=rl; x.fillRect(0,0,sz,sz);
     if(!p.bg||(p.bgT=(p.bgT||0)-1)<=0){ p.bgT=15; const ip=toImg(p.x,p.y); p.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[120,100,70]; }
-    x.fillStyle=rgb(mixv(p.bg,[214,176,130],.4),(p.wing==null?.12:.2)*Math.min(1,1.4/p.m)); x.fillRect(0,0,sz,sz);                     /* the haze of the air between you and the tree */
+    x.fillStyle=rgb(mixv(p.bg,[214,176,130],.4),(p.wing==null?.16:.2)*Math.min(1,1.4/p.m)); x.fillRect(0,0,sz,sz);                     /* the haze of the air between you and the tree */
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; { const bl=Math.max(0,p.m-3)*.32; ctx.filter=bl>.4? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; { const bl=Math.max(0,p.m-3)*.32+(p.state==="cling"||p.state==="hop"? .5 : 0); ctx.filter=bl>.3? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
   }
   /* ---- fireflies blinking low over the lawn and along the edge of the field ---- */
   const flies=[], flyGlow=(()=>{ const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d"), g=x.createRadialGradient(24,24,0,24,24,24); g.addColorStop(0,"rgba(244,255,160,1)"); g.addColorStop(.3,"rgba(190,250,90,.5)"); g.addColorStop(1,"rgba(160,230,60,0)"); x.fillStyle=g; x.fillRect(0,0,48,48); return c; })();
@@ -2150,26 +2150,55 @@ const ambient=(function(){
     f.hd+=((f.lag[0]?f.lag[0][0]:0)*(f.walking?.4:1)-f.hd)*Math.min(1,dt*3); f.hy=Math.sin(t*.7)*.3;
   }
   function deerPose(o,scale,spots){ const s=toScreen(o.Xw,o.Dw); return {x:s.x,y:s.y,g:s.g*scale,Xw:o.Xw,Dw:o.Dw,lift:0,leapU:null,stand:!o.walking,walk:!!o.walking,antlers:false,hd:o.hd,hy:o.hy,q:o.q,spots}; }
-  /* ---- a hummingbird zips right up to you, hovers a moment as if to look you over, and is gone ---- */
-  let hum=null, nextHum=45;
+  /* ---- a ruby-throated hummingbird, in true 3D: it shoots in out of the evening toward you, stops dead and hovers an arm's length away,
+     body tilted up, wings a blur, turning to look you over, then darts off back into the distance ---- */
+  let hum=null, nextHum=45; const hcv=document.createElement("canvas"), hcx=hcv.getContext("2d");
+  function hum3D(x,P,f0,beat,proj,C){
+    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+    const fh=nrm([f0[0],0,f0[2]]), tilt=f0[3]||0, f=nrm([fh[0],-tilt,fh[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.02;
+    const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*K, P[1]+(f[1]*a+r[1]*b+u[1]*c)*K, P[2]+(f[2]*a+r[2]*b+u[2]*c)*K], S=(a,b,c)=>{ const w=W3(a,b,c); return proj(w[0],w[1],w[2]); };
+    const front=(f[2]<0);                                                                                 /* facing you: you see its white front and ruby throat */
+    const wingFan=sd=>{ const sh=S(.8,sd*1.2,.6), pts=[sh]; for(let i=0;i<=8;i++){ const th=-1.15+i/8*2.3; pts.push(S(.8+Math.sin(th)*4.6,sd*(1.2+Math.cos(th)*5.6),.6+Math.cos(th)*.8)); }
+      x.fillStyle="rgba(214,222,208,.2)"; x.beginPath(); x.moveTo(pts[0][0],pts[0][1]); for(const q of pts) x.lineTo(q[0],q[1]); x.closePath(); x.fill();           /* the blur of the wingbeat */
+      const th=Math.sin(beat)*1.15, tp=S(.8+Math.sin(th)*4.6,sd*(1.2+Math.cos(th)*5.6),.6+Math.cos(th)*.8);
+      x.strokeStyle="rgba(170,180,170,.45)"; x.lineWidth=Math.max(.8,Math.hypot(tp[0]-sh[0],tp[1]-sh[1])*.12); x.beginPath(); x.moveTo(sh[0],sh[1]); x.lineTo(tp[0],tp[1]); x.stroke(); };
+    const q=sd=>{ const w=W3(.8,sd*3,0); return w[0]*w[0]+w[1]*w[1]+w[2]*w[2]; }, far=q(-1)>q(1)? -1 : 1;
+    wingFan(far);
+    const HP=W3(3.4,0,.5), hd=proj(HP[0],HP[1],HP[2]), btW=[HP[0]+fh[0]*5*K,HP[1]+fh[1]*5*K,HP[2]+fh[2]*5*K], bt=proj(btW[0],btW[1],btW[2]);   /* the bill points straight ahead, level */
+    const tl=S(-5.2,0,-.2), tl2=S(-6.6,0,-.4), bc=S(0,0,0), wR=Math.max(1,Math.hypot(...[0,1].map(i=>S(0,1.6,0)[i]-bc[i])));
+    x.lineCap="round"; x.strokeStyle=C([34,58,40]); x.lineWidth=wR*1.1; x.beginPath(); x.moveTo(tl[0],tl[1]); x.lineTo(tl2[0],tl2[1]); x.stroke();     /* tail */
+    x.strokeStyle=C(front? [214,212,198] : [70,136,78]); x.lineWidth=wR*2.1; x.beginPath(); x.moveTo(tl[0],tl[1]); x.lineTo(bc[0],bc[1]); x.stroke();   /* body: pale front, green back */
+    if(front){ const g1=S(2,0,-.6); x.strokeStyle=C([70,136,78]); x.lineWidth=wR*1.2; x.beginPath(); x.moveTo(S(-3,1.4,.4)[0],S(-3,1.4,.4)[1]); x.lineTo(S(1.6,1.3,.6)[0],S(1.6,1.3,.6)[1]); x.moveTo(S(-3,-1.4,.4)[0],S(-3,-1.4,.4)[1]); x.lineTo(S(1.6,-1.3,.6)[0],S(1.6,-1.3,.6)[1]); x.stroke();   /* green flanks */
+      x.fillStyle=C([196,26,44]); x.beginPath(); x.arc(g1[0],g1[1],wR*.95,0,6.283); x.fill(); }                    /* the ruby gorget */
+    x.fillStyle=C([62,124,72]); x.beginPath(); x.arc(hd[0],hd[1],wR*.95,0,6.283); x.fill();
+    for(const sd of [-1,1]){ const e=S(3.9,sd*.9,.9); x.fillStyle="rgba(8,6,6,.95)"; x.beginPath(); x.arc(e[0],e[1],Math.max(.6,wR*.22),0,6.283); x.fill(); }
+    x.strokeStyle=C([26,22,20]); x.lineWidth=Math.max(.6,wR*.18); x.beginPath(); x.moveTo(hd[0],hd[1]); x.lineTo(bt[0],bt[1]); x.stroke();     /* the long needle bill */
+    wingFan(-far);
+  }
   function drawHum(dt,dark){
-    nextHum-=dt; if(!hum&&nextHum<=0){ const sd=Math.random()<.5?-1:1; hum={t:0,sd,x:sd<0? -40 : W+40,y:H*rnd(.35,.6),hx:W*rnd(.3,.7),hy:H*rnd(.3,.55)}; }
-    if(!hum) return; const h=hum; h.t+=dt; const T=h.t;
-    let x,y,sc;
-    if(T<.7){ const e=ease(T/.7); x=lerp(h.x,h.hx,e); y=lerp(h.y,h.hy,e)-Math.sin(e*Math.PI)*40; sc=lerp(.6,1,e); }     /* zip in */
-    else if(T<3.6){ x=h.hx+Math.sin(T*3.1)*14+Math.sin(T*9)*3; y=h.hy+Math.sin(T*2.3)*8+Math.cos(T*11)*2; sc=1+Math.sin(T*1.2)*.05; }   /* hover, darting a little side to side */
-    else { const e=ease((T-3.6)/.5); x=lerp(h.hx,h.hx-h.sd*W*.8,e); y=lerp(h.hy,h.hy-H*.3,e); sc=lerp(1,.4,e); if(T>4.2){ hum=null; nextHum=rnd(90,170); return; } }
-    h.sx=x; h.sy=y; const k=Math.min(W,H)/900*5.2*sc, lt=dark?.6:.85, C=c=>rgb(mulv(c,lt));
-    ctx.save(); ctx.filter="blur(1.4px)"; ctx.translate(x,y); ctx.scale(k,k);
-    for(const s of [-1,1]){ ctx.fillStyle="rgba(220,226,214,.28)"; ctx.beginPath(); ctx.ellipse(s*9,-4,9,4,s*-.5,0,6.283); ctx.fill(); }   /* wings: a soft blur, too fast to see */
-    ctx.fillStyle=C([60,120,72]); ctx.beginPath(); ctx.ellipse(0,0,4.2,7,0,0,6.283); ctx.fill();                                          /* green back and flanks */
-    ctx.fillStyle=C([226,222,206]); ctx.beginPath(); ctx.ellipse(0,1.6,2.6,5,0,0,6.283); ctx.fill();                                      /* pale belly */
-    ctx.fillStyle=C([200,30,46]); ctx.beginPath(); ctx.ellipse(0,-4,2.8,2,0,0,6.283); ctx.fill();                                        /* the ruby throat */
-    ctx.fillStyle=C([54,104,64]); ctx.beginPath(); ctx.arc(0,-7.4,2.9,0,6.283); ctx.fill();
-    ctx.fillStyle="rgba(10,6,4,.95)"; for(const s of [-1,1]){ ctx.beginPath(); ctx.arc(s*1.4,-8,.55,0,6.283); ctx.fill(); }
-    ctx.strokeStyle=C([30,26,24]); ctx.lineWidth=.7; ctx.beginPath(); ctx.moveTo(0,-6.6); ctx.lineTo(.4,-2.6); ctx.stroke();           /* the needle bill, pointing at you */
-    ctx.fillStyle=C([46,70,50]); ctx.beginPath(); ctx.moveTo(-1.6,6); ctx.lineTo(0,10); ctx.lineTo(1.6,6); ctx.closePath(); ctx.fill();
-    ctx.restore(); ctx.filter="none";
+    nextHum-=dt; if(!hum&&nextHum<=0){ const sp=sun(); hum={t:0,fx:sp.x+rnd(-W*.25,W*.15),fy:sp.y+H*rnd(.1,.25),hx:W*rnd(.3,.7),hy:H*rnd(.32,.55),ex:Math.random()<.5? -.2*W : 1.2*W,ey:H*rnd(.15,.4),beat:0}; }
+    if(!hum) return; const h=hum; h.t+=dt; h.beat+=dt*Math.PI*2*28; const T=h.t, F=H*.5, cx=W/2, cy=H*.52, zH=.75;
+    let z, sx, sy, look=0;
+    if(T<1.3){ const u=T/1.3, e=u*u*(3-2*u); z=9*Math.pow(zH/9,e); const ev=(1/9-1/z)/(1/9-1/zH); sx=lerp(h.fx,h.hx,ev); sy=lerp(h.fy,h.hy,ev)-Math.sin(ev*Math.PI)*30; }   /* shooting in toward you */
+    else if(T<4.6){ z=zH+Math.sin(T*1.7)*.05; sx=h.hx+Math.sin(T*2.6)*16+Math.sin(T*9)*3; sy=h.hy+Math.sin(T*2.1)*9+Math.cos(T*11)*2; look=Math.sin(T*1.9)*.7; }   /* hovering, darting a little, turning its head to you */
+    else { const u=Math.min(1,(T-4.6)/.8), e=u*u; z=zH*Math.pow(10/zH,e); const ev=(1/zH-1/z)/(1/zH-1/10); sx=lerp(h.hx,h.ex,ev); sy=lerp(h.hy,h.ey,ev); if(u>=1){ hum=null; nextHum=rnd(90,170); return; } }
+    const P=[(sx-cx)*z/F,(sy-cy)*z/F,z], V=h.pp? [P[0]-h.pp[0],P[1]-h.pp[1],P[2]-h.pp[2]] : [0,0,-1]; h.pp=P; h.sx=sx; h.sy=sy;
+    if(Math.hypot(...V)>1e-7) h.V=h.V? h.V.map((v,i)=>lerp(v,V[i],.2)) : V;
+    let fdir=h.V||V; const hov=T>=1.3&&T<4.6; if(hov) fdir=[Math.sin(look)*.6,0,-1];                           /* hovering: it faces you */
+    if(Math.hypot(fdir[0],fdir[2])<1e-6) fdir=[0,0,-1]; fdir=[fdir[0],fdir[1],fdir[2],hov? 1.1 : .45];                 /* body tilted up, steeply when hovering */
+    const m=.75/z, sz=Math.ceil(Math.min(1400,260*m)); if(hcv.width<sz||hcv.height<sz){ hcv.width=hcv.height=sz; }
+    const x=hcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,hcv.width,hcv.height);
+    const lt=dark?.55:.72, C=c=>rgb(mulv(c,lt));
+    hum3D(x,P,fdir,h.beat,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz-sx+sz/2, cy+Y3*F/zz-sy+sz/2]; },C);
+    /* the evening light on it: warm on the sun side, hazing into the sky with distance, toned like the photo */
+    x.globalCompositeOperation="source-atop"; const sp=sun(), sdx=Math.sign(sp.x-sx)||1;
+    x.fillStyle="rgba(255,160,76,.2)"; x.fillRect(0,0,sz,sz);
+    const rl=x.createLinearGradient(sz/2-sdx*sz*.2,0,sz/2+sdx*sz*.2,0); rl.addColorStop(0,"rgba(20,12,6,.22)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,"rgba(255,196,120,.3)"); x.fillStyle=rl; x.fillRect(0,0,sz,sz);
+    if(!h.bg||(h.bgT=(h.bgT||0)-1)<=0){ h.bgT=6; const ip=toImg(sx,sy); h.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
+    const haze=Math.min(.75,Math.max(0,(z-1)/7)); if(haze>0){ x.fillStyle=rgb(h.bg,haze); x.fillRect(0,0,sz,sz); }
+    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
+    x.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=Math.min(1,T/.25); ctx.drawImage(hcv,0,0,sz,sz,sx-sz/2,sy-sz/2,sz,sz); ctx.restore();
   }
   /* ---- a hen turkey leads a string of little poults across the lawn edge, pecking as they go ---- */
   let hen=null, nextHen=95;
