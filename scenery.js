@@ -663,7 +663,7 @@ const ambient=(function(){
     buck={X:s.X,Z:s.Z,yaw:rnd(0,6.28),hd:1,hy:0,hyT:0,q:0,plan,cur:null,t:0,alpha:1,walking:false};
   }
   function stepBuck(dt){
-    if(!buck){ nextBuck-=dt; if(nextBuck<=0){ if(herd.length) nextBuck=12; else startBuck(); } return; }
+    if(!buck){ nextBuck-=dt; if(nextBuck<=0){ if(herd.length||buck2) nextBuck=12; else startBuck(); } return; }   /* only one buck out at a time */
     const b=buck; if(!b.cur){ b.cur=b.plan.shift(); b.t=0; b.h0=b.hd; if(!b.cur){ buck=null; nextBuck=rnd(70,160); return; } }
     const c=b.cur; b.t+=dt; b.walking=false;
     if(c.k==="head"){ const u=Math.min(1,b.t/c.dur), e=u*u*(3-2*u); b.hd=lerp(b.h0,c.to,e); if(u>=1) b.cur=null; }
@@ -690,7 +690,7 @@ const ambient=(function(){
     buck2={X:s.X,Z:s.Z,yaw:rnd(0,6.28),hd:1,hy:0,hyT:0,q:0,plan,cur:null,t:0,alpha:0,walking:false,fin:true};
   }
   function stepBuck2(dt){
-    if(!buck2){ nextBuck2-=dt; if(nextBuck2<=0) startBuck2(); return; }
+    if(!buck2){ nextBuck2-=dt; if(nextBuck2<=0){ if(buck) nextBuck2=12; else startBuck2(); } return; }
     const b=buck2; if(b.fin){ b.alpha=Math.min(1,b.alpha+dt/1.5); if(b.alpha>=1) b.fin=false; }   /* eases into view as he lifts out of the cover */
     if(!b.cur){ b.cur=b.plan.shift(); b.t=0; b.h0=b.hd; if(!b.cur){ buck2=null; nextBuck2=rnd(90,200); return; } }
     const c=b.cur; b.t+=dt; b.walking=false;
