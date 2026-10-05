@@ -393,11 +393,11 @@ const ambient=(function(){
     x.fillStyle=sh; x.fillRect(0,0,c.width,c.height); return c; })();
   const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
   function drawMoon(){
-    const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.04, d=Math.min(1,duskV/.62), a=.55+.4*d;
+    const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.08, d=Math.min(1,duskV/.62), a=.55+.4*d;
     const veil=.25+.35*Math.max(0,Math.sin(t*.045+1)*.5+Math.sin(t*.11)*.5);                                           /* thin cloud drifting across it */
     ctx.save(); ctx.globalAlpha=a*(1-veil*.55);
     const gl=ctx.createRadialGradient(p[0],p[1],R*.8,p[0],p[1],R*4); gl.addColorStop(0,`rgba(255,246,226,${(.22*a).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* glow in the haze */
-    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ ctx.globalAlpha=Math.min(1,a*1.25*(1-veil*.35)); ctx.drawImage(moonImg,p[0]-R,p[1]-R,R*2,R*2); ctx.globalAlpha*=.6; ctx.drawImage(moonImg,p[0]-R,p[1]-R,R*2,R*2); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
+    ctx.globalCompositeOperation="screen"; if(moonImg.complete&&moonImg.naturalWidth){ ctx.globalAlpha=Math.min(1,a*1.25*(1-veil*.35)); ctx.translate(p[0],p[1]); ctx.rotate(110*Math.PI/180); ctx.drawImage(moonImg,-R,-R,R*2,R*2); ctx.globalAlpha*=.6; ctx.drawImage(moonImg,-R,-R,R*2,R*2); ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY); } else ctx.drawImage(moonSpr,p[0]-R-R*4/64,p[1]-R-R*4/64,R*2+R*8/64,R*2+R*8/64);   /* screened, so its dark half melts into the sky and only the lit part shows */
     ctx.restore();
     if(skyTile){ const ip=toImg(p[0],p[1]); const c=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[120,110,110];
       const v=ctx.createRadialGradient(p[0]+Math.sin(t*.07)*R,p[1],0,p[0],p[1],R*2.2); v.addColorStop(0,rgb(c,.4*veil)); v.addColorStop(1,rgb(c,0)); ctx.fillStyle=v; ctx.fillRect(p[0]-R*2.5,p[1]-R*2.5,R*5,R*5); }   /* the veil itself */
@@ -1812,7 +1812,7 @@ const ambient=(function(){
   /* ---- a pileated woodpecker: bounds in from the woods on the left, lands on the lone tree, hitches up the trunk, drums, and flies off ---- */
   let pecker=null, nextPecker=20; const pcv=document.createElement("canvas"), pcx=pcv.getContext("2d"); const TRUNK=[[.187,.666],[.188,.612]];
   /* it comes in over your shoulder from behind, big and close, and flies off across the lawn to the tree, shrinking into the distance, then swings up onto the trunk */
-  function startPecker(){ pecker={t:0,x:-99,y:-99,state:"approach",X0:(Math.random()<.5?-1:1)*rnd(.03,.08),Y0:-rnd(.07,.11),dur:rnd(3.8,4.6),hops:2+Math.floor(Math.random()*2),drums:0,st:0,fl:0,face:1,tgt:0,m:1}; }
+  function startPecker(){ pecker={t:0,x:-99,y:-99,state:"approach",X0:(Math.random()<.5?-1:1)*rnd(.03,.08),Y0:-rnd(.07,.11),dur:rnd(3.2,3.8),hops:2+Math.floor(Math.random()*2),drums:0,st:0,fl:0,face:1,tgt:0,m:1}; }
   /* the pileated woodpecker in true 3D for its flights: built around its own heading, wings beating about the body, seen from whatever angle it happens to be at */
   function pileated3D(x,P,V,flap,glide,proj,Kw,C){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -1840,7 +1840,7 @@ const ambient=(function(){
     const at=u=>[lerp(A[0],B[0],u)-3*sc,lerp(A[1],B[1],u)];
     let peck=0; p.m=1; p.back=false;
     if(p.state==="approach"){
-      const F=H*.5, cx=W/2, cy=H*.52, zT=6, z0=.2, u=Math.min(1,p.st/p.dur), e=u*u*(3-2*u), z=z0*Math.pow(zT/z0,e), tg=at(p.tgt);
+      const F=H*.5, cx=W/2, cy=H*.52, zT=6, z0=.35, u=Math.min(1,p.st/p.dur), e=1-(1-u)*(1-u)*(1-u), z=z0*Math.pow(zT/z0,e), tg=at(p.tgt);
       const ev=(1/z0-1/z)/(1/z0-1/zT);                                                                         /* how far it has closed on the tree, measured in perspective */
       const nx=lerp(cx+p.X0*F/z,tg[0],ev), ny=lerp(cy+p.Y0*F/z,tg[1],ev)+Math.sin(ev*Math.PI*4)*10*sc*(1-ev*.5);   /* the bounding flight, rising and dipping */
       p.P3=[(nx-cx)*z/F,(ny-cy)*z/F,z]; p.three=u<.97; if(p.x>-90) p.face=nx>=p.x?1:-1; p.x=nx; p.y=ny; p.m=zT/z;
