@@ -1296,16 +1296,20 @@ const ambient=(function(){
   /* at the end of a dash: a quick stop, a dash somewhere new, or a turn at chasing the other one, each dog deciding for itself */
   function rompArrive(d){
     const m=d.mate, r=Math.random(); d.sm=rnd(.8,1.2);
-    if(r<.3){ d.state="pause"; d.t=0; d.st=rnd(.3,1.1); return; }
-    if(r<.6&&m&&!m.it&&m.romp>0){ d.it=true; d.chase=rnd(1.8,3.6); d.lag=rnd(.6,1.2); return; }
+    if(r<.22){ d.state="pause"; d.t=0; d.st=rnd(.3,1.1); return; }
+    if(r<.36){ dogSit(d,true); return; }
+    if(r<.62&&m&&!m.it&&m.romp>0){ d.it=true; d.chase=rnd(1.8,3.6); d.lag=rnd(.6,1.2); return; }
     rompTarget(d);
   }
   function dogTarget(d,first){
     const b=foxBounds(), cur=toScreen(d.Xw,d.Dw), sx=first? W*(d.dir>0?rnd(.3,.5):rnd(.5,.7)) : Math.max(W*.08,Math.min(W*.92,cur.x+d.dir*W*rnd(.18,.36))), lo=Math.max(b.gmin,lawnMinG(sx))+10;
     const g= cur.g>(lo+b.gmax)/2? rnd(lo,lerp(lo,b.gmax,.45)) : rnd(lerp(lo,b.gmax,.55),b.gmax), p=toGround(sx,gnd().vy+g); d.tX=p.Xw; d.tD=p.Dw; d.dir*=-1;
   }
+  /* sit down for a while, sometimes to have a good scratch */
+  function dogSit(d,short){ d.state="sit"; d.t=0; d.st=short? rnd(2,3.6) : rnd(3.5,7); d.lookH=-.15;
+    if(Math.random()<.5){ const a=rnd(.7,1.4); d.scr=[a,a+rnd(1.4,2.6)]; } else d.scr=null; }
   function stepDog(d,dt){
-    d.t+=dt;
+    d.t+=dt; d.sitA=(d.sitA||0)+((d.state==="sit"?1:0)-(d.sitA||0))*Math.min(1,dt*5);
     const romping=d.state==="run"&&d.romp>0&&stepRomp(d,dt);
     if(d.state==="run"||d.state==="leave"){
       const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=romping? (d.it?1.3:1.12)*(d.sm||1) : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
@@ -1319,11 +1323,15 @@ const ambient=(function(){
       if(dist<.02){ d.legs--;
         if(!d.lab && !d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
         else if(d.legs<=0){ d.state="leave"; const s=toScreen(d.Xw,d.Dw), p=toGround(d.dir>0? W+140 : -140, gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
+        else if(Math.random()<.28) dogSit(d,false);
         else if(Math.random()<(d.lab?.5:.3)){ d.state="sniff"; d.t=0; d.st=d.lab?rnd(1.4,3):rnd(.8,1.6); }
         else dogTarget(d); }
       return;
     }
     if(d.state==="sniff"){ d.head+=(1-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; dogTarget(d); } return; }
+    if(d.state==="sit"){ d.scratching=!!(d.scr&&d.t>d.scr[0]&&d.t<d.scr[1]);
+      d.head+=((d.scratching? .45 : d.lookH??-.15)-d.head)*Math.min(1,dt*6); if(!d.scratching&&Math.random()<dt*.5) d.lookH=rnd(-.35,.1);   /* now and then glances about */
+      if(d.t>d.st){ d.state="run"; d.scratching=false; if(d.romp>0) rompTarget(d); else dogTarget(d); } return; }
     if(d.state==="pause"){ d.head+=(-.15-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; rompTarget(d); } return; }   /* a quick stop mid-romp, head up */
     if(d.state==="point"){ d.head+=(-.05-d.head)*Math.min(1,dt*10);                                          /* frozen: head level, tail up, a forepaw lifted */
       if(!d.flushed && d.t>d.pt*.7){ d.flushed=true; if(!grouse&&!pheas){ if(Math.random()<.6) flushPheasant(); else flushGrouse(); } }
@@ -1332,11 +1340,18 @@ const ambient=(function(){
   function dogParts(d,P,moving){
     const q=d.ph*Math.PI*.9, yaw=d.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], point=d.state==="point";
     const wh=rgb(P.white), whF=rgb(mulv(P.white,.8)), or=rgb(P.orange), orF=rgb(mulv(P.orange,.8)), sh=[rgb(mulv(P.white,.7)),rgb(mixv(P.white,[255,215,160],.2))];
-    const bounce=moving? Math.max(0,Math.sin(q))*1.6 : 0, pitchB=moving? Math.sin(q+.6)*.06 : 0;
-    const T=(x,y)=>{ const c=Math.cos(pitchB), s=Math.sin(pitchB), dy=y-15; return [x*c-dy*s, 15+bounce+x*s+dy*c]; }, B=(x,y,z,r)=>{ const t2=T(x,y); return [t2[0],t2[1],z,r]; };
+    const bounce=moving? Math.max(0,Math.sin(q))*1.6 : 0, pitchB=moving? Math.sin(q+.6)*.06 : 0, sA=d.sitA||0, sa=.62*sA, sc=Math.cos(sa), ss=Math.sin(sa);
+    /* sitting: the whole body tips up about the shoulders, so the rump drops to the grass and the head rises */
+    const T=(x,y)=>{ const c=Math.cos(pitchB), s=Math.sin(pitchB), dy=y-15; let X=x*c-dy*s, Y=15+bounce+x*s+dy*c; if(sa){ const rx=X-6.6, ry=Y-13.4; X=6.6+rx*sc-ry*ss; Y=13.4+rx*ss+ry*sc; } return [X,Y]; }, B=(x,y,z,r)=>{ const t2=T(x,y); return [t2[0],t2[1],z,r]; };
     for(const [lx,ly,z,ph,hind] of [[6.6,13.4,-2.3,0,0],[6.6,13.4,2.3,.4,0],[-8,14.2,-2.5,Math.PI,1],[-8,14.2,2.5,Math.PI+.4,1]]){
       const sw=moving?Math.sin(q+ph):0, lift=moving?Math.max(0,-Math.cos(q+ph)):0, top=T(lx,ly), up=point&&!hind&&z*Math.cos(yaw)<0;
-      const segs=hind? [[5.8,.35+.75*sw,1.7],[5.6,-.6+.75*sw-lift*.5,1.15],[4.2,.08+.75*sw+lift*.5,.95]] : up? [[5.8,.5,1.5],[5.4,-1.6,1.05],[1.4,-2.2,.95]] : [[5.8,-.12+.8*sw,1.5],[6.2,.05+.8*sw-lift*1.5,1.05],[1.4,.3+.8*sw-lift*1.8,.95]];
+      let segs=hind? [[5.8,.35+.75*sw,1.7],[5.6,-.6+.75*sw-lift*.5,1.15],[4.2,.08+.75*sw+lift*.5,.95]] : up? [[5.8,.5,1.5],[5.4,-1.6,1.05],[1.4,-2.2,.95]] : [[5.8,-.12+.8*sw,1.5],[6.2,.05+.8*sw-lift*1.5,1.05],[1.4,.3+.8*sw-lift*1.8,.95]];
+      if(hind&&sA>0){ const near=z*Math.cos(yaw)<0; let fold=[[5.0,1.35,1.7],[4.4,-1.3,1.15],[3.4,1.5,.95]];          /* haunches folded under, hind paws flat out front */
+        if(d.scratching&&near&&sA>.8){                                       /* the near hind foot up behind the ear, going like mad */
+          const hd0=Math.max(0,d.head), hcS=T(lerp(12.6,14.2,hd0),lerp(22.6,9,hd0)), o=Math.sin(t*32), zz=z*1.5;
+          const F=[hcS[0]-2.4+o*.9,hcS[1]-1.6+o*.7], K=[top[0]+6.4,top[1]-1.4], A=[F[0]+.6,F[1]-6.2+o*.5];
+          parts.push({p:[[top[0],top[1],zz,2.7],[K[0],K[1],zz,1.4],[A[0],A[1],zz,.9],[F[0],F[1],zz,.85]],c:rgb(mulv(P.white,.72)),bias:-.2}); continue; }
+        segs=segs.map((g,i)=>[lerp(g[0],fold[i][0],sA),lerp(g[1],fold[i][1],sA),g[2]]); }
       const ch=legChain(top[0],top[1],z,hind?2.9:2.4,segs); parts.push({p:ch,c:far(z)?whF:wh,sh:far(z)?null:sh});
     }
     const tor=d.lab? [[-8.8,15.4,4.8],[-4,15.6,5.3],[1,15.7,5.6],[5.6,16.4,5.3]] : [[-8.6,15.6,4.2],[-4,15.8,4.6],[1,15.9,5.0],[5.6,16.6,4.8]];
@@ -1350,7 +1365,7 @@ const ambient=(function(){
     parts.push({p:[B(-12.4,17.4,0,1.2),B(-14.2,point?20.4:18.8,0,.95)],c:or,bias:.1}); }                          /* short docked tail, straight up on point */
     const hd=d.head, hc0=T(lerp(12.6,14.2,Math.max(0,hd)),lerp(22.6,9,Math.max(0,hd))-(point?1.2:0)), hc=[hc0[0],hc0[1],0];
     parts.push({p:[B(8.2,17.4,0,3.4),[hc[0]-1,hc[1]-.6,0,2.4]],c:wh,sh});
-    const hp=hd*1.0+.08, Hh=(u,v,w,r)=>{ const t2=headPt(hc,hp,0,u,v,w); return [t2[0],t2[1],t2[2],r]; };
+    const hp=hd*1.0+.08+sa*.9, Hh=(u,v,w,r)=>{ const t2=headPt(hc,hp,0,u,v,w); return [t2[0],t2[1],t2[2],r]; };
     parts.push({p:[Hh(-.2,.1,0,d.lab?3.2:2.9),Hh(1.6,-.3,0,d.lab?2.8:2.5)],c:d.lab?wh:or,sh:null});
     parts.push({p:[Hh(3.4,-.9,0,d.lab?2.0:1.75),Hh(5.2,-1.2,0,d.lab?1.6:1.35)],c:wh,bias:-.05}); if(!d.lab) parts.push({p:[Hh(-.4,1.6,0,.7),Hh(2.6,.5,0,.55)],c:wh,bias:-.1});   /* muzzle; the Brittany's white blaze */
     parts.push({p:[Hh(5.9,-1.05,0,.65)],c:rgb(P.nose),bias:-.3});
@@ -1409,14 +1424,14 @@ const ambient=(function(){
     /* local (forward, side, up) → world, with the bird banked about its own axis */
     const P=(f,sd,u)=>{ const sY=sd*sb+u*cb, sS=sd*cb-u*sb; return w2s(b.X+F[0]*f*S.half*2+Rt[0]*sS*S.half, b.Y+sY*S.half, b.Z+F[1]*f*S.half*2+Rt[1]*sS*S.half); };
     const c0=w2s(b.X,b.Y,b.Z); if(c0.x<-120||c0.x>W+120||c0.y<-80) return false;
-    const haze=Math.max(.15,Math.min(.82,(b.Z-3)/20)), sp=sun(), glow=Math.max(0,1-Math.hypot(c0.x-sp.x,c0.y-sp.y)/(W*.3));
+    const haze=b.kind==='vult'? Math.max(.06,Math.min(.42,(b.Z-3)/34)) : Math.max(.15,Math.min(.82,(b.Z-3)/20)), sp=sun(), glow=Math.max(0,1-Math.hypot(c0.x-sp.x,c0.y-sp.y)/(W*.3));
     if(!b.skyC||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=20; const ip=toImg(c0.x,c0.y); b.skyC=(ip&&ip[1]>0&&ip[1]<1&&sampleAt(Math.max(0,Math.min(1,ip[0])),ip[1]))||[206,180,140]; }
     const M=c=>{ const hz=dark? mulv(b.skyC,.45) : b.skyC; return rgb(mixv(c.map(v=>v*(dark?.7:1)),hz,Math.min(.88,haze+glow*.2))); };
-    const pal= b.kind==="vult"? {w:M([34,28,26]),band:M([120,116,112]),body:M([30,25,22]),head:M([140,60,52]),tail:M([36,30,27])}
+    const pal= b.kind==="vult"? {w:M([30,24,21]),band:M([78,72,68]),body:M([26,21,18]),head:M([150,58,48]),tail:M([32,26,23])}
              : b.kind==="hawk"? {w:M([196,178,150]),band:M([70,48,32]),body:M([206,190,166]),head:M([110,76,52]),tail:M([170,92,52])}
              : {w:M([150,120,86]),band:M([96,72,50]),body:M([160,128,92]),head:M([150,120,88]),tail:M([130,102,72])};
     const dih=b.kind==="vult"? .32 : b.kind==="hawk"? .08 : .04, fl=b.flap;
-    ctx.save(); ctx.globalAlpha=b.alpha*(1-glow*.25)*(1-haze*.3); ctx.lineJoin="round";
+    ctx.save(); ctx.globalAlpha=b.alpha*(1-glow*.25)*(1-haze*(b.kind==="vult"?.15:.3)); ctx.lineJoin="round";
     const wing=(sd,lead,trail,col)=>{ const pts=[]; S.s.forEach((s,i)=>{ const up=s*Math.sin(dih+fl*(.4+.6*s)); pts.push(P(lead[i],sd*s,up)); });
       for(let i=S.s.length-1;i>=0;i--){ const s=S.s[i], up=s*Math.sin(dih+fl*(.4+.6*s)); pts.push(P(trail[i],sd*s,up)); }
       ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); ctx.closePath(); ctx.fillStyle=col; ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=Math.max(1.1,c0.k*.006); ctx.stroke(); };
@@ -1542,5 +1557,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&toScreen(d.Xw,d.Dw)); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
