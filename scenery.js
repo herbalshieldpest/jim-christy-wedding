@@ -130,7 +130,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } } };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -896,17 +896,17 @@ const ambient=(function(){
     parts.push({p:[Hh(6.0+sn,-1.0,0,.55)],c:dk,bias:-.5});
     for(const sd of [-1,1]){
       parts.push({p:[Hh(2.1,.85,1.55*sd,.42)],c:dk,bias:-.6});
-      parts.push({poly:true,p:earPts(Hh,sd,[-.3,1.9,1.5],[-.15,.9,.35],[.8,.05,.5],4.8,1.7,[[0,1],[.45,.62],[.8,.25]]),c:far(sd)?dkFar:dk});
+      parts.push({poly:true,p:earPts(Hh,sd,[-.3,1.9,1.5],[-.15,.9,.35],[.8,.05,.5],4.8,1.7,[[0,1],[.45,.62],[.8,.25]]),c:P.ear?rgb(far(sd)?mulv(P.ear,.8):P.ear):(far(sd)?dkFar:dk)});
     }
     /* the brush: a wave runs down it, streaming out behind at a run, swaying low when it stands */
     const tb=B(-10.6,13.2,0,1.4); let tp=[tb[0],tb[1],0]; const tail=[[...tp,1.4]];
-    const om=running?9:1.7, Av=running?.12:.07, Al=running?.14:.2, base=running?.3:(f.state==="sniff"?.75:.62);
+    const om=running?9:1.7, Av=running?.12:.07, Al=running?.14:.2, base=(running?.3:(f.state==="sniff"?.75:.62))+(f.coy?.5:0);
     for(let i=0;i<10;i++){
       const va=base+i*(running?.015:.07)+Av*Math.sin(t*om-i*.55)-(running?bob*.03*i:0), la=Al*Math.sin(t*om*.8-i*.5+1);
       tp=[tp[0]-Math.cos(va)*Math.cos(la)*1.65, tp[1]-Math.sin(va)*1.65, tp[2]+Math.cos(va)*Math.sin(la)*1.65];
       tail.push([...tp,[2.3,3.0,3.4,3.6,3.6,3.3,2.9,2.3,1.6,.7][i]]);
     }
-    parts.push({p:tail.slice(0,9),c:coat,sh},{p:tail.slice(8),c:wh,bias:-.05});
+    parts.push({p:tail.slice(0,9),c:coat,sh},{p:tail.slice(8),c:P.tip?rgb(P.tip):wh,bias:-.05});
     return parts;
   }
   function drawFox(dt,dark){
@@ -932,6 +932,25 @@ const ambient=(function(){
     else { const tn2=tint(); if(tn2.a>0){ x.globalAlpha=tn2.a; x.fillStyle=tn2.c; x.fillRect(0,0,w,h); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=f.alpha; ctx.drawImage(fsp,0,0,w,h,s.x-ax/R,s.y-ay/R,w/R,h/R); ctx.restore();
+  }
+  /* ---- a coyote: trots in low and steady, stops to sniff and stare, then lopes off; bigger and greyer than the fox, tail hung low with a dark tip ---- */
+  let coyote=null, nextCoyote=200;
+  function startCoyote(){
+    const b=foxBounds(), side=Math.random()<.5, x0=side? W+70 : -70, g=rnd(Math.max(b.gmin,lawnMinG(side?W*.9:W*.1))+20,b.gmax-25), p=toGround(x0,gnd().vy+g);
+    coyote={Xw:p.Xw,Dw:p.Dw,state:"run",t:rnd(2.5,4),cycles:3+Math.floor(Math.random()*3),head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,alpha:1,spd:.62,cad:.7,yaw:side?Math.PI:0,coy:true};
+    const q=toGround(W*(side?rnd(.55,.75):rnd(.25,.45)),gnd().vy+g); coyote.tX=q.Xw; coyote.tD=q.Dw; coyote.ang=null; arrive(x0,coyote);
+  }
+  function drawCoyote(dt,dark){
+    if(!coyote){ nextCoyote-=dt; if(nextCoyote<=0){ if(groundBusy()) nextCoyote=12; else startCoyote(); } return; }
+    const was=coyote.state; foxStep(coyote,dt); if(coyote.gone){ coyote=null; nextCoyote=rnd(220,380); return; }
+    const f=coyote, s=toScreen(f.Xw,f.Dw), k=.16*s.g/26*1.22, running=f.state==="run"||f.state==="leave";
+    if(was!=="leave"&&f.state==="leave"&&Math.random()<.4) setTimeout(()=>natureSfx.yip(),rnd(2,5)*1000);   /* sometimes the pack answers from the woods as it goes */
+    if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(running&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*6); } idleTurn(f,dt,running); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
+    f.ct=(f.ct||0)-dt;
+    if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), g=G.g, lit=dark?.45:.6;
+      f.pal={...G, coat:mixv(mulv([140,116,88],lit),mulv(g,.55),.2), dark:mulv([104,88,70],lit), white:mixv(mulv([214,204,186],lit),mulv(g,.6),.2), ear:mulv([132,104,76],lit), tip:mulv([38,30,24],lit)}; }
+    if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-24,24),h:rnd(3,7),lean:rnd(-.5,.5),c:Math.random()}));
+    critterBlit(null,null,f,s,k,f.pal,()=>foxParts(f,f.pal,running||f.turning),f.yaw,52,104,22,f.blades,f.alpha);
   }
   /* ---- shared: paint a rigged ground animal into a small sprite and set it in the photo's light ---- */
   function critterBlit(cv,cx,f,s,k,P,parts,yaw,hgt,wid,shadowR,blades,alpha,haze){
@@ -1120,19 +1139,22 @@ const ambient=(function(){
     }
     parts.push({p:[B(-8.6,13.4,0,6.0),B(-3.4,14.8,0,6.8),B(2,14.6,0,6.6),B(6,13.6,0,5.4)],c:fur,sh});
     parts.push({p:[B(-11.6,14.4,0,1.4)],c:fur,bias:.1});
+    if(f.adult) parts.push({p:[B(1.5,15.6,0,6.2),B(4.2,16.2,0,5.4)],c:fur,sh});   /* a grown bear's shoulder hump */
     const hd=f.head, hc0=B(lerp(13.2,13.4,Math.max(0,hd)),lerp(16.6,6.2,Math.max(0,hd))+Math.max(0,-hd)*2.6,0,0), hc=[hc0[0],hc0[1],hc0[2]];
     const nb=B(7.6,14.2,0,4.8); parts.push({p:[nb,[hc[0]-1,hc[1],hc[2],3.8]],c:fur,sh});
     const sn=f.state==="sniff"? Math.sin(f.sniff*11)*.2 : 0, hp=hd*.85+.08, hy=f.turn;
     const Hh=(u,v,w,r)=>{ const t2=headPt(hc,hp,hy,u,v,w); return [t2[0],t2[1],t2[2],r]; };
     parts.push({p:[Hh(-.4,.2,0,4.6),Hh(1.6,-.2,0,3.9)],c:fur,sh});
-    parts.push({p:[Hh(3.2,-1.1,0,2.5),Hh(5.6+sn,-1.7,0,1.6)],c:rgb(P.muzzle),bias:-.1});
-    parts.push({p:[Hh(6.6+sn,-1.5,0,.95)],c:rgb(mulv(P.fur,.5)),bias:-.3});
-    for(const sd of [-1,1]){ parts.push({p:[Hh(-1.3,4.3,3.0*sd,1.85)],c:far(sd)?furFar:fur,bias:.05}); parts.push({p:[Hh(2.2,1.1,2.4*sd,.48)],c:"rgba(8,6,6,.95)",bias:-.3}); }
+    const sl=f.adult?.9:0; parts.push({p:[Hh(3.2,-1.1,0,2.5),Hh(5.6+sl+sn,-1.7,0,1.6)],c:rgb(P.muzzle),bias:-.1});
+    parts.push({p:[Hh(6.6+sl+sn,-1.5,0,.95)],c:rgb(mulv(P.fur,.5)),bias:-.3});
+    for(const sd of [-1,1]){ parts.push({p:[Hh(-1.3,f.adult?3.9:4.3,(f.adult?2.8:3.0)*sd,f.adult?1.3:1.85)],c:far(sd)?furFar:fur,bias:.05}); parts.push({p:[Hh(2.2,1.1,2.4*sd,.48)],c:"rgba(8,6,6,.95)",bias:-.3}); }
     return parts;
   }
   function drawCub(dt,dark){
     if(!cub){ nextCub-=dt; if(nextCub<=0){ if(groundBusy()) nextCub=12; else startCub(); } return; }
+    if(cub.follow!=null){ cub.follow-=dt; if(cub.follow<=0){ cub.follow=null; cub.state="leave"; cub.tX=cub.exX; cub.tD=cub.exD; cub.ang=null; cub.spd=.3; cub.cad=.5; } }
     foxStep(cub,dt); if(cub.gone){ cub=null; nextCub=rnd(180,320); return; }
+    cub.age=(cub.age||0)+dt; if(!mom&&!cub.momDone&&cub.state!=="leave"&&cub.age>(cub.momAt??(cub.momAt=rnd(9,15)))) startMom();
     const f=cub, s=toScreen(f.Xw,f.Dw), k=.16*s.g/26, walking=f.state==="run"||f.state==="leave";
     if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(walking&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*4); } idleTurn(f,dt,walking); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
     f.ct=(f.ct||0)-dt;
@@ -1140,12 +1162,44 @@ const ambient=(function(){
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-20,20),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
     critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha);
   }
+  /* ---- the cub's mother: a little while after the cub wanders out she comes out of the tall field looking for it, walks over, noses it, and leads it away ---- */
+  let mom=null;
+  function startMom(){
+    const cs=toScreen(cub.Xw,cub.Dw), sd=cs.x<W*.25?1:cs.x>W*.75?-1:(Math.random()<.5?-1:1), sx=Math.max(W*.06,Math.min(W*.94,cs.x+sd*W*rnd(.16,.26))), p=toGround(sx,gnd().vy+lawnMinG(sx));
+    mom={Xw:p.Xw,Dw:p.Dw,state:"run",t:999,cycles:1,head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,alpha:0,fadeIn:true,spd:.3,cad:.34,adult:true};
+    mom.yaw=Math.atan2(trueZ(cub.Dw)-trueZ(mom.Dw),cub.Xw-mom.Xw); mom.tX=cub.Xw; mom.tD=cub.Dw; mom.ang=null;
+    cub.momDone=true; cub.cycles=99; lastArrive=t;                       /* nobody else barges in while the family is out */
+  }
+  function drawMom(dt,dark){
+    if(!mom) return;
+    if(!cub&&mom.state!=="leave"){ const s0=toScreen(mom.Xw,mom.Dw), p=toGround(s0.x<W/2?-160:W+160,gnd().vy+s0.g); mom.state="leave"; mom.tX=p.Xw; mom.tD=p.Dw; mom.ang=null; }
+    if(cub&&!mom.met&&mom.state==="run"){
+      const cs=toScreen(cub.Xw,cub.Dw), ms=toScreen(mom.Xw,mom.Dw), dir=ms.x>=cs.x?1:-1, gap=.36*cs.g;
+      const a=toGround(cs.x+dir*gap,gnd().vy+cs.g); mom.tX=a.Xw; mom.tD=a.Dw; mom.t=999;
+      if(mom.alpha>.6&&cub.state!=="leave"){ const b=toGround(ms.x-dir*gap,gnd().vy+ms.g); cub.state="run"; cub.t=999; cub.tX=b.Xw; cub.tD=b.Dw; cub.ang=null; }   /* the cub hears her and trots to meet her */
+      if(Math.hypot(ms.x-cs.x,(ms.y-cs.y)*3)<.52*cs.g){ mom.met=true; mom.dir=dir;
+        mom.state="sniff"; mom.t=rnd(2.4,3.4); mom.sniff=0; mom.idleYaw=Math.atan2(trueZ(cub.Dw)-trueZ(mom.Dw),cub.Xw-mom.Xw);
+        cub.state="sniff"; cub.t=999; cub.sniff=0; cub.idleYaw=Math.atan2(trueZ(mom.Dw)-trueZ(cub.Dw),mom.Xw-cub.Xw); }
+    }
+    const was=mom.state; foxStep(mom,dt); if(mom.gone){ mom=null; return; }
+    if(mom.met&&was!=="leave"&&mom.state==="leave"){                     /* off together: she leads, the cub falls in behind */
+      const s0=toScreen(mom.Xw,mom.Dw), p=toGround(mom.dir>0?W+180:-180,gnd().vy+s0.g); mom.tX=p.Xw; mom.tD=p.Dw; mom.ang=null; mom.spd=.32;
+      if(cub&&cub.state!=="leave"){ const cs=toScreen(cub.Xw,cub.Dw), q=toGround(mom.dir>0?W+180:-180,gnd().vy+cs.g); cub.exX=q.Xw; cub.exD=q.Dw; cub.follow=.9; cub.state="look"; cub.t=999; }
+    }
+    if(mom.fadeIn){ mom.alpha=Math.min(1,mom.alpha+dt*.6); if(mom.alpha>=1) mom.fadeIn=false; }   /* stepping out of the tall grass */
+    const f=mom, s=toScreen(f.Xw,f.Dw), k=.16*s.g/26*2.1, walking=f.state==="run"||f.state==="leave";
+    if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(walking&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*3); } idleTurn(f,dt,walking); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
+    f.ct=(f.ct||0)-dt;
+    if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, fur:mixv(mulv([34,25,19],lit/.68),mulv(G.g,.3),.06), muzzle:mulv([150,112,78],lit)}; }
+    if(!f.blades) f.blades=Array.from({length:12},()=>({ox:rnd(-11,11),h:rnd(1.4,2.8),lean:rnd(-.5,.5),c:Math.random()}));
+    critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha);
+  }
   /* only one of the ground hunters and wanderers is out at a time */
   /* a newcomer scares off whoever is already out: they bolt away from it, off the far side */
   let lastArrive=-99;
   const groundBusy=()=>t-lastArrive<25;
   function arrive(x,self){ lastArrive=t; const away=sx=>sx<x? -150 : W+150;
-    for(const f of [fox,skunk,cub,bobcat,pheasW]) if(f&&f!==self&&!f.gone){ const s=toScreen(f.Xw,f.Dw), p=toGround(away(s.x),gnd().vy+s.g); f.state="leave"; f.tX=p.Xw; f.tD=p.Dw; f.ang=null; f.spd=Math.max(f.spd||1,1.3); f.cad=Math.max(f.cad||1,1); f.head=0; }
+    for(const f of [fox,skunk,cub,mom,bobcat,pheasW,coyote]) if(f&&f!==self&&!f.gone){ const s=toScreen(f.Xw,f.Dw), p=toGround(away(s.x),gnd().vy+s.g); f.state="leave"; f.tX=p.Xw; f.tD=p.Dw; f.ang=null; f.spd=Math.max(f.spd||1,1.3); f.cad=Math.max(f.cad||1,1); f.head=0; }
     for(const dd of [lab]) if(dd&&dd!==self){ const s=toScreen(dd.Xw,dd.Dw), p=toGround(away(s.x),gnd().vy+s.g); dd.state="leave"; dd.tX=p.Xw; dd.tD=p.Dw; }
     if(dog&&dog!==self){ const s=toScreen(dog.Xw,dog.Dw), p=toGround(away(s.x),gnd().vy+s.g); dog.state="leave"; dog.tX=p.Xw; dog.tD=p.Dw; }
     if(turks&&turks!==self&&turks.mode!=="leave"){ const s=toScreen(turks.cX,turks.cD), p=toGround(away(s.x),gnd().vy+s.g); turks.mode="leave"; turks.gX=p.Xw; turks.gD=p.Dw; turks.dir=s.x<x?-1:1; turks.birds.forEach(b=>{ b.state="walk"; b.fanT=0; }); }
@@ -1428,6 +1482,8 @@ const ambient=(function(){
       const L=[]; if(fox) L.push({y:toScreen(fox.Xw,fox.Dw).y,fn:()=>drawFox(dt,dark)}); else drawFox(dt,dark);
       if(skunk) L.push({y:toScreen(skunk.Xw,skunk.Dw).y,fn:()=>drawSkunk(dt,dark)}); else drawSkunk(dt,dark);
       if(cub) L.push({y:toScreen(cub.Xw,cub.Dw).y,fn:()=>drawCub(dt,dark)}); else drawCub(dt,dark);
+      if(mom) L.push({y:toScreen(mom.Xw,mom.Dw).y,fn:()=>drawMom(dt,dark)});
+      if(coyote) L.push({y:toScreen(coyote.Xw,coyote.Dw).y,fn:()=>drawCoyote(dt,dark)}); else drawCoyote(dt,dark);
       if(bobcat) L.push({y:toScreen(bobcat.Xw,bobcat.Dw).y,fn:()=>drawBobcat(dt,dark)}); else drawBobcat(dt,dark);
       if(pheasW) L.push({y:toScreen(pheasW.Xw,pheasW.Dw).y,fn:()=>drawPheasW(dt,dark)}); else drawPheasW(dt,dark);
       if(dog) L.push({y:toScreen(dog.Xw,dog.Dw).y,fn:()=>drawDog(dt,dark)}); else drawDog(dt,dark);
@@ -1448,5 +1504,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
