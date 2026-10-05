@@ -304,9 +304,11 @@ const ambient=(function(){
     if(back){ ctx.fillStyle="rgba(40,20,0,.2)"; ctx.fill(p); }
     if(mist>.03){ ctx.fillStyle=`rgba(236,214,172,${mist.toFixed(2)})`; ctx.fill(p); }   /* far off, the air washes the color out */
     ctx.strokeStyle=`rgba(60,30,10,${(.35*(.4+.6*d)).toFixed(2)})`; ctx.lineWidth=.7/ls;
+    ctx.save(); ctx.clip(p);                                                                   /* veins stay inside the leaf */
     ctx.beginPath(); ctx.moveTo(0,-.8); ctx.lineTo(0,1.35);
     if(l.kind==="maple"){ ctx.moveTo(0,.2); ctx.lineTo(-.62,-.45); ctx.moveTo(0,.2); ctx.lineTo(.62,-.45); ctx.moveTo(0,.25); ctx.lineTo(-.7,.35); ctx.moveTo(0,.25); ctx.lineTo(.7,.35); }
-    ctx.stroke();
+    ctx.stroke(); ctx.restore();
+    { const b0=l.kind==="maple"? .3 : .92; ctx.beginPath(); ctx.moveTo(0,b0); ctx.lineTo(0,b0+.28); ctx.stroke(); }   /* just a short stem */
     ctx.restore();
   }
   /* ---- now and then one big leaf of each kind in turn: tumbling right up past the lens, or blown out from behind you into the scene ---- */
@@ -338,10 +340,11 @@ const ambient=(function(){
     const g=ctx.createLinearGradient(-1,-1,1,1); g.addColorStop(0,`rgba(255,226,160,${(.32+.16*lit).toFixed(2)})`); g.addColorStop(.45,"rgba(255,220,150,0)"); g.addColorStop(1,"rgba(30,14,4,.5)"); ctx.fillStyle=g; ctx.fill(p);   /* curled: light on one side, shade on the other */
     if(back){ ctx.fillStyle="rgba(60,34,12,.25)"; ctx.fill(p); }
     const vein=`rgba(${back?"70,40,18":"255,214,150"},${back?.4:.35})`;                                                        /* veins: pale on the face, dark on the back */
-    ctx.strokeStyle=vein; ctx.lineWidth=1.6/S; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(0,-.85); ctx.lineTo(0,1.4);
+    ctx.save(); ctx.clip(p); ctx.strokeStyle=vein; ctx.lineWidth=1.6/S; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(0,-.85); ctx.lineTo(0,1.4);
     if(l.kind==="maple"){ for(const [a,b] of [[-.62,-.45],[.62,-.45],[-.7,.35],[.7,.35]]){ ctx.moveTo(0,.22); ctx.lineTo(a,b); } }
     else { for(let i=0;i<6;i++){ const yy=-.65+i*.28, w=(l.kind==="oak"?.36:.5)*Math.sqrt(Math.max(0,1-yy*yy)); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(w*.5,yy-.02,w,yy-.14); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(-w*.5,yy-.02,-w,yy-.14); } }
-    ctx.stroke();
+    ctx.stroke(); ctx.restore();
+    { const b0=l.kind==="maple"? .3 : .92; ctx.strokeStyle=vein; ctx.lineWidth=1.6/S; ctx.beginPath(); ctx.moveTo(0,b0); ctx.lineTo(0,b0+.3); ctx.stroke(); }   /* a short stem */
     ctx.strokeStyle="rgba(60,28,8,.5)"; ctx.lineWidth=1.2/S; ctx.stroke(p);                                                   /* the curled, darker rim */
     ctx.globalCompositeOperation="source-atop";
     if(mist>.02){ ctx.fillStyle=`rgba(236,206,160,${mist.toFixed(2)})`; ctx.fill(p); }
@@ -2995,9 +2998,15 @@ const ambient=(function(){
       const g=ctx.createLinearGradient(0,q.y0,0,q.y1), c=q.lt?"255,246,226":"20,12,6", a=q.a*(.6+.4*Math.random()); g.addColorStop(0,`rgba(${c},0)`); g.addColorStop(.15,`rgba(${c},${a.toFixed(3)})`); g.addColorStop(.85,`rgba(${c},${(a*.7).toFixed(3)})`); g.addColorStop(1,`rgba(${c},0)`);
       ctx.fillStyle=g; ctx.fillRect(q.x,q.y0,q.w,q.y1-q.y0); }
     ctx.restore(); }
+  let frameErr=0;
   function frame(ts){
     raf=0; if(!running()) { ctx.clearRect(0,0,W,H); return; }
-    if(last && ts-last<30){ raf=requestAnimationFrame(frame); return; }   /* ~30 frames a second is plenty for drifting things */
+    raf=requestAnimationFrame(frame);
+    if(last && ts-last<28) return;                                         /* ~30 frames a second is plenty for drifting things */
+    try{ frameBody(ts); }
+    catch(e){ if(frameErr++<3) console.warn("scenery:",e); for(let i=0;i<24;i++) ctx.restore(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation="source-over"; ctx.filter="none"; }   /* one bad frame never stops the whole scene */
+  }
+  function frameBody(ts){
     const dt=Math.min(.07,(ts-(last||ts))/1000); last=ts; t+=dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
     camX=(Math.sin(t*.23)*9+Math.sin(t*.61+1)*4)*.9; camY=(Math.cos(t*.19+.5)*6+Math.sin(t*.47)*3)*.9; camZ=1+30/Math.min(W,H)+.035*(.5-.5*Math.cos(t*2*Math.PI/48));   /* and slowly breathes in and out, about once every 48 seconds */   /* the hand-held drift: the whole view sways together */
@@ -3053,10 +3062,9 @@ const ambient=(function(){
     if(img) drawBig(dt,dark);
     ctx.globalAlpha=1; if(img){ dogScare(dt); drawGreet(dt,dark); drawTrail(dt,dark); drawBats(dt,dark); drawMoths(dt,dark,"near"); drawFlock(dt,dark); drawJays(dt,dark); drawHawkG(dt,dark,"near"); drawPheasFront(dt,dark); drawHum(dt,dark); collectTags(); } ctx.globalAlpha=1;
     ctx.setTransform(1,0,0,1,0,0); if(img) filmPass();
-    raf=requestAnimationFrame(frame);
   }
-  const running=()=>on && !reduce.matches && !document.hidden;
-  function start(){ cv.hidden=!on||reduce.matches; if(running() && !raf){ last=0; raf=requestAnimationFrame(frame); } }
+  const running=()=>on && !document.hidden;
+  function start(){ cv.hidden=!on; if(running() && !raf){ last=0; raf=requestAnimationFrame(frame); } }
   size(); seed();
   window.addEventListener("resize",()=>{ size(); seed(); buns.forEach(b=>b.init=false); });
   document.addEventListener("visibilitychange",start);
