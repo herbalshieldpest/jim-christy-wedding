@@ -1552,7 +1552,7 @@ const ambient=(function(){
      the body pitched up as moths fly, heading the way it's moving, all projected with perspective */
   let lunaSpr=null; const LR=6, LX0=0, LY0=-16;
   function lunaSprite(){ if(lunaSpr) return lunaSpr; const c=document.createElement("canvas"); c.width=31*LR; c.height=60*LR; const x=c.getContext("2d");
-    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true); return lunaSpr=c; }
+    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true); return lunaSpr=mipChain(c); }
   function luna3D(x,P,V,flap,proj){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const v=nrm(V), f=nrm([v[0],v[1]-.55,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0068;               /* nose pitched up into the climb */
@@ -1561,7 +1561,8 @@ const ambient=(function(){
     const wingAt=sd=>{ /* local wing (x outward, y toward the tail) -> 3D: outward along r and up along u by the beat angle, back along -f */
       const L=(lx,ly)=>W3(-ly,sd*lx*Math.cos(ang),lx*Math.sin(ang));
       const O=S(L(0,0)), A=S(L(1,0)), B=S(L(0,1)), X=[A[0]-O[0],A[1]-O[1]], Y=[B[0]-O[0],B[1]-O[1]];
-      x.save(); x.setTransform(X[0]/LR,X[1]/LR,Y[0]/LR,Y[1]/LR,O[0]+X[0]*LX0+Y[0]*LY0,O[1]+X[1]*LX0+Y[1]*LY0); x.drawImage(spr,0,0); x.restore(); };
+      const n=mipPick(spr,Math.max(Math.hypot(X[0],X[1]),Math.hypot(Y[0],Y[1]))/LR), R=LR/Math.pow(2,n), im=spr[n];
+      x.save(); x.setTransform(X[0]/R,X[1]/R,Y[0]/R,Y[1]/R,O[0]+X[0]*LX0+Y[0]*LY0,O[1]+X[1]*LX0+Y[1]*LY0); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high"; x.drawImage(im,0,0,im.width,im.height,0,0,spr[0].width/Math.pow(2,n),spr[0].height/Math.pow(2,n)); x.restore(); };
     const dist=sd=>{ const p=W3(0,sd*10,0); return p[0]*p[0]+p[1]*p[1]+p[2]*p[2]; };
     const far=dist(-1)>dist(1)? -1 : 1;
     wingAt(far);
@@ -1772,6 +1773,8 @@ const ambient=(function(){
     ctx.restore();
   }
   /* ---- monarch butterflies: a few drifting over the field and the lawn in 3D, flapping and then sailing on wings held in a shallow V ---- */
+  function mipChain(c){ const out=[c]; let cur=c; for(let i=0;i<5&&cur.width>8;i++){ const n=document.createElement("canvas"); n.width=Math.max(1,Math.round(cur.width/2)); n.height=Math.max(1,Math.round(cur.height/2)); const x=n.getContext("2d"); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high"; x.drawImage(cur,0,0,n.width,n.height); out.push(n); cur=n; } return out; }
+  function mipPick(chain,pxPerSprPx){ let n=0; while(n<chain.length-1&&pxPerSprPx*Math.pow(2,n)<.75) n++; return n; }
   let monSpr=null; const MR=10, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
   function monarchSprite(){ if(monSpr) return monSpr; const c=document.createElement("canvas"); c.width=26*MR; c.height=34*MR; const x=c.getContext("2d");
     x.setTransform(MR,0,0,MR,-MX0*MR,-MY0*MR); const OR=[232,124,28], OR2=[244,156,52], BK=[24,18,16], WD=[246,240,226];
@@ -1788,13 +1791,14 @@ const ambient=(function(){
     x.strokeStyle=rgb(BK); x.lineWidth=.55; for(const [ex,ey] of [[17,-6],[17.5,-2.5],[15,0.6],[10,1.6]]){ x.beginPath(); x.moveTo(2,-1); x.quadraticCurveTo(ex*.55,ey*.5-.6,ex,ey); x.stroke(); }
     x.fillStyle=rgb(WD); for(const [a,b,r] of [[19.5,-9.4,.6],[21.2,-8.2,.5],[20.6,-5.6,.55],[19,-3,.5],[17.6,-.6,.45],[13,2.4,.4],[9,2.8,.4],[18.4,-7.2,.45]]){ x.beginPath(); x.arc(a,b,r,0,6.283); x.fill(); }
     x.fillStyle=rgb([246,170,70]); for(const [a,b] of [[18.6,-8.2],[20,-7]]){ x.beginPath(); x.arc(a,b,.5,0,6.283); x.fill(); }   /* the little orange spots near the tip */
-    return monSpr=c; }
+    return monSpr=mipChain(c); }
   function monarch3D(x,P,V,ang,proj){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const v=nrm(V), f=nrm([v[0],v[1]-.3,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0074;
     const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*K, P[1]+(f[1]*a+r[1]*b+u[1]*c)*K, P[2]+(f[2]*a+r[2]*b+u[2]*c)*K], S=p=>proj(p[0],p[1],p[2]), spr=monarchSprite();
     const wingAt=sd=>{ const L=(lx,ly)=>W3(-ly,sd*lx*Math.cos(ang),lx*Math.sin(ang)); const O=S(L(0,0)), A=S(L(1,0)), B=S(L(0,1)), X=[A[0]-O[0],A[1]-O[1]], Y=[B[0]-O[0],B[1]-O[1]];
-      x.save(); x.transform(X[0]/MR,X[1]/MR,Y[0]/MR,Y[1]/MR,O[0]+X[0]*MX0+Y[0]*MY0,O[1]+X[1]*MX0+Y[1]*MY0); x.drawImage(spr,0,0); x.restore(); };
+      const n=mipPick(spr,Math.max(Math.hypot(X[0],X[1]),Math.hypot(Y[0],Y[1]))/MR), R=MR/Math.pow(2,n), im=spr[n];
+      x.save(); x.transform(X[0]/R,X[1]/R,Y[0]/R,Y[1]/R,O[0]+X[0]*MX0+Y[0]*MY0,O[1]+X[1]*MX0+Y[1]*MY0); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high"; x.drawImage(im,0,0,im.width,im.height,0,0,spr[0].width/Math.pow(2,n),spr[0].height/Math.pow(2,n)); x.restore(); };
     const d2=sd=>{ const p=W3(0,sd*10,0); return p[0]*p[0]+p[1]*p[1]+p[2]*p[2]; }, far=d2(-1)>d2(1)? -1 : 1;
     wingAt(far);
     const hd=S(W3(5,0,0)), tl=S(W3(-10,0,0)), wd=Math.max(.6,Math.hypot(...[0,1].map(i=>S(W3(0,1.2,0))[i]-S(W3(0,0,0))[i])));
