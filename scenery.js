@@ -3274,7 +3274,7 @@ const ambient=(function(){
     const cr=(a,b,c,d,t)=>{ const t2=t*t, t3=t2*t; return .5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t2+(-a+3*b-3*c+d)*t3); }, P=[];
     for(let i=0;i<pts.length-1;i++){ const a=pts[Math.max(0,i-1)], b=pts[i], c=pts[i+1], d=pts[Math.min(pts.length-1,i+2)]; for(let k=0;k<16;k++){ const t=k/16; P.push([cr(a[0],b[0],c[0],d[0],t),cr(a[1],b[1],c[1],d[1],t)]); } }
     P.push(pts[pts.length-1]); const cum=[0]; for(let i=1;i<P.length;i++) cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));
-    utv={P,cum,len:cum[cum.length-1],d:0,v:0,t:0,yaw:null,roll:0,pitch:0,wr:0,dust:[],col:pick([[58,78,44],[88,30,26],[60,64,58]])};   /* forest green, barn red, or gunmetal */
+    utv={P,cum,len:cum[cum.length-1],d:0,v:0,t:0,yaw:null,roll:0,pitch:0,wr:0,dust:[],col:pick([[52,72,50],[52,72,50],[96,34,28],[66,70,64]])};   /* mostly the hunter green of the photo */   /* forest green, barn red, or gunmetal */
   }
   function utvAt(u,d){ const c=u.cum; let lo=0, hi=c.length-1; d=Math.max(0,Math.min(u.len,d)); while(hi-lo>1){ const m=(lo+hi)>>1; if(c[m]<d) lo=m; else hi=m; }
     const k=(d-c[lo])/Math.max(1e-6,c[hi]-c[lo]); return [lerp(u.P[lo][0],u.P[hi][0],k),lerp(u.P[lo][1],u.P[hi][1],k)]; }
@@ -3309,29 +3309,76 @@ const ambient=(function(){
     const box=(x0,x1,y0,y1,z0,z1,col,opt)=>{ face([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],col,[0,1,0],opt); face([[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]],col,[0,-1,0],opt);
       face([[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],col,[0,0,1],opt); face([[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0]],col,[0,0,-1],opt);
       face([[x1,y0,z0],[x1,y0,z1],[x1,y1,z1],[x1,y1,z0]],col,[1,0,0],opt); face([[x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]],col,[-1,0,0],opt); };
-    const C=u.col, BLK=[22,22,24], SEAT=[34,32,30], TUBE=[26,26,28], SKIN=[176,130,100], SHIRT1=[120,62,40], SHIRT2=[60,74,98], HAT=[70,56,40];
-    /* wheels: chunky knobby tyres as 12-sided prisms, with the hub and its turning spokes */
-    for(const [wx,wz] of [[-.44,.56],[.44,.56],[-.44,-.52],[.44,-.52]]){ const R=.17, w2=.075, N=12, sd=Math.sign(wx);
-      const ring=(x)=>Array.from({length:N},(_,i)=>{ const a=i/N*6.283+u.wr; return [x,R+Math.sin(a)*R,wz+Math.cos(a)*R]; });
-      const outer=ring(wx+sd*w2), inner=ring(wx-sd*w2);
-      for(let i=0;i<N;i++){ const j=(i+1)%N, a=(i+.5)/N*6.283+u.wr; face([outer[i],outer[j],inner[j],inner[i]],i%2?[30,28,26]:[40,38,34],[0,Math.sin(a),Math.cos(a)]); }   /* the knobby tread */
-      face(outer,[34,32,30],[sd,0,0]); const hub=outer.map(([x,y,z])=>[x+sd*.004,R+(y-R)*.55,wz+(z-wz)*.55]); face(hub,[96,96,92],[sd,0,0],{gloss:1}); }
-    box(-.4,.4,.2,.33,-.78,.8,BLK);                                                                                          /* the frame and floor */
-    box(-.42,.42,.33,.5,.32,.86,C,{gloss:1});                                                                                 /* the hood */
-    face([[-.42,.5,.32],[.42,.5,.32],[.38,.6,.18],[-.38,.6,.18]],C,[0,.8,.6],{gloss:1});                                       /* the dash cowl */
-    box(-.43,-.37,.28,.48,-.25,.32,C,{gloss:1}); box(.37,.43,.28,.48,-.25,.32,C,{gloss:1});                                   /* the side panels by the seats */
-    box(-.44,.44,.35,.55,-.82,-.3,C,{gloss:1}); box(-.42,.42,.55,.6,-.82,-.78,C); box(-.44,-.39,.55,.62,-.82,-.3,C); box(.39,.44,.55,.62,-.82,-.3,C);   /* the cargo bed */
-    for(const sx of [-.2,.2]){ box(sx-.17,sx+.17,.4,.48,-.22,.12,SEAT); box(sx-.17,sx+.17,.48,.82,-.28,-.2,SEAT); }          /* the two bucket seats */
-    box(-.36,.36,.5,.62,.24,.3,BLK);                                                                                          /* the dash */
-    face([[-.4,.32,.86],[.4,.32,.86],[.4,.5,.86],[-.4,.5,.86]],[30,30,30],[0,0,1]);                                           /* the grille */
-    /* two riders: driver on the left, passenger on the right */
-    for(const [sx,sh] of [[-.2,SHIRT2],[.2,SHIRT1]]){ box(sx-.11,sx+.11,.5,.8,-.19,-.06,sh); box(sx-.13,sx+.13,.74,.84,-.18,-.07,mulv(sh,.92)); box(sx-.1,sx+.1,.48,.56,-.04,.2,[52,54,62]);   /* torso and lap */
-      faces.push({head:true,c:L2W(sx,.96,-.11),r:.1,col:SKIN,hat:HAT,d:Math.hypot(...L2W(sx,.96,-.11).map((v,i)=>i===1?v-1:v))}); }
-    { const sx=-.2, h0=L2W(sx+.04,.7,.16), h1=L2W(sx,.66,.24); faces.push({arm:true,a:h0,b:h1,col:SHIRT2,d:Math.hypot(h0[0],h0[1]-1,h0[2])-.01}); }   /* the driver's arm to the wheel */
-    /* the roll cage: black tubes over the seats */
-    const tubes=[[[-.4,.5,.3],[-.38,1.08,.12]],[[.4,.5,.3],[.38,1.08,.12]],[[-.4,.55,-.3],[-.38,1.08,-.3]],[[.4,.55,-.3],[.38,1.08,-.3]],[[-.38,1.08,.12],[.38,1.08,.12]],[[-.38,1.08,-.3],[.38,1.08,-.3]],[[-.38,1.08,.12],[-.38,1.08,-.3]],[[.38,1.08,.12],[.38,1.08,-.3]]];
-    for(const [a,b] of tubes){ const A=L2W(...a), B=L2W(...b); faces.push({tube:true,a:A,b:B,d:Math.hypot((A[0]+B[0])/2,(A[1]+B[1])/2-1,(A[2]+B[2])/2)-.02}); }
-    box(-.4,.4,1.06,1.1,-.34,.16,[40,40,42]);                                                                                 /* the roof */
+    const C=u.col, BLK=[24,24,26], TIRE=[30,29,27], SEAT=[28,28,30], SKIN=[184,138,108], SKIN2=[200,152,124];
+    const poly=(pts,col,n,opt)=>face(pts,col,n,opt);
+    const both={both:1};
+    /* big knobby tyres on black wheels */
+    for(const [wx,wz] of [[-.44,.58],[.44,.58],[-.44,-.56],[.44,-.56]]){ const R=.215, w2=.075, N=16, sd=Math.sign(wx);
+      const ring=(x,r)=>Array.from({length:N},(_,i)=>{ const a=i/N*6.283+u.wr; return [x,R+Math.sin(a)*r,wz+Math.cos(a)*r]; });
+      const outer=ring(wx+sd*w2,R), inner=ring(wx-sd*w2,R), lug=ring(wx+sd*w2,R*.97);
+      for(let i=0;i<N;i++){ const j=(i+1)%N, a=(i+.5)/N*6.283+u.wr; poly([outer[i],outer[j],inner[j],inner[i]],i%2?[26,25,23]:[44,42,38],[0,Math.sin(a),Math.cos(a)]); }   /* the tread blocks */
+      poly(outer,TIRE,[sd,0,0]);
+      const rim=ring(wx+sd*(w2+.004),R*.62); poly(rim,[34,34,36],[sd,0,0],{gloss:1});                                          /* the black wheel */
+      for(let k=0;k<5;k++){ const a=k/5*6.283+u.wr, b=a+.25, c=[wx+sd*(w2+.008),R,wz]; poly([c,[c[0],R+Math.sin(a)*R*.56,wz+Math.cos(a)*R*.56],[c[0],R+Math.sin(b)*R*.56,wz+Math.cos(b)*R*.56]],[70,70,72],[sd,0,0],{gloss:1}); }   /* its spokes */
+      /* the black fender flare arching over it */
+      const fl=[]; for(let i=0;i<=8;i++){ const a=lerp(.15,Math.PI-.15,i/8); fl.push([wx+sd*.02,R+Math.sin(a)*.3,wz+Math.cos(a)*.3]); } for(let i=8;i>=0;i--){ const a=lerp(.15,Math.PI-.15,i/8); fl.push([wx+sd*.02,R+Math.sin(a)*.25,wz+Math.cos(a)*.25]); }
+      poly(fl,BLK,[sd,0,0],both); }
+    poly([[-.34,.22,-.8],[.34,.22,-.8],[.34,.22,.8],[-.34,.22,.8]],BLK,[0,-1,0]);                                               /* the skid plate */
+    /* the nose: a sloping hood narrowing to a sharp front, angled headlights, a black grille and bumper */
+    const H0=[[-.37,.62,.36],[.37,.62,.36],[.36,.58,.66],[.3,.52,.86],[-.3,.52,.86],[-.36,.58,.66]];
+    poly(H0,C,[0,.92,.38],{gloss:1});
+    poly([[-.3,.52,.86],[.3,.52,.86],[.26,.34,.95],[-.26,.34,.95]],C,[0,.45,.9],{gloss:1});                                       /* the front fascia */
+    poly([[-.18,.44,.9],[.18,.44,.9],[.16,.33,.955],[-.16,.33,.955]],[20,20,22],[0,.45,.9]);                                      /* the grille */
+    for(const sd of [-1,1]){
+      poly([[sd*.37,.62,.36],[sd*.36,.58,.66],[sd*.3,.52,.86],[sd*.26,.34,.95],[sd*.36,.3,.82],[sd*.4,.36,.4]],C,[sd,.25,.2],{gloss:1});   /* the flank of the nose */
+      poly([[sd*.3,.5,.875],[sd*.2,.49,.9],[sd*.21,.45,.91],[sd*.31,.47,.885]],[220,224,226],[0,.45,.9],{gloss:1}); }              /* the angled headlights */
+    const bump=[[[-.3,.26,1],[.3,.26,1]],[[-.3,.26,1],[-.3,.4,.98]],[[.3,.26,1],[.3,.4,.98]],[[-.3,.4,.98],[.3,.4,.98]],[[-.3,.26,1],[-.3,.24,.85]],[[.3,.26,1],[.3,.24,.85]]];
+    for(const [a,b] of bump){ const A=L2W(...a), B=L2W(...b); faces.push({tube:true,a:A,b:B,w:.028,d:Math.hypot((A[0]+B[0])/2,(A[1]+B[1])/2-1,(A[2]+B[2])/2)-.01}); }   /* the brush-guard bumper */
+    /* the cab sides between the wheels, the low door panels with their cut-down tops */
+    for(const sd of [-1,1]){ poly([[sd*.4,.3,-.3],[sd*.4,.3,.34],[sd*.41,.6,.34],[sd*.41,.58,.06],[sd*.4,.46,-.12],[sd*.4,.46,-.3]],C,[sd,0,0],{gloss:1});
+      poly([[sd*.4,.22,-.3],[sd*.4,.22,.34],[sd*.4,.3,.34],[sd*.4,.3,-.3]],BLK,[sd,0,0]); }                                       /* the black rocker below */
+    poly([[-.38,.62,.36],[.38,.62,.36],[.36,.7,.28],[-.36,.7,.28]],BLK,[0,.6,.8]);                                                /* the dash top */
+    /* the cargo bed */
+    const bz0=-.92, bz1=-.32, by0=.5, by1=.72;
+    poly([[-.42,by1,bz0],[.42,by1,bz0],[.42,by0,bz0],[-.42,by0,bz0]],C,[0,0,-1],{gloss:1});
+    for(const sd of [-1,1]) poly([[sd*.42,by0,bz0],[sd*.42,by0,bz1],[sd*.42,by1,bz1],[sd*.42,by1,bz0]],C,[sd,0,0],{gloss:1});
+    poly([[-.4,by0+.02,bz0],[.4,by0+.02,bz0],[.4,by0+.02,bz1],[-.4,by0+.02,bz1]],[40,40,40],[0,1,0]);                              /* its floor */
+    poly([[-.42,by1,bz1],[.42,by1,bz1],[.42,by0,bz1],[-.42,by0,bz1]],[36,36,38],[0,0,1]);                                         /* the bulkhead behind the seats */
+    poly([[-.42,by0,bz0],[.42,by0,bz0],[.42,.3,-.75],[-.42,.3,-.75]],BLK,[0,-.4,-.9]);
+    /* bucket seats with tall backs and headrests */
+    for(const sx of [-.2,.2]){ poly([[sx-.15,.52,-.22],[sx+.15,.52,-.22],[sx+.15,.52,.12],[sx-.15,.52,.12]],SEAT,[0,1,0]);
+      poly([[sx-.15,.52,-.24],[sx+.15,.52,-.24],[sx+.14,.92,-.32],[sx-.14,.92,-.32]],SEAT,[0,.2,1],both); poly([[sx-.08,.94,-.33],[sx+.08,.94,-.33],[sx+.08,1.03,-.35],[sx-.08,1.03,-.35]],SEAT,[0,.2,1],both); }
+    /* the roll cage: curved bent tubes, as in the photo */
+    const cage=[]; const bend=(a,m,b,n=4)=>{ for(let i=0;i<n;i++){ const t0=i/n, t1=(i+1)/n, q=t=>[0,1,2].map(k=>(1-t)*(1-t)*a[k]+2*(1-t)*t*m[k]+t*t*b[k]); cage.push([q(t0),q(t1)]); } };
+    for(const sd of [-1,1]){ bend([sd*.39,.62,.34],[sd*.39,1.06,.24],[sd*.37,1.12,-.02]); bend([sd*.37,1.12,-.02],[sd*.37,1.14,-.3],[sd*.39,1.06,-.36]); cage.push([[sd*.39,1.06,-.36],[sd*.41,.66,-.34]]); cage.push([[sd*.41,.86,-.34],[sd*.4,.6,.0]]); }
+    cage.push([[-.37,1.12,-.02],[.37,1.12,-.02]]); cage.push([[-.39,1.06,-.36],[.39,1.06,-.36]]); cage.push([[-.39,.8,.3],[.39,.8,.3]]);
+    for(const [a,b] of cage){ const A=L2W(...a), B=L2W(...b); faces.push({tube:true,a:A,b:B,w:.032,d:Math.hypot((A[0]+B[0])/2,(A[1]+B[1])/2-1,(A[2]+B[2])/2)-.03}); }
+    poly([[-.36,1.13,.0],[.36,1.13,.0],[.36,1.13,-.34],[-.36,1.13,-.34]],[30,30,32],[0,1,0],both);                                 /* the roof panel */
+    /* the steering wheel */
+    { const c=[-.2,.74,.2]; const r=Array.from({length:10},(_,i)=>{ const a=i/10*6.283; return [c[0]+Math.cos(a)*.08,c[1]+Math.sin(a)*.06,c[2]-Math.sin(a)*.03]; }); for(let i=0;i<10;i++){ const A=L2W(...r[i]), B=L2W(...r[(i+1)%10]); faces.push({tube:true,a:A,b:B,w:.014,d:Math.hypot(A[0],A[1]-1,A[2])-.05}); } }
+    /* the people. A limb is a tapered stroke; a body is a few panels; a head is a shaded oval with its hair or cap */
+    const limb=(a,b,col,w)=>{ const A=L2W(...a), B=L2W(...b); faces.push({limb:true,a:A,b:B,col,w,d:Math.hypot((A[0]+B[0])/2,(A[1]+B[1])/2-1,(A[2]+B[2])/2)-.045}); };
+    const torso=(sx,sw,cw,col)=>{ const zb=-.2, zf=-.06;                                                                         /* waist narrower than the shoulders, a little lean back */
+      const pts=[[sx-cw,.54,zf],[sx+cw,.54,zf],[sx+sw,.84,zf-.04],[sx-sw,.84,zf-.04]]; poly(pts,col,[0,.15,1],both);
+      for(const sd of [-1,1]) poly([[sx+sd*cw,.54,zb],[sx+sd*cw,.54,zf],[sx+sd*sw,.84,zf-.04],[sx+sd*sw,.84,zb-.02]],mulv(col,.85),[sd,0,0]);
+      poly([[sx-sw,.84,zb-.02],[sx+sw,.84,zb-.02],[sx+sw*.6,.88,zb+.02],[sx-sw*.6,.88,zb+.02]],mulv(col,.9),[0,1,0]); };
+    /* he drives: broad-shouldered in a flannel shirt and a ball cap, hands on the wheel */
+    { const sx=-.2, sh=[118,52,36]; torso(sx,.135,.11,sh);
+      limb([sx,.86,-.12],[sx,.92,-.12],SKIN,.05);                                                                                  /* neck */
+      for(const sd of [-1,1]){ const s0=[sx+sd*.13,.83,-.1], e0=[sx+sd*.15,.66,.03], h0=[sx+sd*.07,.74,.19]; limb(s0,e0,sh,.055); limb(e0,h0,sh,.045); faces.push({hand:true,c:L2W(...h0),r:.024,col:SKIN,d:Math.hypot(...L2W(...h0).map((v,i)=>i===1?v-1:v))-.06}); }
+      for(const sd of [-1,1]){ limb([sx+sd*.07,.56,-.08],[sx+sd*.08,.56,.14],[52,58,72],.07); limb([sx+sd*.08,.56,.14],[sx+sd*.08,.32,.2],[52,58,72],.06); }   /* jeans */
+      faces.push({head:true,man:true,c:L2W(sx,.99,-.1),f:L2W(sx,.99,.0),r:.075,col:SKIN,hat:[64,74,58],d:Math.hypot(...L2W(sx,.99,-.1).map((v,i)=>i===1?v-1:v))-.02}); }
+    /* she rides shotgun, quite literally: slimmer, long hair down her back, the gun held upright beside her, muzzle to the sky */
+    { const sx=.2, sh=[72,96,82]; torso(sx,.115,.09,sh);
+      limb([sx,.85,-.12],[sx,.9,-.12],SKIN2,.042);
+      for(const sd of [-1,1]){ limb([sx+sd*.07,.56,-.08],[sx+sd*.07,.56,.14],[58,52,48],.06); limb([sx+sd*.07,.56,.14],[sx+sd*.07,.32,.2],[58,52,48],.055); }
+      const butt=[sx+.13,.52,.08], grip=[sx+.14,.64,.12], fore=[sx+.15,.82,.17], muzzle=[sx+.17,1.1,.25];                          /* stock on the seat by her knee, barrel up */
+      limb(butt,grip,[150,88,44],.04); limb(grip,[sx+.145,.7,.135],[30,30,32],.024); limb([sx+.145,.7,.135],muzzle,[58,60,66],.02); limb([sx+.147,.74,.15],fore,[112,66,34],.024);   /* walnut stock and fore-end, blued barrel */
+      const s1=[sx+.12,.82,-.1], e1=[sx+.17,.68,.02], s2=[sx-.12,.82,-.1], e2=[sx-.02,.66,.06];
+      limb(s1,e1,sh,.045); limb(e1,grip,sh,.038); limb(s2,e2,sh,.045); limb(e2,fore,sh,.038);
+      for(const hh of [grip,fore]) faces.push({hand:true,c:L2W(...hh),r:.02,col:SKIN2,d:Math.hypot(...L2W(...hh).map((v,i)=>i===1?v-1:v))-.07});
+      faces.push({hair:true,a:L2W(sx,.99,-.14),b:L2W(sx,.8,-.17),col:[78,50,30],w:.09,d:Math.hypot(...L2W(sx,.9,-.16).map((v,i)=>i===1?v-1:v))+.01});   /* her hair down her back */
+      faces.push({head:true,c:L2W(sx,.985,-.1),f:L2W(sx,.985,0),r:.068,col:SKIN2,hairC:[78,50,30],d:Math.hypot(...L2W(sx,.985,-.1).map((v,i)=>i===1?v-1:v))-.02}); }
     faces.sort((a,b)=>b.d-a.d);
     /* draw everything into its own layer, then light it and put it in the air */
     const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(utcv.width!==cw||utcv.height!==ch){ utcv.width=cw; utcv.height=ch; }
@@ -3340,12 +3387,22 @@ const ambient=(function(){
     { const sh=[0,1,2,3].map(i=>{ const a=i/4*6.283+.785; return proj(p[0]+(Math.cos(a)*.62*ca+Math.sin(a)*.95*sa+.12)*S,0,p[1]+(-Math.cos(a)*.62*sa+Math.sin(a)*.95*ca-.25)*S); });   /* its shadow, thrown toward us by the low sun */
       const c0=proj(p[0]+.06*S,0,p[1]-.15*S), g=x.createRadialGradient(c0[0],c0[1],0,c0[0],c0[1],gS*1.1); g.addColorStop(0,"rgba(16,12,6,.55)"); g.addColorStop(1,"rgba(16,12,6,0)"); x.fillStyle=g; x.beginPath(); sh.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.closePath(); x.fill(); }
     for(const F of faces){
-      if(F.tube){ const a=proj(...F.a), b=proj(...F.b); x.strokeStyle=rgb([28,28,30]); x.lineWidth=Math.max(1,gS*.035); x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.strokeStyle="rgba(255,200,140,.25)"; x.lineWidth=Math.max(.5,gS*.01); x.stroke(); continue; }
-      if(F.arm){ const a=proj(...F.a), b=proj(...F.b); x.strokeStyle=rgb(mulv(F.col,.7)); x.lineWidth=Math.max(1,gS*.05); x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); continue; }
-      if(F.head){ const c=proj(...F.c), r=F.r*S*f/F.c[2]; const g=x.createRadialGradient(c[0]+r*.3,c[1]-r*.3,r*.1,c[0],c[1],r); g.addColorStop(0,rgb(mulv(F.col,.75))); g.addColorStop(1,rgb(mulv(F.col,.4))); x.fillStyle=g; x.beginPath(); x.arc(c[0],c[1],r,0,6.283); x.fill();
-        x.fillStyle=rgb(mulv(F.hat,.6)); x.beginPath(); x.ellipse(c[0],c[1]-r*.55,r*1.25,r*.32,0,0,6.283); x.fill(); x.beginPath(); x.arc(c[0],c[1]-r*.6,r*.78,Math.PI,0); x.fill(); continue; }   /* a cap */
+      const pw=(P,w)=>Math.max(.8,w*S*f/Math.max(.2,P[2]));
+      if(F.tube){ const a=proj(...F.a), b=proj(...F.b), w=pw(F.a,F.w||.035); x.strokeStyle=rgb([26,26,28]); x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.strokeStyle="rgba(255,206,150,.3)"; x.lineWidth=Math.max(.4,w*.3); x.stroke(); continue; }
+      if(F.limb||F.hair){ const a=proj(...F.a), b=proj(...F.b), w=pw(F.a,F.w); x.strokeStyle=rgb(mulv(F.col,.72)); x.lineWidth=w; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke();
+        x.strokeStyle=rgb(mulv(F.col,.95),.55); x.lineWidth=w*.45; x.beginPath(); x.moveTo(a[0]-w*.12,a[1]-w*.12); x.lineTo(b[0]-w*.12,b[1]-w*.12); x.stroke(); continue; }   /* a little light down one side */
+      if(F.hand){ const c=proj(...F.c), r=pw(F.c,F.r); x.fillStyle=rgb(mulv(F.col,.75)); x.beginPath(); x.arc(c[0],c[1],r,0,6.283); x.fill(); continue; }
+      if(F.head){ const c=proj(...F.c), fc=proj(...F.f), r=pw(F.c,F.r), dx=fc[0]-c[0], dy=fc[1]-c[1], fl=Math.hypot(dx,dy), fx=fl>.01? dx/fl : 0, fy=fl>.01? dy/fl : 0, side=Math.min(1,fl/r);   /* which way it faces on screen */
+        if(F.hairC){ x.fillStyle=rgb(mulv(F.hairC,.75)); x.beginPath(); x.ellipse(c[0]-fx*r*.15,c[1]-r*.05,r*1.08,r*1.12,0,0,6.283); x.fill(); }
+        { const fxp=c[0]+fx*r*.3, fyp=c[1]+fy*r*.3+r*.05, g=x.createRadialGradient(fxp-r*.2,fyp-r*.3,r*.1,c[0],c[1],r*1.05); g.addColorStop(0,rgb(mulv(F.col,.82))); g.addColorStop(1,rgb(mulv(F.col,.45))); x.fillStyle=g;
+          x.beginPath(); x.ellipse(c[0]+fx*r*.12,c[1]+r*.06,r*.86,r*1.04,0,0,6.283); x.fill(); }                                   /* the face, a little longer than wide */
+        if(F.hairC){ x.fillStyle=rgb(mulv(F.hairC,.85)); x.beginPath(); x.ellipse(c[0]-fx*r*.2,c[1]-r*.45,r*.95,r*.6,0,Math.PI,0); x.fill(); x.beginPath(); x.ellipse(c[0]-fx*r*.55,c[1]-r*.05,r*.42*(1-.4*side)+r*.2,r*.9,0,0,6.283); x.fill(); }   /* parted over the crown, falling past the ears */
+        if(F.man){ x.fillStyle=rgb(mulv([70,52,40],.8)); x.beginPath(); x.ellipse(c[0]+fx*r*.25,c[1]+r*.55,r*.62,r*.36,0,0,Math.PI); x.fill();   /* a close beard along the jaw */
+          x.fillStyle=rgb(mulv(F.hat,.75)); x.beginPath(); x.ellipse(c[0],c[1]-r*.42,r*.98,r*.62,0,Math.PI,0); x.fill();                          /* the cap's crown */
+          x.fillStyle=rgb(mulv(F.hat,.55)); x.beginPath(); x.ellipse(c[0]+fx*r*.85,c[1]-r*.44+fy*r*.2,r*(.35+.55*side),r*.16,Math.atan2(fy,fx)*.15,0,6.283); x.fill(); }   /* and its bill, pointing the way he faces */
+        continue; }
       x.fillStyle=rgb(F.col); x.strokeStyle=rgb(F.col); x.lineWidth=.6; x.beginPath(); F.s.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.closePath(); x.fill(); x.stroke(); }
-    { const hl=[-.3,.3].map(sx=>proj(...L2W(sx,.44,.87))); x.save(); x.globalCompositeOperation="lighter"; for(const h of hl){ const r=gS*.07, g=x.createRadialGradient(h[0],h[1],0,h[0],h[1],r*3); g.addColorStop(0,"rgba(255,244,214,.95)"); g.addColorStop(.2,"rgba(255,230,180,.45)"); g.addColorStop(1,"rgba(255,220,160,0)"); x.fillStyle=g; x.fillRect(h[0]-r*3,h[1]-r*3,r*6,r*6); } x.restore(); }   /* headlights on in the dusk */
+    { const hl=[-.25,.25].map(sx=>proj(...L2W(sx,.49,.89))); x.save(); x.globalCompositeOperation="lighter"; for(const h of hl){ const r=gS*.07, g=x.createRadialGradient(h[0],h[1],0,h[0],h[1],r*3); g.addColorStop(0,"rgba(255,244,214,.95)"); g.addColorStop(.2,"rgba(255,230,180,.45)"); g.addColorStop(1,"rgba(255,220,160,0)"); x.fillStyle=g; x.fillRect(h[0]-r*3,h[1]-r*3,r*6,r*6); } x.restore(); }   /* headlights on in the dusk */
     /* light and air over the whole machine */
     const c0=proj(p[0],.5*S,p[1]), rad=gS*1.6+30, RX=Math.max(0,(c0[0]-rad)*.6), RY=Math.max(0,(c0[1]-rad)*.6), RW=rad*1.2, RH=rad*1.2;
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
