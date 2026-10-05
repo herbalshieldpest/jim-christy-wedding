@@ -1226,7 +1226,7 @@ const ambient=(function(){
   function arrive(x,self){ lastArrive=t; const away=sx=>sx<x? -150 : W+150;
     for(const f of [fox,skunk,cub,mom,bobcat,pheasW,coyote]) if(f&&f!==self&&!f.gone){ const s=toScreen(f.Xw,f.Dw), p=toGround(away(s.x),gnd().vy+s.g); f.state="leave"; f.tX=p.Xw; f.tD=p.Dw; f.ang=null; f.spd=Math.max(f.spd||1,1.3); f.cad=Math.max(f.cad||1,1); f.head=0; }
     for(const dd of [lab]) if(dd&&dd!==self){ const s=toScreen(dd.Xw,dd.Dw), p=toGround(away(s.x),gnd().vy+s.g); dd.state="leave"; dd.tX=p.Xw; dd.tD=p.Dw; }
-    if(dog&&dog!==self){ const s=toScreen(dog.Xw,dog.Dw), p=toGround(away(s.x),gnd().vy+s.g); dog.state="leave"; dog.tX=p.Xw; dog.tD=p.Dw; }
+    if(dog&&dog!==self&&dog.state!=="greet"&&!dog.toViewer){ const s=toScreen(dog.Xw,dog.Dw), p=toGround(away(s.x),gnd().vy+s.g); dog.state="leave"; dog.tX=p.Xw; dog.tD=p.Dw; }
     if(turks&&turks!==self&&turks.mode!=="leave"){ const s=toScreen(turks.cX,turks.cD), p=toGround(away(s.x),gnd().vy+s.g); turks.mode="leave"; turks.gX=p.Xw; turks.gD=p.Dw; turks.dir=s.x<x?-1:1; turks.birds.forEach(b=>{ b.state="walk"; b.fanT=0; }); }
     for(const bn of buns) if(bn.init){ bn.state="hop"; bn.hops=3+Math.floor(Math.random()*3); bn.face=bn.x<x?-1:1; bn.hx=bn.x; bn.tx=Math.max(W*.06,Math.min(W*.94,bn.x+bn.face*rnd(14,26))); bn.hop=0; }
     if(buck&&buck.onLawn){ buck.plan=[{k:"walk",...fieldPt()},{k:"look",dur:2},{k:"head",to:1,dur:1.2},{k:"fade"}]; buck.cur=null; }
@@ -1337,16 +1337,19 @@ const ambient=(function(){
     d.t+=dt; d.sitA=(d.sitA||0)+((d.state==="sit"?1:0)-(d.sitA||0))*Math.min(1,dt*5);
     const romping=d.state==="run"&&d.romp>0&&stepRomp(d,dt);
     if(d.state==="run"||d.state==="leave"){
-      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=romping? (d.it?1.3:1.12)*(d.sm||1) : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
+      const dX=d.tX-d.Xw, dD=d.tD-d.Dw, dist=Math.hypot(dX,dD*.25)||1e-6, sp=romping? (d.it?1.3:1.12)*(d.sm||1) : d.toViewer? 1.05 : (d.lab? (d.state==="leave"?1.1:.75) : (d.state==="leave"?.95:.62));
       const pr=d.lp? Math.hypot(d.Xw-d.lp[0],(d.Dw-d.lp[1])*.25) : 1; d.lp=[d.Xw,d.Dw]; d.stl= pr<sp*dt*.2? (d.stl||0)+dt : 0;
       if(d.stl>.8){ d.stl=0; if(d.state==="leave") d.fade=true; else { d.tX=d.Xw; d.tD=d.Dw; } }
       if(d.fade){ d.alpha-=dt*2.5; if(d.alpha<=0){ d.gone=true; return; } }
+      if(d.fadeIn){ d.alpha=Math.min(1,d.alpha+dt*3); if(d.alpha>=1) d.fadeIn=false; }
       if(dist<=sp*dt){ d.Xw=d.tX; d.Dw=d.tD; } else { d.Xw+=dX/dist*sp*dt; const sD=dD/dist*sp*dt*4; d.Dw+=Math.sign(sD)*Math.min(Math.abs(sD),Math.abs(dD)); }
-      d.ph+=dt*(d.lab?4.6:4.2)*(romping?1.45:1); d.head+=((d.state==="run"&&!romping? (d.lab?.25:.45) : 0)-d.head)*Math.min(1,dt*6);               /* nose down, working the scent */
+      d.ph+=dt*(d.lab?4.6:4.2)*(romping?1.45:1); d.head+=((d.state==="run"&&!romping&&!d.toViewer? (d.lab?.25:.45) : 0)-d.head)*Math.min(1,dt*6);               /* nose down, working the scent */
       if(d.state==="leave"){ const s=toScreen(d.Xw,d.Dw); if(s.x<-90||s.x>W+90||dist<.02){ d.alpha-=dt*3; if(d.alpha<=0) d.gone=true; } return; }
       if(romping){ if(dist<.02&&!d.it) rompArrive(d); return; }
+      if(d.toViewer){ if(dist<.02){ d.toViewer=false; d.state="greet"; d.t=0; startGreet(d); } return; }
       if(dist<.02){ d.legs--;
         if(!d.lab && !d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
+        else if(d.legs<=0&&!d.lab&&!d.greeted&&!greet){ d.greeted=true; d.toViewer=true; lastArrive=t; const p=toGround(W*rnd(.38,.62),gnd().vy+foxBounds().gmax); d.tX=p.Xw; d.tD=p.Dw; }   /* comes to say hello first */
         else if(d.legs<=0){ d.state="leave"; const s=toScreen(d.Xw,d.Dw), p=toGround(d.dir>0? W+140 : -140, gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
         else if(Math.random()<.28) dogSit(d,false);
         else if(Math.random()<(d.lab?.5:.3)){ d.state="sniff"; d.t=0; d.st=d.lab?rnd(1.4,3):rnd(.8,1.6); }
@@ -1357,6 +1360,7 @@ const ambient=(function(){
     if(d.state==="sit"){ d.scratching=!!(d.scr&&d.t>d.scr[0]&&d.t<d.scr[1]);
       d.head+=((d.scratching? .45 : d.lookH??-.15)-d.head)*Math.min(1,dt*6); if(!d.scratching&&Math.random()<dt*.5) d.lookH=rnd(-.35,.1);   /* now and then glances about */
       if(d.t>d.st){ d.state="run"; d.scratching=false; if(d.romp>0) rompTarget(d); else dogTarget(d); } return; }
+    if(d.state==="greet"){ d.alpha=Math.max(0,d.alpha-dt*4); if(d.alpha<=0) d.hidden=true; return; }   /* drops out of sight below the view as the close-up takes over */
     if(d.state==="pause"){ d.head+=(-.15-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; rompTarget(d); } return; }   /* a quick stop mid-romp, head up */
     if(d.state==="point"){ d.head+=(-.05-d.head)*Math.min(1,dt*10);                                          /* frozen: head level, tail up, a forepaw lifted */
       if(!d.flushed && d.t>d.pt*.7){ d.flushed=true; if(!grouse&&!pheas){ if(Math.random()<.6) flushPheasant(); else flushGrouse(); } }
@@ -1399,6 +1403,90 @@ const ambient=(function(){
       parts.push({p:[Hh(1.9,.55,1.9*sd,.42)],c:"rgba(30,16,8,.95)",bias:-.4}); }
     return parts;
   }
+  /* ---- before it leaves, the Brittany runs right up to you: its front paws hook over the bottom of the view, it pulls itself up, and gives you a few good licks ---- */
+  let greet=null; const smears=[]; const gcv=document.createElement("canvas"), gx=gcv.getContext("2d"); const GREET_LEN=8.2, GR=.62;
+  function startGreet(d){ const s=toScreen(d.Xw,d.Dw), sp=(n,f)=>Array.from({length:n},f);
+    greet={t:0,x:Math.max(W*.3,Math.min(W*.7,s.x)),dog:d,seed:rnd(0,6),lastLick:-1,
+      chest:sp(80,()=>[rnd(-76,76),rnd(30,260),rnd(.6,1.3)]), muz:sp(26,()=>{ const a=rnd(0,6.28), r=Math.sqrt(Math.random()); return [Math.cos(a)*r*30,16+Math.sin(a)*r*18,rnd(.7,1.3)]; }),
+      leg:sp(16,()=>[rnd(-12,12),rnd(14,150),rnd(.8,1.6)]), fur:sp(40,()=>[rnd(0,1),rnd(.6,1.2)])}; }
+  const ease=x=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  function drawGreet(dt,dark){
+    for(const m of smears) m.a-=dt*.11;
+    while(smears.length&&smears[0].a<=0) smears.shift();
+    for(const m of smears){ ctx.save(); ctx.globalAlpha=Math.min(1,m.a); ctx.translate(m.x,m.y); ctx.rotate(m.r); ctx.scale(1,.32); const g=ctx.createRadialGradient(0,0,0,0,0,m.w); g.addColorStop(0,"rgba(255,248,236,.3)"); g.addColorStop(.6,"rgba(255,248,236,.12)"); g.addColorStop(1,"rgba(255,248,236,0)"); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,m.w,0,6.283); ctx.fill(); ctx.restore(); }   /* a faint wet streak where it licked the glass */
+    if(!greet) return;
+    const g=greet; g.t+=dt; const T=g.t;
+    if(T>=GREET_LEN){ greet=null; const d=g.dog; if(d&&!d.gone){ d.hidden=false; d.alpha=0; d.fadeIn=true; d.state="leave"; d.ang=null; const s=toScreen(d.Xw,d.Dw), side=g.x<W/2? -1 : 1, p=toGround(side>0? W+160 : -160, gnd().vy+Math.max(foxBounds().gmin+30,s.g-120)); d.tX=p.Xw; d.tD=p.Dw; } return; }
+    const cw=Math.ceil(W*GR), ch=Math.ceil(H*GR); if(gcv.width!==cw||gcv.height!==ch){ gcv.width=cw; gcv.height=ch; }
+    const x=gx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(GR,0,0,GR,0,0); x.lineCap="round";
+    const S=Math.min(W*1.3,H*1.05)/300, out=ease((T-(GREET_LEN-1.2))/1.05);
+    const pawR=ease(T/.6)*(1-ease((T-(GREET_LEN-.75))/.7)), rise=ease((T-.35)/1.1)*(1-out);
+    const L0=1.6, L1=GREET_LEN-1.5, lickOn=T>L0&&T<L1, lk=lickOn? Math.pow(Math.max(0,Math.sin((T-L0)*Math.PI*2*1.7)),1.5) : 0, pant=lickOn?0:Math.max(0,Math.sin(T*13))*.6;
+    const lt=dark?.6:.8, C=(c,m=1,a=1)=>rgb(mulv(c,lt*m),a);
+    const WH=[226,216,200], OR=[184,96,44], ORd=[146,70,32];
+    const hy=lerp(H+180*S,H-122*S,rise)+(lickOn? Math.sin(T*8.2)*3*S : 0), tilt=Math.sin(T*1.5+g.seed)*.1+(lickOn? Math.sin(T*4.9)*.035 : 0);
+    const furEdge=(pts,col,len,w)=>{ x.strokeStyle=col; x.lineWidth=w; for(const [px,py,nx,ny] of pts){ x.beginPath(); x.moveTo(px,py); x.lineTo(px+nx*len,py+ny*len); x.stroke(); } };
+    /* chest and neck, rising behind the head: soft white fur with fine orange ticking */
+    x.save(); x.translate(g.x,hy); x.scale(S,S);
+    const cg=x.createLinearGradient(-90,0,90,0); cg.addColorStop(0,C(WH,.72)); cg.addColorStop(.55,C(WH,.98)); cg.addColorStop(1,C(WH,.86)); x.fillStyle=cg;
+    x.beginPath(); x.moveTo(-42,0); x.quadraticCurveTo(-80,100,-94,430); x.lineTo(94,430); x.quadraticCurveTo(80,100,42,0); x.closePath(); x.fill();
+    furEdge(Array.from({length:22},(_,i)=>{ const u=i/21, yy=20+u*200, xx=-(42+38*Math.min(1,u*1.6)); return [xx,yy,-.7,.7]; }),C(WH,.78),5,1.6);
+    furEdge(Array.from({length:22},(_,i)=>{ const u=i/21, yy=20+u*200, xx=(42+38*Math.min(1,u*1.6)); return [xx,yy,.7,.7]; }),C(WH,.86),5,1.6);
+    x.fillStyle=C(OR,.95,.75); for(const [a,b,r] of g.chest){ x.beginPath(); x.ellipse(a,b,r,r*1.5,0,0,6.283); x.fill(); }
+    x.restore();
+    /* the head */
+    x.save(); x.translate(g.x,hy); x.rotate(tilt); x.scale(S,S);
+    const sw=Math.sin(T*8.2)*.07*(lickOn?1:.4);
+    for(const sd of [-1,1]){ x.save(); x.translate(sd*33,-42); x.rotate(sd*(.1+sw));                                      /* long, feathered ears hanging at the sides */
+      const eg=x.createLinearGradient(0,0,sd*30,0); eg.addColorStop(0,C(ORd)); eg.addColorStop(1,C(OR,1.05)); x.fillStyle=eg;
+      x.beginPath(); x.moveTo(0,0); x.bezierCurveTo(sd*26,2,sd*34,40,sd*27,80); x.bezierCurveTo(sd*22,94,sd*2,94,-sd*3,74); x.bezierCurveTo(-sd*7,40,-sd*8,10,0,0); x.fill();
+      x.restore(); }
+    const hg=x.createRadialGradient(10,-30,6,0,-10,62); hg.addColorStop(0,C(OR,1.12)); hg.addColorStop(1,C(ORd,.9)); x.fillStyle=hg;
+    x.beginPath(); x.moveTo(0,-62); x.bezierCurveTo(34,-62,48,-36,46,-12); x.bezierCurveTo(44,6,36,20,30,30); x.lineTo(-30,30); x.bezierCurveTo(-36,20,-44,6,-46,-12); x.bezierCurveTo(-48,-36,-34,-62,0,-62); x.fill();   /* skull and cheeks */
+    x.fillStyle=C(WH); x.beginPath(); x.moveTo(-5,-62); x.quadraticCurveTo(0,-64,5,-62); x.quadraticCurveTo(9,-30,15,-6); x.lineTo(-15,-6); x.quadraticCurveTo(-9,-30,-5,-62); x.fill();   /* white blaze up the forehead */
+    const mg=x.createRadialGradient(6,10,4,0,18,40); mg.addColorStop(0,C(WH,1.04)); mg.addColorStop(1,C(WH,.8)); x.fillStyle=mg;
+    x.beginPath(); x.moveTo(-16,-8); x.bezierCurveTo(-30,-2,-38,14,-34,30); x.bezierCurveTo(-28,46,28,46,34,30); x.bezierCurveTo(38,14,30,-2,16,-8); x.closePath(); x.fill();   /* muzzle */
+    x.fillStyle=C(OR,.95,.85); for(const [a,b,r] of g.muz){ x.beginPath(); x.arc(a,b,r,0,6.283); x.fill(); }                 /* freckles */
+    for(const sd of [-1,1]){ const ex=sd*20, ey=-20;                                                                     /* amber eyes under heavy lids */
+      x.fillStyle=C([34,18,12]); x.beginPath(); x.ellipse(ex,ey,7.6,6.2,sd*.2,0,6.283); x.fill();
+      x.fillStyle=C([158,96,40],1.05); x.beginPath(); x.arc(ex,ey+.6,5,0,6.283); x.fill();
+      x.fillStyle="rgba(10,5,3,.95)"; x.beginPath(); x.arc(ex,ey+.8,2.7,0,6.283); x.fill();
+      x.fillStyle=C(ORd,.95); x.beginPath(); x.ellipse(ex,ey-4.4,8.4,3.6,sd*.2,Math.PI,0); x.fill();
+      x.fillStyle="rgba(255,248,236,.85)"; x.beginPath(); x.arc(ex+1.6,ey-.6,1.2,0,6.283); x.fill(); }
+    const open=Math.max(lk,pant), mh=5+open*10;
+    x.fillStyle=C([46,16,18]); x.beginPath(); x.moveTo(-18,28); x.quadraticCurveTo(0,30+mh*1.7,18,28); x.quadraticCurveTo(0,33,-18,28); x.fill();   /* open mouth */
+    const tl=lickOn? 10+lk*52 : 6+pant*14, tx=lickOn? Math.sin(T*10.7)*5*lk : 0, tw=12+lk*6;
+    if(tl>2){ const tg=x.createLinearGradient(-tw,0,tw,0); tg.addColorStop(0,C([186,86,100])); tg.addColorStop(.5,C([226,120,130],1.05)); tg.addColorStop(1,C([196,94,108])); x.fillStyle=tg;
+      x.beginPath(); x.moveTo(-tw*.8,31); x.bezierCurveTo(-tw,31+tl*.6,-tw*.7+tx,31+tl,tx,31+tl+2); x.bezierCurveTo(tw*.7+tx,31+tl,tw,31+tl*.6,tw*.8,31); x.closePath(); x.fill();
+      x.strokeStyle=C([150,62,76]); x.lineWidth=1.1; x.beginPath(); x.moveTo(0,34); x.lineTo(tx*.8,31+tl*.72); x.stroke(); }   /* the tongue, with its centre groove */
+    x.strokeStyle=C([70,34,30]); x.lineWidth=1.4; x.beginPath(); x.moveTo(0,15); x.lineTo(0,25); x.stroke();
+    const ng=x.createRadialGradient(3,5,1,0,9,14); ng.addColorStop(0,C([150,82,70])); ng.addColorStop(1,C([92,44,38])); x.fillStyle=ng;
+    x.beginPath(); x.moveTo(-12,7); x.bezierCurveTo(-12,1,12,1,12,7); x.bezierCurveTo(12,14,4,17,0,17); x.bezierCurveTo(-4,17,-12,14,-12,7); x.fill();   /* liver nose */
+    x.fillStyle="rgba(20,8,6,.8)"; for(const sd of [-1,1]){ x.beginPath(); x.ellipse(sd*4.6,10.5,2.3,1.5,sd*.5,0,6.283); x.fill(); }
+    x.fillStyle="rgba(255,232,220,.3)"; x.beginPath(); x.ellipse(2,5,4.2,1.9,0,0,6.283); x.fill();
+    if(lk>.95&&T-g.lastLick>.4){ g.lastLick=T; const m=x.getTransform(), q=m.transformPoint(new DOMPoint(tx,31+tl)); if(smears.length<8) smears.push({x:q.x/GR,y:q.y/GR,w:rnd(14,22)*S,r:rnd(-.6,.6),a:.9}); }
+    x.restore();
+    /* front legs and paws hooked over the bottom edge: they grab first, kneading a little, and pull as it climbs */
+    for(const sd of [-1,1]){
+      const kn=lickOn? Math.sin(T*6+sd*1.4)*3.5*S : 0, px=g.x+sd*60*S+(lickOn? Math.sin(T*2.9+sd)*3*S : 0), py=lerp(H+80*S,H-32*S,pawR)+kn+(1-rise)*pawR*-8*S;
+      x.save(); x.translate(px,py); x.scale(S,S); x.rotate(sd*-.07);
+      const lg2=x.createLinearGradient(-17,0,17,0); lg2.addColorStop(0,C(WH,.76)); lg2.addColorStop(.6,C(WH,.98)); lg2.addColorStop(1,C(WH,.84)); x.fillStyle=lg2;
+      x.beginPath(); x.moveTo(-14,0); x.lineTo(-17,210); x.lineTo(17,210); x.lineTo(14,0); x.closePath(); x.fill();       /* the leg, running down out of view */
+      x.fillStyle=C(OR,.95,.75); for(const [a,b,r] of g.leg){ x.beginPath(); x.ellipse(a,b,r,r*1.5,0,0,6.283); x.fill(); }
+      const pg=x.createRadialGradient(4,-8,2,0,-4,24); pg.addColorStop(0,C(WH,1.04)); pg.addColorStop(1,C(WH,.8)); x.fillStyle=pg;
+      x.beginPath(); x.moveTo(-20,4); x.bezierCurveTo(-24,-10,-14,-20,0,-20); x.bezierCurveTo(14,-20,24,-10,20,4); x.closePath(); x.fill();   /* the paw, toes curled over */
+      x.strokeStyle=C(WH,.66); x.lineWidth=1.3; for(const t2 of [-8,0,8]){ x.beginPath(); x.moveTo(t2,-19); x.quadraticCurveTo(t2*1.1,-12,t2*1.05,-6); x.stroke(); }
+      x.fillStyle=C([52,42,36]); for(const t2 of [-13,-4.5,4.5,13]){ x.beginPath(); x.ellipse(t2,-19.5,1.7,2.6,0,0,6.283); x.fill(); }   /* nails */
+      x.restore(); }
+    /* the same evening light as the rest of the scene: warm on the sun side, shadowed on the other, darker low down */
+    x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
+    const sp=sun(), s0=Math.sign(sp.x-g.x)||1, gl=x.createLinearGradient((g.x-s0*150*S)*GR,0,(g.x+s0*150*S)*GR,0); gl.addColorStop(0,"rgba(26,14,6,.32)"); gl.addColorStop(.55,"rgba(255,200,130,0)"); gl.addColorStop(1,"rgba(255,192,116,.24)");
+    x.fillStyle=gl; x.fillRect(0,0,cw,ch);
+    const vg=x.createLinearGradient(0,(H-300*S)*GR,0,ch); vg.addColorStop(0,"rgba(20,12,4,0)"); vg.addColorStop(1,"rgba(20,12,4,.38)"); x.fillStyle=vg; x.fillRect(0,0,cw,ch);
+    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
+    x.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=1; ctx.imageSmoothingQuality="high"; ctx.drawImage(gcv,0,0,cw,ch,0,0,W,H); ctx.restore();
+  }
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
   let lab=null, nextLab=130;
   function startLab(){
@@ -1418,6 +1506,7 @@ const ambient=(function(){
     paintDog(dog,dt,dark);
   }
   function paintDog(d,dt,dark){
+    if(d.hidden) return;
     const s=toScreen(d.Xw,d.Dw), k=.16*s.g/26, moving=d.state==="run"||d.state==="leave";
     if(d.pw){ const dX=d.Xw-d.pw[0], dZ=trueZ(d.Dw)-d.pw[1]; if(moving&&Math.hypot(dX,dZ)>1e-5) d.yaw=angTo(d.yaw,Math.atan2(dZ,dX),dt*8); } keepOnLawn(d); d.pw=[d.Xw,trueZ(d.Dw)];
     d.ct=(d.ct||0)-dt;
@@ -1573,7 +1662,7 @@ const ambient=(function(){
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
-    ctx.globalAlpha=1;
+    ctx.globalAlpha=1; if(img) drawGreet(dt,dark); ctx.globalAlpha=1;
     raf=requestAnimationFrame(frame);
   }
   const running=()=>on && !reduce.matches && !document.hidden;
@@ -1583,5 +1672,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { where(){ return [dog,lab].map(d=>d&&toScreen(d.Xw,d.Dw)); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { where(){ return [dog,lab].map(d=>d&&toScreen(d.Xw,d.Dw)); }, spawn(n){ lastArrive=-99; if(n==="cub") nextCub=0; else if(n==="coyote") nextCoyote=0; else if(n==="lab") nextLab=0; else if(n==="vult") nextVult=0; else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
