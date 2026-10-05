@@ -3000,7 +3000,7 @@ const ambient=(function(){
   function filmPass(){
     ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation="source-over";
     const k=W+"|"+H; if(vigK!==k){ vigK=k; vigC=document.createElement("canvas"); vigC.width=Math.max(1,Math.round(W/4)); vigC.height=Math.max(1,Math.round(H/4)); const vx=vigC.getContext("2d"), w=vigC.width, h=vigC.height;
-      vx.translate(w/2,h/2); vx.scale(w/2,h/2); const g=vx.createRadialGradient(0,0,.55,0,0,1.42); g.addColorStop(0,"rgba(14,9,4,0)"); g.addColorStop(.5,"rgba(14,9,4,.1)"); g.addColorStop(1,"rgba(14,9,4,.38)"); vx.fillStyle=g; vx.fillRect(-1,-1,2,2); }
+      vx.translate(w/2,h/2); vx.scale(w/2,h/2); const g=vx.createRadialGradient(0,0,.55,0,0,1.42); g.addColorStop(0,"rgba(14,9,4,0)"); g.addColorStop(.45,"rgba(14,9,4,.16)"); g.addColorStop(1,"rgba(14,9,4,.58)"); vx.fillStyle=g; vx.fillRect(-1,-1,2,2); }
     ctx.globalAlpha=1; ctx.drawImage(vigC,0,0,W,H);                                                            /* the corners and edges darken a little */
     const T=grainT[Math.floor(Math.random()*4)], S=2.2, step=T.width*S, ox=-Math.random()*step, oy=-Math.random()*step;   /* coarse, soft clumps, a fresh pattern every frame */
     ctx.globalAlpha=.04; ctx.imageSmoothingEnabled=true;
