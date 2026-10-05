@@ -456,7 +456,7 @@ const ambient=(function(){
     x.fillStyle="rgba(150,146,140,.28)"; for(const [a,b,r] of [[-.3,-.35,.22],[.1,-.1,.28],[.35,.25,.18],[-.2,.3,.16],[.42,-.36,.12],[-.48,.05,.1]]){ x.beginPath(); x.ellipse(o+a*R,o+b*R,r*R,r*R*.85,a,0,6.283); x.fill(); }   /* the maria */
     x.globalCompositeOperation="destination-out"; const sh=x.createRadialGradient(o-R*1.55,o,R*.4,o-R*1.55,o,R*1.25); sh.addColorStop(0,"rgba(0,0,0,.9)"); sh.addColorStop(.75,"rgba(0,0,0,.75)"); sh.addColorStop(1,"rgba(0,0,0,0)");   /* the unlit sliver on the side away from the sun */
     x.fillStyle=sh; x.fillRect(0,0,c.width,c.height); return c; })();
-  const moonCv=document.createElement("canvas"); const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
+  const moonCv=document.createElement("canvas"), moonBl=document.createElement("canvas"); const moonImg=new Image(); moonImg.src=SC.sounds+"moon.png";   /* a real photograph of the moon */
   /* the moon lives behind the drifting clouds. Two versions are prepared once: the moon in clear sky (tinted to the evening, contrast eased to the photo's),
      and the moon seen through cloud (just its light brightening the cloud in front of it, soft and diffuse). Several times a second we look at the clouds drifting
      over it right now and cross-fade, pixel by pixel, between the two: clear patches show the crisp moon, thin cloud a soft glow, thick cloud hides it */
@@ -476,7 +476,7 @@ const ambient=(function(){
       CA[i*3]=Math.min(255,wc[0]*f+gr); CA[i*3+1]=Math.min(255,wc[1]*f+gr); CA[i*3+2]=Math.min(255,wc[2]*f+gr); AA[i]=A[k+3]/255;   /* clear-sky moon: brighter than the sky, its seas a softer grey */
       BL[i]=(Bd[k]+Bd[k+1]+Bd[k+2])/765; BA[i]=Bd[k+3]/255; }                                                          /* the soft light that gets through cloud */
     const skyC=document.createElement("canvas"); skyC.width=skyC.height=S2;
-    MN={p,R,S2,clear,CA,AA,BL,BA,cl:new Float32Array(N).fill(-1),skyC,sx:skyC.getContext("2d"),out:moonCv.getContext("2d").createImageData(S2,S2),next:0,cov:0};
+    MN={p,R,S2,clear,CA,AA,BL,BA,cl:new Float32Array(N).fill(-1),skyC,sx:skyC.getContext("2d",{willReadFrequently:true}),out:moonCv.getContext("2d").createImageData(S2,S2),next:0,cov:0};
   }
   function moonUpdate(){
     const M=MN, S2=M.S2, R=M.R, p=M.p, x=M.sx, m=cover(); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S2,S2);
@@ -493,6 +493,7 @@ const ambient=(function(){
       o[k]=CA[i*3]*ac+br*(1-ac); o[k+1]=CA[i*3+1]*ac+bg*(1-ac); o[k+2]=CA[i*3+2]*ac+bb*(1-ac);
       o[k+3]=255*Math.min(1,Math.max(ac,BA[i]*c*.98, glow>0? Math.min(1,BA[i]*1.4)*c : 0)); }
     M.cov=cn? cs/cn : 0; moonCv.getContext("2d").putImageData(M.out,0,0);
+    if(moonBl.width!==S2){ moonBl.width=moonBl.height=S2; } const bx=moonBl.getContext("2d"); bx.clearRect(0,0,S2,S2); bx.filter="blur(.6px)"; bx.drawImage(moonCv,0,0); bx.filter="none";
   }
   function drawMoon(){
     const p=[W*.15,Math.max(H*.15,scr(.15,.16)[1])], R=Math.min(W,H)*.08, d=Math.min(1,duskV/.62), a=.55+.4*d;
@@ -500,10 +501,10 @@ const ambient=(function(){
     const S2=Math.ceil(R*2), key=[W,H,S2,Math.round(p[0]),Math.round(p[1]),tileKey].join("|");
     if(moonKey!==key){ moonKey=key; moonPrep(p,R,S2); }
     if(!MN){ ctx.save(); ctx.globalAlpha=a*.85; ctx.translate(p[0],p[1]); ctx.rotate(110*Math.PI/180); ctx.drawImage(moonImg,-R,-R,R*2,R*2); ctx.restore(); return; }   /* the photo can't be read here: just the moon */
-    if(t>=MN.next){ MN.next=t+.1; moonUpdate(); if(!MN) return; }
+    if(t>=MN.next){ MN.next=t+.25; moonUpdate(); if(!MN) return; }
     const cov=MN.cov;
     ctx.save(); const gl=ctx.createRadialGradient(p[0],p[1],R*.6,p[0],p[1],R*(2.6+cov*1.2)); gl.addColorStop(0,`rgba(255,246,226,${(.12*a*(1+cov*.6)).toFixed(3)})`); gl.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=gl; ctx.fillRect(p[0]-R*4,p[1]-R*4,R*8,R*8);   /* its glow spreads wider in cloud */
-    ctx.globalAlpha=Math.min(1,.8+.2*d); ctx.filter="blur(.6px)"; ctx.drawImage(moonCv,p[0]-R,p[1]-R,R*2,R*2); ctx.filter="none"; ctx.restore();
+    ctx.globalAlpha=Math.min(1,.8+.2*d); ctx.drawImage(moonBl,p[0]-R,p[1]-R,R*2,R*2); ctx.restore();
   }
   function welcomeShade(){ /* the welcome screen darkens the middle of the photo a little; match it */
     ctx.save(); ctx.translate(W*.5,H*.48); ctx.scale(W*.65,H*.6);
@@ -1531,32 +1532,26 @@ const ambient=(function(){
   /* what the trail scatters: petals and little blossoms of Appalachian wildflowers, plus the odd leaf and seed */
   const WF=(f,cols,extra)=>()=>Object.assign({f,c:pick(cols)},extra||{});
   const WILD=[
+    WF("petal",[[250,248,240],[244,240,232],[255,252,246]]),                   /* white: trillium, dogwood, bloodroot, ox-eye daisy */
+    WF("long",[[250,250,244],[240,238,230]]),                                  /* daisy and fleabane ray petals */
+    WF("notch",[[250,246,238]]),                                                /* white phlox */
+    WF("petal",[[250,248,240],[236,232,226]]),
     WF("petal",[[244,190,40],[236,170,30]],{eye:[70,40,20]}),                 /* black-eyed Susan */
-    WF("flower",[[244,186,36]],{n:12,eye:[64,36,18],pl:1.25}),
-    WF("long",[[206,110,170],[220,130,186]]),                                  /* purple coneflower */
-    WF("flower",[[150,110,210],[170,130,224]],{n:16,eye:[236,196,60],pl:1}),  /* New England aster */
-    WF("long",[[130,160,232],[150,176,240]]),                                  /* chicory */
+    WF("long",[[250,220,70],[244,200,50]]),                                    /* tickseed, goldenaster */
+    WF("petal",[[255,236,150],[250,226,120]]),                                  /* evening primrose */
+    WF("petal",[[252,214,64],[246,196,40]]),                                    /* sneezeweed */
+    WF("petal",[[244,130,40],[250,160,50]]),                                    /* flame azalea */
+    WF("petal",[[236,92,40],[244,120,50]]),                                     /* butterfly weed */
     WF("petal",[[200,40,52],[214,36,40]]),                                      /* cardinal flower */
     WF("notch",[[222,50,72],[236,70,90]]),                                      /* fire pink */
-    WF("petal",[[250,170,196],[248,206,220],[236,140,180]]),                   /* mountain laurel and rhododendron */
-    WF("petal",[[244,130,40],[250,160,50]]),                                    /* flame azalea */
-    WF("petal",[[246,244,236],[236,224,230]]),                                  /* white trillium, dogwood */
-    WF("long",[[196,150,206],[210,170,220]]),                                   /* bee balm, wild bergamot */
-    WF("petal",[[184,120,160],[200,140,176]]),                                  /* Joe Pye weed */
-    WF("bell",[[110,140,224],[140,160,236]]),                                   /* Virginia bluebells */
-    WF("bell",[[214,60,48]],{tip:[246,200,60]}),                                /* wild columbine */
-    WF("flower",[[250,214,60]],{n:5,eye:[200,150,30],pl:.9}),                   /* buttercup */
-    WF("dots",[[236,196,50],[226,180,40]]),                                     /* goldenrod sprig */
-    WF("leaf",[[198,72,40],[220,128,40],[180,52,44],[214,170,60]]),             /* a little maple or sumac leaf */
-    WF("petal",[[252,214,64],[246,196,40]]),                                    /* sneezeweed, sunflower */
-    WF("flower",[[250,250,244]],{n:14,eye:[240,196,50],pl:1.05}),               /* ox-eye daisy */
-    WF("petal",[[236,92,40],[244,120,50]]),                                     /* butterfly weed */
-    WF("flower",[[244,110,40]],{n:6,eye:[120,40,20],pl:.95}),                   /* Turk's cap lily */
-    WF("petal",[[255,236,150],[250,226,120]]),                                  /* evening primrose */
-    WF("long",[[250,220,70],[244,200,50]]),                                     /* goldenaster, tickseed */
-    WF("notch",[[250,140,170],[244,120,160]]),                                  /* wild phlox, pink */
+    WF("petal",[[250,170,196],[248,206,220],[236,140,180]]),                   /* mountain laurel, rhododendron */
+    WF("notch",[[250,140,170],[244,120,160]]),                                  /* wild phlox */
+    WF("long",[[206,110,170],[220,130,186]]),                                  /* purple coneflower */
+    WF("long",[[130,160,232],[150,176,240]]),                                  /* chicory */
+    WF("bell",[[110,140,224],[140,160,236]]),                                   /* a Virginia bluebell */
+    WF("dots",[[236,196,50],[226,180,40]]),                                     /* a bit of goldenrod */
     WF("seed",[[248,246,240]]),                                                 /* a drifting dandelion seed */
-    WF("leaf",[[120,150,60],[150,170,70]]),                                     /* a bit of green */
+    WF("leaf",[[198,72,40],[220,128,40],[180,52,44],[214,170,60]]),             /* a little maple or sumac leaf */
   ];
   function drawWild(p,lt,flip){ const r=p.r, c=rgb(mulv(flip>0?p.c:mulv(p.c,.84),lt)), shade=rgb(mulv(p.c,.62*lt),.5);
     const petal=(len,wid)=>{ ctx.beginPath(); ctx.moveTo(0,-len); ctx.bezierCurveTo(wid,-len*.7,wid*.9,len*.6,0,len*.85); ctx.bezierCurveTo(-wid*.9,len*.6,-wid,-len*.7,0,-len); ctx.fill(); };
@@ -1579,7 +1574,7 @@ const ambient=(function(){
     for(let i=trail.length-1;i>=0;i--){ const p=trail[i], age=t-p.t, a=Math.min(1,(2.6-age)/1.1); if(a<=0){ trail.splice(i,1); continue; }   /* petals shaken loose: they flutter up off the air toward you, growing, going soft and fading as they pass */
       const k=1+age*age*.9, ex=dt*.55*age; p.x+=(p.x-W/2)*ex+dt*(p.vx+Math.sin(t*3+p.ph)*16); p.y+=(p.y-H*.45)*ex+dt*(6+Math.sin(t*2.2+p.ph)*10); p.rot+=dt*p.spin; const flip=Math.cos(t*4+p.ph);
       const lt=dark?.8:.95; if(!p.c) Object.assign(p,pick(WILD)());
-      ctx.save(); if(k>1.8) ctx.filter=`blur(${Math.min(6,(k-1.8)*1.6).toFixed(1)}px)`; ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(k,k*Math.max(.15,Math.abs(flip))); ctx.globalAlpha=a*.9;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(k,k*Math.max(.15,Math.abs(flip))); ctx.globalAlpha=a*.9/Math.max(1,k*.55);
       drawWild(p,lt,flip); ctx.restore(); }
     for(let i=puffs.length-1;i>=0;i--){ const p=puffs[i], a=1-(t-p.t)/.7; if(a<=0){ puffs.splice(i,1); continue; } p.r+=dt*14*p.k; p.y-=dt*5*p.k;      /* dust and bits of grass kicked up behind the running dogs */
       ctx.fillStyle=rgb(dark?[90,80,60]:[196,176,130],.22*a); ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*.55,0,0,6.283); ctx.fill(); }
@@ -2289,17 +2284,21 @@ const ambient=(function(){
       zs+=Pn[2]; n++; ax+=cx+Pn[0]*F/Pn[2]; ay+=cy+Pn[1]*F/Pn[2]; }
     zs/=n; ax/=n; ay/=n;
     J.call-=dt; if(J.call<=0){ J.call=rnd(1.1,2.4); natureSfx.jay&&natureSfx.jay((ax/W*2-1)*.9); }
+    const RR=((.5+.4)*F/Math.max(.6,zs)+40)*.6, RX=Math.max(0,ax*.6-RR), RY=Math.max(0,ay*.6-RR), RW=RR*2, RH=RR*2;   /* the light and air only where the bird is */
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
-    x.fillStyle="rgba(40,26,18,.26)"; x.fillRect(0,0,cw,ch); x.fillStyle="rgba(255,168,84,.14)"; x.fillRect(0,0,cw,ch);            /* in the warm evening light */
-    { const sp=sun(), rl=x.createLinearGradient(ax*.6-60,0,ax*.6+60,0), k=sp.x>ax?1:0; rl.addColorStop(k,"rgba(255,196,120,.3)"); rl.addColorStop(1-k,"rgba(20,12,6,.15)"); x.fillStyle=rl; x.fillRect(0,0,cw,ch); }   /* rim light from the sun's side */
+    x.fillStyle="rgba(40,26,18,.26)"; x.fillRect(RX,RY,RW,RH); x.fillStyle="rgba(255,168,84,.14)"; x.fillRect(RX,RY,RW,RH);            /* in the warm evening light */
+    { const sp=sun(), rl=x.createLinearGradient(ax*.6-60,0,ax*.6+60,0), k=sp.x>ax?1:0; rl.addColorStop(k,"rgba(255,196,120,.3)"); rl.addColorStop(1-k,"rgba(20,12,6,.15)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH); }   /* rim light from the sun's side */
     if(!J.skyC||(J.skyT=(J.skyT||0)-1)<=0){ J.skyT=6; const ip=toImg(ax,ay); J.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
-    x.fillStyle=rgb(J.skyC,Math.min(.45,.04+(zs-1.2)/10)); x.fillRect(0,0,cw,ch);                                                   /* and the air between */
-    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
-    if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(0,0,cw,ch); }
+    x.fillStyle=rgb(J.skyC,Math.min(.45,.04+(zs-1.2)/10)); x.fillRect(RX,RY,RW,RH);                                                   /* and the air between */
+    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
+    if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=Math.min(1,T/.4,(J.dur-T)/.4); ctx.filter=`blur(${(zs<1.3?(1.3-zs)*3+.6:.6).toFixed(1)}px)`; ctx.drawImage(jcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+    blitRegion(jcv,ax,ay,(.5+.4)*F/Math.max(.6,zs)+40,zs<1.3?(1.3-zs)*3+.6:.6,Math.min(1,T/.4,(J.dur-T)/.4));
   }
   /* ---- a rooster pheasant explodes out of the grass right in front of you: wings whirring, copper and green and a long barred tail, crowing, then sailing away low over the field ---- */
+  function blitRegion(cv,cxp,cyp,rad,blur,alpha){                       /* only the patch around the bird, so the blur doesn't run over the whole frame */
+    const k=.6, x0=Math.max(0,Math.floor((cxp-rad)*k)), y0=Math.max(0,Math.floor((cyp-rad)*k)), x1=Math.min(cv.width,Math.ceil((cxp+rad)*k)), y1=Math.min(cv.height,Math.ceil((cyp+rad)*k));
+    if(x1<=x0||y1<=y0) return; ctx.save(); ctx.globalAlpha=alpha; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`; ctx.drawImage(cv,x0,y0,x1-x0,y1-y0,x0/k,y0/k,(x1-x0)/k,(y1-y0)/k); ctx.restore(); ctx.filter="none"; }
   let pf=null, nextPF=45, pfBits=[]; const pfcv=document.createElement("canvas"), pfcx=pfcv.getContext("2d");
   /* how a flushed rooster really goes: an explosive near-vertical climb on whirring wings, a moment hanging and flailing as it swings round to pick its line,
      then off low and fast, a burst of beats and a long glide on bowed wings, another burst, another glide */
@@ -2356,7 +2355,7 @@ const ambient=(function(){
   }
   function drawPheasFront(dt,dark){
     for(let i=pfBits.length-1;i>=0;i--){ const b=pfBits[i]; b.vy+=430*dt; b.vx*=.99; b.x+=b.vx*dt; b.y+=b.vy*dt; b.rot+=b.vr*dt; b.life-=dt; if(b.life<=0){ pfBits.splice(i,1); continue; }
-      ctx.save(); ctx.globalAlpha=Math.min(1,b.life*2)*.9; ctx.filter="blur(2px)"; ctx.translate(b.x,b.y); ctx.rotate(b.rot); ctx.fillStyle=b.c; ctx.fillRect(-b.r,-b.r*.3,b.r*2,b.r*.6); ctx.restore(); ctx.filter="none"; }
+      ctx.save(); ctx.globalAlpha=Math.min(1,b.life*2)*.8; ctx.translate(b.x,b.y); ctx.rotate(b.rot); ctx.fillStyle=b.c; ctx.fillRect(-b.r,-b.r*.3,b.r*2,b.r*.6); ctx.restore(); }
     nextPF-=dt; if(!pf&&nextPF<=0) startPF(); if(!pf) return;
     const p=pf; p.t+=dt; const T=p.t, F=H*.5, cx=W/2, cy=H*.52;
     let h, pitch, spd, amp, glide=false, hz;
@@ -2374,15 +2373,16 @@ const ambient=(function(){
     const look=[Math.cos(pitch*.85)*Math.cos(h),-Math.sin(pitch*.85),Math.cos(pitch*.85)*Math.sin(h)];                      /* the body rides a little flatter than its climb */
     pheas3D(x,P,look,p.fl,amp,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],.016);
     const sx=cx+P[0]*F/P[2], sy=cy+P[1]*F/P[2];
+    const RR=(.016*32*F/Math.max(.3,P[2])+30)*.6, RX=Math.max(0,sx*.6-RR), RY=Math.max(0,sy*.6-RR), RW=RR*2, RH=RR*2;   /* the light and air only where the bird is */
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
-    x.fillStyle="rgba(40,24,12,.2)"; x.fillRect(0,0,cw,ch); const sp=sun(), rl=x.createLinearGradient(sx*.6-90,0,sx*.6+90,0), sd2=sp.x>sx?1:-1; rl.addColorStop(sd2>0?0:1,"rgba(20,12,6,.2)"); rl.addColorStop(sd2>0?1:0,"rgba(255,190,110,.28)"); x.fillStyle=rl; x.fillRect(0,0,cw,ch);   /* rim-lit from the sun's side */
+    x.fillStyle="rgba(40,24,12,.2)"; x.fillRect(RX,RY,RW,RH); const sp=sun(), rl=x.createLinearGradient(sx*.6-90,0,sx*.6+90,0), sd2=sp.x>sx?1:-1; rl.addColorStop(sd2>0?0:1,"rgba(20,12,6,.2)"); rl.addColorStop(sd2>0?1:0,"rgba(255,190,110,.28)"); x.fillStyle=rl; x.fillRect(RX,RY,RW,RH);   /* rim-lit from the sun's side */
     if(!p.skyC||(p.skyT=(p.skyT||0)-1)<=0){ p.skyT=5; const ip=toImg(sx,sy); p.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[170,150,110]; }
-    x.fillStyle=rgb(p.skyC,Math.min(.65,Math.max(0,(P[2]-1.4)/12))); x.fillRect(0,0,cw,ch);
-    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
-    if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(0,0,cw,ch); }
+    x.fillStyle=rgb(p.skyC,Math.min(.65,Math.max(0,(P[2]-1.4)/12))); x.fillRect(RX,RY,RW,RH);
+    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
+    if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
     const bl=P[2]<.95? (.95-P[2])*9+.6 : .6+Math.max(0,P[2]-6)*.12;                                                      /* too near for the lens at first, then soft with distance */
-    ctx.save(); ctx.globalAlpha=Math.min(1,T/.12,(11-P[2])/1.5); ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(pfcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+    blitRegion(pfcv,sx,sy,.016*32*F/Math.max(.3,P[2])+30,bl,Math.min(1,T/.12,(11-P[2])/1.5));
   }
   /* ---- a red-tailed hawk (a "chicken hawk"), in true 3D like the other birds: it comes over your shoulder from behind, sails out over the lawn on broad wings,
      flares and drops into the grass, sits up tall turning its head, then beats off away from you into the distance ---- */
@@ -2602,7 +2602,7 @@ const ambient=(function(){
       if(Math.hypot(...V)>1e-7) b.V=b.V? b.V.map((v,i)=>lerp(v,V[i],.25)) : V;
       if(!b.sky||(b.skyT=(b.skyT||0)-1)<=0){ b.skyT=10; const ip=toImg(b.x,b.y); b.sky=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,120,100]; }
       const hz=Math.min(.7,.12+(b.z-1.6)/9), sp=sun(), glow=Math.max(0,1-Math.hypot(b.x-sp.x,b.y-sp.y)/(W*.35));         /* hazed toward the sky behind it, more with distance and near the sun */
-      ctx.fillStyle=ctx.strokeStyle=rgb(mixv([22,16,14],b.sky,Math.min(.85,hz+glow*.25)),.88*a); ctx.filter=b.z>4.5? "blur(.6px)" : "none";
+      ctx.fillStyle=ctx.strokeStyle=rgb(mixv([22,16,14],b.sky,Math.min(.85,hz+glow*.25)),.88*a); 
       bat3D(ctx,P,b.V||V,b.ph,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz,cy+Y3*F/zz]; },.0105); }
     ctx.restore();
   }
