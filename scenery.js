@@ -1723,12 +1723,16 @@ const ambient=(function(){
     if(d.state==="greet"){ d.alpha=Math.max(0,d.alpha-dt*4); if(d.alpha<=0) d.hidden=true; return; }   /* drops out of sight below the view as the close-up takes over */
     if(d.state==="pause"){ d.head+=(-.15-d.head)*Math.min(1,dt*8); if(d.t>d.st){ d.state="run"; rompTarget(d); } return; }   /* a quick stop mid-romp, head up */
     if(d.state==="point"){ d.head+=(-.05-d.head)*Math.min(1,dt*10);                                          /* frozen: head level, tail up, a forepaw lifted */
-      if(!d.flushed && d.t>d.pt){ d.flushed=true;                                                       /* staunch on point, holding, holding... then the bird goes up a few feet ahead of the nose */
-        const fx=Math.cos(d.yaw), fz=Math.sin(d.yaw), g0=toScreen(d.Xw,d.Dw).g, Xw=d.Xw+fx*55/g0, Dw=d.Dw*(1+fz*.1), sc=toScreen(Xw,Dw), at=Object.assign([sc.x,sc.y],{Xw,Dw});
+      if(d.t>d.pt){                                                                                   /* staunch on point, holding... then she pounces into the cover */
+        const fx=Math.cos(d.yaw), fz=Math.sin(d.yaw), g0=toScreen(d.Xw,d.Dw).g, Xw=d.Xw+fx*55/g0, Dw=d.Dw*(1+fz*.1);
+        d.state="pounce"; d.t=0; d.pz={X0:d.Xw,D0:d.Dw,X1:d.Xw+(Xw-d.Xw)*.75,D1:d.Dw+(Dw-d.Dw)*.75,fX:Xw,fD:Dw}; } }
+    if(d.state==="pounce"){ const P=d.pz, u=Math.min(1,d.t/.55), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u);
+      d.Xw=lerp(P.X0,P.X1,e); d.Dw=lerp(P.D0,P.D1,e); d.hop=Math.sin(u*Math.PI); d.ph+=dt*16; d.head+=(.35*Math.sin(u*Math.PI)-d.head)*Math.min(1,dt*12);   /* up and over, front feet first, nose down into the grass */
+      if(!d.flushed && u>.7){ d.flushed=true; const sc=toScreen(P.fX,P.fD), at=Object.assign([sc.x,sc.y],{Xw:P.fX,Dw:P.fD});   /* and the bird goes up right in front of her */
         if(Math.random()<.5){ if(!pheas&&!grouse){ pheas=flyStart("pheas",at); flushBits(at,22,["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#a33b25"],1.2); if(typeof natureSfx!=="undefined") natureSfx.flush("pheas",at[0]/W); } else flushQuail(at); }
         else flushQuail(at);
-        d.afterFlush=rnd(.6,1.1); }
-      if(d.flushed){ d.afterFlush-=dt; if(d.afterFlush<=0){ d.state="run"; dogTarget(d); } } }
+        d.afterFlush=rnd(.7,1.2); }
+      if(u>=1){ d.hop=0; d.afterFlush-=dt; if(d.afterFlush<=0){ d.state="run"; dogTarget(d); } } return; }
   }
   function dogParts(d,P,moving){
     const q=d.ph*Math.PI*.9, yaw=d.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], point=d.state==="point";
@@ -2113,7 +2117,7 @@ const ambient=(function(){
     const B=ban; B.t+=dt; const u=B.t/B.dur; if(u>=1){ ban=null; nextBan=rnd(200,360); return; }
     let text=""; try{ text=String(host.banner()||""); }catch(e){} if(!text){ ban=null; nextBan=rnd(200,360); return; }
     const F=H*.5, cx=W/2, cy=H*.52, proj=(X,Y,Z)=>[cx+X*F/Math.max(.05,Z),cy+Y*F/Math.max(.05,Z)];
-    const z=B.z0+Math.sin(u*Math.PI)*-.15, span=Math.min(.62,Math.max(.3,560/W))*W*z/F, Kw=.023*Math.max(.8,Math.min(1.25,W/1200));   /* the ribbon spans about a third of a wide screen, more of a narrow one */
+    const z=B.z0+Math.sin(u*Math.PI)*-.15, span=Math.min(.62,Math.max(.3,560/W))*W*z/F, Kw=.012*Math.max(.8,Math.min(1.25,W/1200));   /* the ribbon spans about a third of a wide screen, more of a narrow one */
     const mg=Math.max(160,W*.12), xL=(-cx-mg)*z/F-(B.dir>0? 0 : span), xR=(W-cx+mg)*z/F+(B.dir>0? span : 0);   /* starts and ends fully off the screen, tails and wings and all */
     const lead=B.dir>0? lerp(xL,xR,u) : lerp(xR,xL,u), Y0=(B.fy*H-cy)*z/F;
     const birds=[0,1].map(i=>{ const bob=Math.sin(B.t*2.2+B.ph[i])*.035+Math.sin(B.t*.7+i)*.02;
@@ -3207,7 +3211,7 @@ const ambient=(function(){
   }
   function paintDog(d,dt,dark){
     if(d.hidden) return;
-    const s=toScreen(d.Xw,d.Dw), k=.16*s.g/26, moving=d.state==="run"||d.state==="leave";
+    const s0=toScreen(d.Xw,d.Dw), k=.16*s0.g/26, moving=d.state==="run"||d.state==="leave"||(d.state==="pounce"&&d.hop>.02), s=d.hop>0? {x:s0.x,y:s0.y-d.hop*16*k,g:s0.g} : s0;
     { const pan=Math.max(-1,Math.min(1,s.x/W*2-1))*.9, near=Math.min(1,Math.max(.15,(s.g-180)/260)), a=d.alpha==null?1:d.alpha;   /* footfalls and scratching, placed in stereo where the dog is */
       if(moving){ const step=Math.floor(d.ph*Math.PI*.9/Math.PI); if(d.lastStep!=null&&step!==d.lastStep) natureSfx.paw&&natureSfx.paw(pan,(.05+.1*near)*a*(d.lab?1.1:1)*(step%2===0?1.15:.85)); d.lastStep=step; } else d.lastStep=null;
       if(d.scratching){ d.scrT=(d.scrT||0)-dt; if(d.scrT<=0){ d.scrT=.11; natureSfx.scratch&&natureSfx.scratch(pan,(.03+.06*near)*a); } } }
