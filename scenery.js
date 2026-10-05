@@ -2011,7 +2011,9 @@ const ambient=(function(){
   function startSquirrels(){ const n=1+Math.floor(Math.random()*3), nearTree=Math.random()<.45, A=scr(TRUNK[0][0],TRUNK[0][1]);
     for(let i=0;i<n;i++){ const kind=pick(["gray","gray","red","chip","chip"]), sx=nearTree? A[0]+rnd(-50,50) : rnd(W*.1,W*.9), sy=nearTree? A[1]+rnd(2,24) : gnd().vy+lawnMinG(sx)+rnd(2,16), p=toGround(sx,sy);
       sqs.push({kind,Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"pause",st:0,dur:rnd(.3,1.2),t:-i*rnd(.5,2),life:rnd(25,45),alpha:0,sitA:0,flick:0,home:[sx,sy]}); } }
-  function sqTarget(q,far){ const s=toScreen(q.Xw,q.Dw), sx=Math.max(W*.03,Math.min(W*.97,s.x+rnd(-1,1)*(far?160:70))), lo=lawnMinG(sx), g=Math.max(lo+2,Math.min(foxBounds().gmax-10,s.g-gnd().vy*0+rnd(-25,35))), p=toGround(sx,gnd().vy+Math.max(lo+2,Math.min(lo+90,(s.y-gnd().vy)+rnd(-25,35)))); q.tX=p.Xw; q.tD=p.Dw; }
+  function sqTarget(q,far){                                                                     /* a spot a short, decisive dash away, always on the lawn near the brush */
+    const s=toScreen(q.Xw,q.Dw), dir=Math.random()<.5?-1:1, sx=Math.max(W*.03,Math.min(W*.97,s.x+dir*rnd(far?120:45,far?220:110))), lo=lawnMinG(sx);
+    const gy=Math.max(lo+3,Math.min(Math.min(lo+90,foxBounds().gmax-10),(s.y-gnd().vy)+rnd(-20,30))), p=toGround(sx,gnd().vy+gy); q.tX=p.Xw; q.tD=p.Dw; q.lastD=1e9; }
   function squirrelParts(q,P){
     const K=SQK[q.kind], yaw=q.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], run=q.state==="run", sA=q.sitA, ph=q.ph;
     const arc=run? Math.sin(ph)*1.4 : 0, hop=run? Math.max(0,Math.sin(ph))*1.6 : 0;               /* bounding: the back arches and stretches with each leap */
@@ -2044,14 +2046,17 @@ const ambient=(function(){
     q.alpha= q.leaving? Math.max(0,q.alpha-dt*2) : Math.min(1,q.alpha+dt*2); if(q.leaving&&q.alpha<=0){ q.gone=true; return; }
     q.flick=Math.max(0,q.flick-dt*1.5); if(Math.random()<dt*.5) q.flick=1;
     q.sitA+=((q.state==="sit"?1:0)-q.sitA)*Math.min(1,dt*8);
-    if(q.t>q.life&&!q.leaving&&q.state!=="run"){ q.leaving=true; q.state="run"; sqTarget(q,true); }
-    if(q.state==="run"){ const sp=SQK[q.kind].s*.55+.25, dX=q.tX-q.Xw, dD=q.tD-q.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
-      if(dist<=sp*dt){ q.Xw=q.tX; q.Dw=q.tD; } else { q.Xw+=dX/dist*sp*dt; q.Dw+=dD/dist*sp*dt*4; }
-      const want=Math.atan2(trueZ(q.tD)-trueZ(q.Dw),q.tX-q.Xw); if(dist>.01) q.yaw=angTo(q.yaw,want,dt*10); q.ph+=dt*(q.kind==="chip"?24:19);
-      if(dist<.01){ const r=Math.random(); q.state= r<.4? "sit" : "pause"; q.st=0; q.dur= q.state==="sit"? rnd(1.6,4) : rnd(.3,1.4); } }
+    if(q.t>q.life&&!q.leaving&&q.state!=="run"){ q.leaving=true; q.state="run"; q.yawT=null; sqTarget(q,true); }
+    if(q.state==="run"){ const sp=SQK[q.kind].s*.4+.2, dX=q.tX-q.Xw, dD=q.tD-q.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
+      if(q.yawT==null) q.yawT=Math.atan2(trueZ(q.tD)-trueZ(q.Dw),q.tX-q.Xw);                              /* face the way it's going once, at the start of the dash, so it never jitters round */
+      q.yaw=angTo(q.yaw,q.yawT,dt*14);
+      const fr=Math.min(1,sp*dt/dist); q.Xw+=dX*fr; q.Dw+=dD*fr;                                            /* a fraction of the remaining way: it can never overshoot and bounce back */
+      q.ph+=dt*(q.kind==="chip"?22:17);
+      const stuck=dist>=q.lastD-1e-6; q.lastD=dist;
+      if(fr>=1||dist<.004||stuck){ q.yawT=null; const r=Math.random(); q.state= r<.4? "sit" : "pause"; q.st=0; q.dur= q.state==="sit"? rnd(1.6,4) : rnd(.3,1.4); } }
     else { q.st+=dt; if(q.state==="sit") q.ph+=dt*2;
-      if(q.st>q.dur){ q.state="run"; sqTarget(q,Math.random()<.3); } }
-    keepOnLawn(q);
+      if(q.st>q.dur){ q.state="run"; q.yawT=null; sqTarget(q,Math.random()<.3); } }
+    if(q.state!=="run") keepOnLawn(q);
   }
   function drawSquirrel(q,dt,dark){
     stepSquirrel(q,dt); if(q.gone||q.t<0) return;
