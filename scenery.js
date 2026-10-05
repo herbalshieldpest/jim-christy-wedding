@@ -197,6 +197,18 @@ var natureSfx=(function(){
     const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1150; bp.Q.value=1.3; const bp2=ctx.createBiquadFilter(); bp2.type="bandpass"; bp2.frequency.value=2300; bp2.Q.value=2; const g2=ctx.createGain(); g2.gain.value=.35;
     const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09*v,at+.05); g.gain.setValueAtTime(.085*v,at+d*.6); g.gain.exponentialRampToValueAtTime(.0001,at+d);
     o.connect(am); am.connect(bp); am.connect(bp2); bp.connect(g); bp2.connect(g2); g2.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); }
+  /* someone calling the dogs: a bright two-note finger whistle, wheet, whee-oo, with a little breath in it */
+  function whistle(pan){ if(!ctx||!live) return; const at=ctx.currentTime+.02, out=voice(master,pan||0);
+    const note=(t0,pts,vol)=>{ const o=ctx.createOscillator(), g=ctx.createGain(), vib=ctx.createOscillator(), vg=ctx.createGain(); o.type="sine";
+      o.frequency.setValueAtTime(pts[0][1],t0); for(const [dt2,f] of pts.slice(1)) o.frequency.exponentialRampToValueAtTime(f,t0+dt2);
+      vib.frequency.value=R(5.5,7); vg.gain.value=R(18,30); vib.connect(vg); vg.connect(o.frequency);
+      const end=t0+pts[pts.length-1][0]; g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol,t0+.03); g.gain.setValueAtTime(vol*.9,end-.06); g.gain.exponentialRampToValueAtTime(.0001,end+.04);
+      o.connect(g); g.connect(out); o.start(t0); vib.start(t0); o.stop(end+.06); vib.stop(end+.06);
+      const n=ctx.createBufferSource(); n.buffer=noiseBuf; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=pts[1][1]; bp.Q.value=4; const ng=ctx.createGain();   /* the breath */
+      ng.gain.setValueAtTime(0,t0); ng.gain.linearRampToValueAtTime(vol*.5,t0+.03); ng.gain.exponentialRampToValueAtTime(.0001,end+.03); n.connect(bp); bp.connect(ng); ng.connect(out); n.start(t0,R(0,2),end-t0+.08); };
+    const k=R(.94,1.06);
+    note(at,[[0,1700*k],[.16,2750*k]],.07);                                    /* wheet */
+    note(at+.24,[[0,2450*k],[.1,2950*k],[.42,2150*k]],.075); }                 /* whee-oo */
   function honk(xFrac,near){
     if(!ctx||!live||Math.random()<.15) return; const now=ctx.currentTime+.02, o=voice(master,xFrac*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=950; bp.Q.value=1.6; bp.connect(o);
     const v=.075*Math.max(.35,near); let at=now; const n=1+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ const f=R(310,380); tone(at,f*.82,f,.05,v*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,v,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,v*.35,bp,"square"); at+=R(.24,.42); }   /* the two-part a-honk of a Canada goose */
@@ -216,7 +228,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
+  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, whistle, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -1520,9 +1532,10 @@ const ambient=(function(){
   }
   /* ---- when the page opens, the Brittany and the Lab tear in together and chase each other around the lawn, taking turns being "it" ---- */
   let rompAt=1.2;
-  let cur=null, callDist=0, lastCall=-99; const trail=[], puffs=[];
+  let cur=null, callDist=0, lastCall=-99, lastWhistle=-1e9; const trail=[], puffs=[];
   document.addEventListener("pointermove",e=>{ if(!on) return; const x=(e.clientX-(1-camZ)*W/2-camX)/camZ, y=(e.clientY-(1-camZ)*H/2-camY)/camZ;
-    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess}; if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) { const dz=Math.random()**1.4; trail.push(Object.assign({x,y,t,dz,r:rnd(4.5,7)*(.55+.75*dz),rot:rnd(0,6.28),spin:rnd(-3,3)*(.5+.6*dz),vx:rnd(-12,12),ph:rnd(0,6)},pick(WILD)())); } if(trail.length>50) trail.shift();
+    const prev=cur; const fresh=!cur||t-cur.t>1.5; cur={x,y,t,sess:fresh?((cur&&cur.sess)||0)+1:cur.sess};
+    if(fresh){ const now=performance.now(); if(now-lastWhistle>=10000){ lastWhistle=now; if(typeof natureSfx!=="undefined"&&natureSfx.whistle) natureSfx.whistle((e.clientX/W*2-1)*.6); } }   /* starting to move the cursor whistles for the dogs, at most once every ten seconds */ if(!trail.length||Math.hypot(x-trail[trail.length-1].x,y-trail[trail.length-1].y)>6) { const dz=Math.random()**1.4; trail.push(Object.assign({x,y,t,dz,r:rnd(4.5,7)*(.55+.75*dz),rot:rnd(0,6.28),spin:rnd(-3,3)*(.5+.6*dz),vx:rnd(-12,12),ph:rnd(0,6)},pick(WILD)())); } if(trail.length>50) trail.shift();
     if(!dog&&!lab&&rompAt==null){ if(prev) callDist+=Math.hypot(x-prev.x,y-prev.y); if(callDist>W*1.2&&t-lastCall>6){ callDist=0; lastCall=t; startRomp(); } } else callDist=0; },{passive:true});   /* wave the cursor around a bit and the dogs come running back */
   const chasing=()=>cur&&t-cur.t<2.6;
   /* each dog has a mind of its own: it notices the cursor late (or not at all this time), and follows a lagging, smoothed idea of where it is */
