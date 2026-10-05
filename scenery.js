@@ -243,18 +243,21 @@ var natureSfx=(function(){
   /* a flock of Canada geese going over. Each goose's call is the real two-part "ah-HONK": a short low grunt that breaks up into a loud, nasal,
      brassy honk a good fifth higher, sliding down at the end. The nasal colour comes from a buzzy source pushed through a few resonances,
      with a little rasp in it. Each goose honks from its own place in the stereo field. */
-  function gooseCall(at,pan,vol,near){ const out=voice(master,pan), f=R(250,300), hi=f*R(1.55,1.75), d1=R(.06,.09), d2=R(.16,.24);
-    const o=ctx.createOscillator(), o2=ctx.createOscillator(); o.type="sawtooth"; o2.type="square";
-    for(const [osc,m] of [[o,1],[o2,1.004]]){ osc.frequency.setValueAtTime(f*m,at); osc.frequency.linearRampToValueAtTime(f*1.05*m,at+d1*.8); osc.frequency.setValueAtTime(hi*1.04*m,at+d1); osc.frequency.linearRampToValueAtTime(hi*m,at+d1+.04); osc.frequency.exponentialRampToValueAtTime(hi*.84*m,at+d1+d2); }   /* ah — HONK, falling off */
-    const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=R(28,40); vg.gain.value=R(8,16); vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);   /* the throaty rattle */
-    const mix=ctx.createGain(), g2=ctx.createGain(); g2.gain.value=.45; o.connect(mix); o2.connect(g2); g2.connect(mix);
-    const env=ctx.createGain(); env.gain.setValueAtTime(0,at); env.gain.linearRampToValueAtTime(vol*.35,at+.015); env.gain.setValueAtTime(vol*.3,at+d1-.01); env.gain.linearRampToValueAtTime(vol,at+d1+.02); env.gain.setValueAtTime(vol*.9,at+d1+d2*.6); env.gain.exponentialRampToValueAtTime(.0001,at+d1+d2+.04);
-    const sum=ctx.createGain(); sum.gain.value=1;
-    for(const [fq,q,gn] of [[700,5,1],[1250,6,.9],[2400,7,.5],[3300,8,.25]]){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=fq*R(.94,1.06); bp.Q.value=q; const gg=ctx.createGain(); gg.gain.value=gn*1.6; mix.connect(bp); bp.connect(gg); gg.connect(sum); }   /* the nasal resonances */
-    const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nb=ctx.createBiquadFilter(); nb.type="bandpass"; nb.frequency.value=1600; nb.Q.value=1; const ng=ctx.createGain(); ng.gain.value=.06; n.connect(nb); nb.connect(ng); ng.connect(sum);   /* breath */
-    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1800+Math.min(1,near)*4500;   /* far off they are softer and duller; close overhead, clear and full */
+  function gooseCall(at,pan,vol,near){ const out=voice(master,pan), f1=R(330,380), f2=f1*R(1.3,1.42), d1=R(.05,.08), d2=R(.17,.26), end=at+d1+d2+.05;
+    const o=ctx.createOscillator(); o.type="sawtooth";
+    o.frequency.setValueAtTime(f1*.92,at); o.frequency.linearRampToValueAtTime(f1,at+d1*.7); o.frequency.linearRampToValueAtTime(f2*1.03,at+d1+.025); o.frequency.linearRampToValueAtTime(f2,at+d1+d2*.45); o.frequency.exponentialRampToValueAtTime(f2*.86,at+d1+d2);   /* ah — HONK, the pitch snapping up then sagging */
+    const sub=ctx.createOscillator(); sub.type="sine"; sub.frequency.setValueAtTime(f1/2,at); sub.frequency.linearRampToValueAtTime(f2/2,at+d1+.025); sub.frequency.exponentialRampToValueAtTime(f2*.43,at+d1+d2);
+    const am=ctx.createGain(); am.gain.value=.65; const sg=ctx.createGain(); sg.gain.value=.35; sub.connect(sg); sg.connect(am.gain);   /* period-doubling: the rough, doubled buzz of a goose's syrinx */
+    const ws=ctx.createWaveShaper(); { const n=1024, c=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(x*3.2); } ws.curve=c; }   /* hard, brassy edge */
+    const pre=ctx.createGain(); pre.gain.value=1.4; o.connect(am); am.connect(pre); pre.connect(ws);
+    const sum=ctx.createGain();
+    for(const [fq,q,gn] of [[620,4,.7],[1150,5,1],[2350,6,.75],[3500,7,.35]]){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=fq*R(.95,1.05); bp.Q.value=q; const gg=ctx.createGain(); gg.gain.value=gn; ws.connect(bp); bp.connect(gg); gg.connect(sum); }   /* the nasal resonances */
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nb=ctx.createBiquadFilter(); nb.type="bandpass"; nb.frequency.value=2200; nb.Q.value=.9; const ng=ctx.createGain(); ng.gain.value=.07; n.connect(nb); nb.connect(ng); ng.connect(sum);   /* breath and rasp */
+    const env=ctx.createGain(); env.gain.setValueAtTime(0,at); env.gain.linearRampToValueAtTime(vol*.4,at+.012); env.gain.setValueAtTime(vol*.35,at+d1-.008); env.gain.linearRampToValueAtTime(vol,at+d1+.015); env.gain.setValueAtTime(vol*.92,at+d1+d2*.55); env.gain.exponentialRampToValueAtTime(.0001,at+d1+d2+.03);
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1700+Math.min(1,near)*4800;   /* far off: softer and duller */
     sum.connect(env); env.connect(lp); lp.connect(out);
-    const end=at+d1+d2+.08; o.start(at); o2.start(at); vib.start(at); n.start(at,R(0,2),end-at); o.stop(end); o2.stop(end); vib.stop(end); }
+    if(near<.6){ const dl=ctx.createDelay(.5); dl.delayTime.value=R(.12,.2); const dg=ctx.createGain(); dg.gain.value=.22; lp.connect(dl); dl.connect(dg); dg.connect(out); }   /* the call coming back off the hills */
+    o.start(at); sub.start(at); n.start(at,R(0,2),end-at); o.stop(end); sub.stop(end); }
   /* the side-by-side: a small engine's lumpy putter (the firing pulses chopping a low buzz), a whine from the drive belt that rises with speed, and grass and gravel under the tyres */
   let utvN=null;
   function utv(vol,pan,load){ if(!ctx||!live){ return; }
@@ -3459,13 +3462,16 @@ const ambient=(function(){
       const s1=[sx+.12,.82,-.1], e1=[sx+.17,.68,.02], s2=[sx-.12,.82,-.1], e2=[sx-.02,.66,.06];
       limb(s1,e1,sh,.045); limb(e1,grip,sh,.038); limb(s2,e2,sh,.045); limb(e2,fore,sh,.038);
       for(const hh of [grip,fore]) faces.push({hand:true,c:L2W(...hh),r:.02,col:SKIN2,d:Math.hypot(...L2W(...hh).map((v,i)=>i===1?v-1:v))-.07});
-      faces.push({hair:true,a:L2W(sx,.99,-.14),b:L2W(sx,.8,-.17),col:[78,50,30],w:.09,d:Math.hypot(...L2W(sx,.9,-.16).map((v,i)=>i===1?v-1:v))+.01});   /* her hair down her back */
-      faces.push({head:true,c:L2W(sx,.985,-.1),f:L2W(sx,.985,0),r:.068,col:SKIN2,hairC:[78,50,30],d:Math.hypot(...L2W(sx,.985,-.1).map((v,i)=>i===1?v-1:v))-.02}); }
+      faces.push({hair:true,a:L2W(sx,.99,-.14),b:L2W(sx,.7,-.19),col:[176,66,28],w:.1,d:Math.hypot(...L2W(sx,.9,-.16).map((v,i)=>i===1?v-1:v))+.01});   /* her hair down her back */
+      faces.push({head:true,c:L2W(sx,.985,-.1),f:L2W(sx,.985,0),r:.068,col:SKIN2,hairC:[176,66,28],d:Math.hypot(...L2W(sx,.985,-.1).map((v,i)=>i===1?v-1:v))-.02}); }
     faces.sort((a,b)=>b.d-a.d);
     /* draw everything into its own layer, then light it and put it in the air */
     const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(utcv.width!==cw||utcv.height!==ch){ utcv.width=cw; utcv.height=ch; }
     const x=utcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0); x.lineJoin="round"; x.lineCap="round";
     const gS=f/p[1]*S;
+    { const g0=proj(p[0],0,p[1]), ip=toImg(g0[0],g0[1]), ix=ip? ip[0] : .5; let i=0; while(i<LAWN.length-2&&ix>LAWN[i+1][0]) i++;      /* the lawn here is a hillside, not flat: lean the machine with the slope it's driving across */
+      const a=LAWN[i], b=LAWN[i+1], m=cover(), sl=(b[1]-a[1])*m.ih/((b[0]-a[0])*m.iw), tilt=Math.atan(sl)*.75; u.tilt=(u.tilt??tilt)+(tilt-(u.tilt??tilt))*Math.min(1,dt*2);
+      x.translate(g0[0],g0[1]); x.rotate(u.tilt); x.translate(-g0[0],-g0[1]); }
     { const sh=[0,1,2,3].map(i=>{ const a=i/4*6.283+.785; return proj(p[0]+(Math.cos(a)*.62*ca+Math.sin(a)*.95*sa+.12)*S,0,p[1]+(-Math.cos(a)*.62*sa+Math.sin(a)*.95*ca-.25)*S); });   /* its shadow, thrown toward us by the low sun */
       const c0=proj(p[0]+.06*S,0,p[1]-.15*S), g=x.createRadialGradient(c0[0],c0[1],0,c0[0],c0[1],gS*1.1); g.addColorStop(0,"rgba(16,12,6,.55)"); g.addColorStop(1,"rgba(16,12,6,0)"); x.fillStyle=g; x.beginPath(); sh.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.closePath(); x.fill(); }
     for(const F of faces){
