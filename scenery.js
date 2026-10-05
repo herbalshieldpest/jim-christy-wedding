@@ -2677,7 +2677,7 @@ const ambient=(function(){
       vx.translate(w/2,h/2); vx.scale(w/2,h/2); const g=vx.createRadialGradient(0,0,.55,0,0,1.42); g.addColorStop(0,"rgba(14,9,4,0)"); g.addColorStop(.5,"rgba(14,9,4,.1)"); g.addColorStop(1,"rgba(14,9,4,.38)"); vx.fillStyle=g; vx.fillRect(-1,-1,2,2); }
     ctx.globalAlpha=1; ctx.drawImage(vigC,0,0,W,H);                                                            /* the corners and edges darken a little */
     const T=grainT[Math.floor(Math.random()*4)], S=2.2, step=T.width*S, ox=-Math.random()*step, oy=-Math.random()*step;   /* coarse, soft clumps, a fresh pattern every frame */
-    ctx.globalAlpha=.075; ctx.imageSmoothingEnabled=true;
+    ctx.globalAlpha=.04; ctx.imageSmoothingEnabled=true;
     for(let y=oy;y<H;y+=step) for(let x=ox;x<W;x+=step) ctx.drawImage(T,x,y,step,step);
     if(Math.random()<.035) scratches.push({x:Math.random()*W, life:rnd(.08,.7), w:rnd(.5,1.4), a:rnd(.04,.1), lt:Math.random()<.6, y0:Math.random()<.5?0:rnd(0,H*.6), y1:Math.random()<.5?H:rnd(H*.4,H)});
     ctx.globalAlpha=1;
