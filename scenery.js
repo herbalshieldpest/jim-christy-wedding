@@ -1358,7 +1358,6 @@ const ambient=(function(){
       if(d.toViewer){ if(dist<.02){ d.toViewer=false; d.state="greet"; d.t=0; startGreet(d); } return; }
       if(dist<.02){ d.legs--;
         if(!d.lab && !d.pointed && d.legs<=4 && Math.random()<.85){ d.state="point"; d.t=0; d.pt=rnd(2.2,3.4); d.pointed=true; d.idleYaw=d.yaw; }
-        else if(d.legs<=0&&!d.lab&&!d.greeted&&!greet){ d.greeted=true; d.toViewer=true; lastArrive=t; const p=toGround(W*rnd(.38,.62),gnd().vy+foxBounds().gmax); d.tX=p.Xw; d.tD=p.Dw; }   /* comes to say hello first */
         else if(d.legs<=0){ d.state="leave"; const s=toScreen(d.Xw,d.Dw), p=toGround(d.dir>0? W+140 : -140, gnd().vy+s.g); d.tX=p.Xw; d.tD=p.Dw; }
         else if(Math.random()<.28) dogSit(d,false);
         else if(Math.random()<(d.lab?.5:.3)){ d.state="sniff"; d.t=0; d.st=d.lab?rnd(1.4,3):rnd(.8,1.6); }
