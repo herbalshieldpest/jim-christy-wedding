@@ -44,6 +44,10 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 .scn-tag::after{order:1}
 .scn-tag::before{transform:scaleX(-1)}
 @media (max-width:640px){.scn-tag{font-size:13px!important;letter-spacing:.2em!important;gap:9px;padding:9px 12px 8px calc(12px + .2em)!important}.scn-tag::before,.scn-tag::after{width:30px;height:7px}}
+/* the names arrive: from far too close and out of focus, settling into place */
+@keyframes lockIn{from{opacity:0;scale:4;filter:blur(26px)}55%{filter:blur(3px)}to{opacity:1;scale:1;filter:blur(0)}}
+.lockup{animation:lockIn 2.4s cubic-bezier(.14,.72,.2,1) .25s backwards;transform-origin:50% 50%;will-change:scale,filter,opacity}
+@media (prefers-reduced-motion:reduce){.lockup{animation:none}}
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mrs+Saint+Delafield&family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,300;0,500;1,400&family=Jost:wght@500&display=swap">
 </head>
