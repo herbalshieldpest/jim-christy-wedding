@@ -18,7 +18,7 @@ body{margin:0;background:var(--ground) url("scene.jpg") center/cover no-repeat f
    --size   how big the whole lockup is (it's the size of the names; everything else scales with it)
    --x, --y nudge the whole lockup from the centre of the screen, in the same scaled units
    Inside the lockup every measurement is a multiple of --size, so it keeps its exact shape on any screen. */
-.lockup{ --size:min(9.6vw,168px); --x:0; --y:-.050;
+.lockup{ --size:min(9.6vw,168px); --x:.072; --y:-.050;
   position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;
   transform:translate(calc(var(--size)*var(--x)),calc(var(--size)*var(--y))) }
 main{position:relative;z-index:2;min-height:100%;display:flex;align-items:center;justify-content:center;padding-inline:16px;box-sizing:border-box}
