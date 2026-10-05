@@ -61,6 +61,10 @@ var natureSfx=(function(){
     for(let i=0;i<n;i++){ const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=.55*(i<n-5?1:(n-i)/5);
       g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.035); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.05);
       at+=.062-i*.0012; } }
+  /* a single peck at the bark: a dry, hollow knock with a little woody thump under it */
+  function peck(xf){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1000,1500); bp.Q.value=4; bp.connect(out);
+    const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=R(.35,.5); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
+    tone(at,R(380,460),R(240,280),.05,.12,out,"triangle"); }
   /* eastern bluebirds: a soft, low, burbling tu-a-wee as the flock goes over */
   function bluebird(){ if(!ctx||!live) return; let at=ctx.currentTime+.3; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=5000; lp.connect(master);
     for(let k=0;k<3;k++){ const out=voice(lp,R(-.5,.5)), v=.06; tone(at,2100,2500,.16,v,out); tone(at+.18,2600,2200,.14,v*.9,out); tone(at+.34,2300,2900,.22,v*.8,out); at+=R(.9,1.6); } }
@@ -139,7 +143,7 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   ["pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, bluebird };
+  return { get on(){ return on; }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-nature",on?"on":"off"); }catch(e){} if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, bluebird };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -1693,7 +1697,10 @@ const ambient=(function(){
       if(p.state==="fly"&&d<2){ p.state="cling"; p.st=0; p.x=tg[0]; p.y=tg[1]; }
       if(p.state==="leave"&&(p.x<-40||p.x>W+40||p.y<-40)){ pecker=null; nextPecker=rnd(150,300); return; } }
     else if(p.state==="cling"){ p.face=1; p.wing=null;
-      if(p.st>.6&&p.st<.6+1.4){ peck=Math.max(0,Math.sin((p.st-.6)*Math.PI*10)); if(!p.drummed){ p.drummed=true; natureSfx.drum&&natureSfx.drum(A[0]/W); } }   /* rat-a-tat-tat */
+      if(p.st<dt*1.5){ p.drumMode=Math.random()<.35; p.taps=[]; let tt=rnd(.3,.6); const n=4+Math.floor(Math.random()*4); for(let i=0;i<n;i++){ p.taps.push(tt); tt+=rnd(.16,.42); } p.lastTap=-9; }
+      if(p.drumMode){ if(p.st>.6&&p.st<.6+1.4){ peck=Math.max(0,Math.sin((p.st-.6)*Math.PI*10)); if(!p.drummed){ p.drummed=true; natureSfx.drum&&natureSfx.drum(A[0]/W); } } }   /* rat-a-tat-tat */
+      else { while(p.taps.length&&p.taps[0]<=p.st){ p.taps.shift(); p.lastTap=p.st; natureSfx.peck&&natureSfx.peck(A[0]/W); }   /* foraging: a peck, a pause, another, each one knocking */
+        const since=p.st-p.lastTap; peck= since<.14? Math.sin(Math.min(1,since/.14)*Math.PI) : 0; }
       if(p.st>2.6){ if(p.hops>0){ p.hops--; p.state="hop"; p.st=0; p.h0=p.tgt; p.tgt=Math.min(.95,p.tgt+rnd(.12,.22)); p.drummed=false; } else { p.state="leave"; p.lx=-60; p.ly=p.y-rnd(80,160); p.fl=0; } } }
     else if(p.state==="hop"){ const u=Math.min(1,p.st/.35); const q=at(lerp(p.h0,p.tgt,u)); p.x=q[0]; p.y=q[1]-Math.sin(u*Math.PI)*2*sc; p.wing=null; if(u>=1){ p.state="cling"; p.st=0; } }
     /* paint: a big black crow-sized bird, flaming red crest, white stripe down the neck */
@@ -1715,15 +1722,17 @@ const ambient=(function(){
   }
   /* ---- fireflies blinking low over the lawn and along the edge of the field ---- */
   const flies=[];
+  function edgeY(x){ return gnd().vy+lawnMinG(x)-rnd(-4,22); }
   function drawFireflies(dt,dark){
-    const g=gnd(); if(!flies.length) for(let i=0;i<14;i++) flies.push({x:rnd(0,W),y:g.vy+rnd(30,H-g.vy-10),vx:0,vy:0,per:rnd(3,6.5),ph:rnd(0,6),wan:rnd(0,6)});
+    if(!flies.length) for(let i=0;i<16;i++){ const x=rnd(0,W); flies.push({ax:x,ay:edgeY(x),x,y:0,per:rnd(3,6.5),ph:rnd(0,6),wan:rnd(0,6),r:rnd(1.1,1.9)}); }
     ctx.save(); ctx.globalCompositeOperation="lighter";
-    for(const f of flies){ f.wan+=dt*.6; f.vx+=(Math.sin(f.wan*1.3)*8-f.vx*.8)*dt; f.vy+=(Math.cos(f.wan)*5-f.vy*.8)*dt; f.x+=f.vx*dt; f.y+=f.vy*dt;
-      if(f.x<-20) f.x=W+20; if(f.x>W+20) f.x=-20; f.y=Math.max(g.vy+20,Math.min(H-8,f.y));
+    for(const f of flies){ f.wan+=dt*.5;
+      f.x=f.ax+Math.sin(f.wan*1.3+f.ph)*18; f.y=f.ay+Math.cos(f.wan*.9)*6;                                          /* drifting along the edge of the brush */
+      if(Math.random()<dt*.02){ f.ax=rnd(0,W); f.ay=edgeY(f.ax); }
       const c=((t+f.ph*f.per/6.283)%f.per), on=c<.55? Math.sin(c/.55*Math.PI) : 0; if(on<=.01) continue;
-      const near=(f.y-g.vy)/(H-g.vy), r=(3+near*7)*(dark?1.2:1), yy=f.y-c*10*near;                               /* a little rising flash, the eastern firefly's J */
-      const gl=ctx.createRadialGradient(f.x,yy,0,f.x,yy,r*3.2); gl.addColorStop(0,`rgba(236,255,140,${(on*.9).toFixed(2)})`); gl.addColorStop(.25,`rgba(190,250,90,${(on*.45).toFixed(2)})`); gl.addColorStop(1,"rgba(160,230,60,0)");
-      ctx.fillStyle=gl; ctx.fillRect(f.x-r*3.2,yy-r*3.2,r*6.4,r*6.4); }
+      const r=f.r*(dark?1.2:1), yy=f.y-c*5;                                                                    /* a small rising flash, the eastern firefly's J */
+      const gl=ctx.createRadialGradient(f.x,yy,0,f.x,yy,r*3); gl.addColorStop(0,`rgba(244,255,160,${Math.min(1,on*1.1).toFixed(2)})`); gl.addColorStop(.3,`rgba(190,250,90,${(on*.5).toFixed(2)})`); gl.addColorStop(1,"rgba(160,230,60,0)");
+      ctx.fillStyle=gl; ctx.fillRect(f.x-r*3,yy-r*3,r*6,r*6); }
     ctx.restore();
   }
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
