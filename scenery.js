@@ -1548,6 +1548,15 @@ const ambient=(function(){
     WF("flower",[[250,214,60]],{n:5,eye:[200,150,30],pl:.9}),                   /* buttercup */
     WF("dots",[[236,196,50],[226,180,40]]),                                     /* goldenrod sprig */
     WF("leaf",[[198,72,40],[220,128,40],[180,52,44],[214,170,60]]),             /* a little maple or sumac leaf */
+    WF("petal",[[252,214,64],[246,196,40]]),                                    /* sneezeweed, sunflower */
+    WF("flower",[[250,250,244]],{n:14,eye:[240,196,50],pl:1.05}),               /* ox-eye daisy */
+    WF("petal",[[236,92,40],[244,120,50]]),                                     /* butterfly weed */
+    WF("flower",[[244,110,40]],{n:6,eye:[120,40,20],pl:.95}),                   /* Turk's cap lily */
+    WF("petal",[[255,236,150],[250,226,120]]),                                  /* evening primrose */
+    WF("long",[[250,220,70],[244,200,50]]),                                     /* goldenaster, tickseed */
+    WF("notch",[[250,140,170],[244,120,160]]),                                  /* wild phlox, pink */
+    WF("seed",[[248,246,240]]),                                                 /* a drifting dandelion seed */
+    WF("leaf",[[120,150,60],[150,170,70]]),                                     /* a bit of green */
   ];
   function drawWild(p,lt,flip){ const r=p.r, c=rgb(mulv(flip>0?p.c:mulv(p.c,.84),lt)), shade=rgb(mulv(p.c,.62*lt),.5);
     const petal=(len,wid)=>{ ctx.beginPath(); ctx.moveTo(0,-len); ctx.bezierCurveTo(wid,-len*.7,wid*.9,len*.6,0,len*.85); ctx.bezierCurveTo(-wid*.9,len*.6,-wid,-len*.7,0,-len); ctx.fill(); };
@@ -1561,6 +1570,7 @@ const ambient=(function(){
       ctx.fillStyle=p.tip? rgb(mulv(p.tip,lt)) : shade; ctx.beginPath(); ctx.ellipse(0,r*1.02,r*.7,r*.2,0,0,6.283); ctx.fill(); }
     else if(p.f==="dots"){ ctx.strokeStyle=rgb(mulv([120,120,50],lt)); ctx.lineWidth=r*.12; ctx.beginPath(); ctx.moveTo(0,r*1.3); ctx.lineTo(0,-r*1.3); ctx.stroke();
       for(let i=0;i<9;i++){ const yy=-r*1.2+i*r*.3, sd=i%2?1:-1; ctx.beginPath(); ctx.arc(sd*r*(.25+.1*(i%3)),yy,r*.22,0,6.283); ctx.fill(); } }
+    else if(p.f==="seed"){ ctx.strokeStyle=c; ctx.lineWidth=r*.08; ctx.beginPath(); ctx.moveTo(0,r*1.3); ctx.lineTo(0,-r*.2); for(let i=0;i<9;i++){ const a=-Math.PI/2+(i/8-.5)*2.4; ctx.moveTo(0,-r*.2); ctx.lineTo(Math.cos(a)*r*1.1,-r*.2+Math.sin(a)*r*1.1); } ctx.stroke(); ctx.fillStyle=rgb(mulv([140,110,70],lt)); ctx.beginPath(); ctx.ellipse(0,r*1.35,r*.12,r*.25,0,0,6.283); ctx.fill(); }
     else if(p.f==="leaf"){ ctx.beginPath(); for(let i=0;i<=5;i++){ const a=-Math.PI/2+(i-2.5)*.55, rr=i%2? r*.7 : r*1.3; i? ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr) : ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr); } ctx.lineTo(r*.2,r*.5); ctx.lineTo(0,r*1.1); ctx.lineTo(-r*.2,r*.5); ctx.closePath(); ctx.fill();
       ctx.strokeStyle=shade; ctx.lineWidth=r*.1; ctx.beginPath(); ctx.moveTo(0,r*1.1); ctx.lineTo(0,-r*.9); ctx.stroke(); }
     if(p.eye&&p.f==="petal"){ ctx.fillStyle=rgb(mulv(p.eye,lt),.55); ctx.beginPath(); ctx.ellipse(0,r*.95,r*.18,r*.22,0,0,6.283); ctx.fill(); }
@@ -1568,7 +1578,7 @@ const ambient=(function(){
   function drawTrail(dt,dark){                                                                    /* the cursor's trail: little motes of light that drift and fade */
     for(let i=trail.length-1;i>=0;i--){ const p=trail[i], age=t-p.t, a=Math.min(1,(2.6-age)/1.1); if(a<=0){ trail.splice(i,1); continue; }   /* petals shaken loose: they flutter up off the air toward you, growing, going soft and fading as they pass */
       const k=1+age*age*.9, ex=dt*.55*age; p.x+=(p.x-W/2)*ex+dt*(p.vx+Math.sin(t*3+p.ph)*16); p.y+=(p.y-H*.45)*ex+dt*(6+Math.sin(t*2.2+p.ph)*10); p.rot+=dt*p.spin; const flip=Math.cos(t*4+p.ph);
-      const lt=dark?.6:.92; if(!p.c) Object.assign(p,pick(WILD)());
+      const lt=dark?.8:.95; if(!p.c) Object.assign(p,pick(WILD)());
       ctx.save(); if(k>1.8) ctx.filter=`blur(${Math.min(6,(k-1.8)*1.6).toFixed(1)}px)`; ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.scale(k,k*Math.max(.15,Math.abs(flip))); ctx.globalAlpha=a*.9;
       drawWild(p,lt,flip); ctx.restore(); }
     for(let i=puffs.length-1;i>=0;i--){ const p=puffs[i], a=1-(t-p.t)/.7; if(a<=0){ puffs.splice(i,1); continue; } p.r+=dt*14*p.k; p.y-=dt*5*p.k;      /* dust and bits of grass kicked up behind the running dogs */
@@ -2291,60 +2301,88 @@ const ambient=(function(){
   }
   /* ---- a rooster pheasant explodes out of the grass right in front of you: wings whirring, copper and green and a long barred tail, crowing, then sailing away low over the field ---- */
   let pf=null, nextPF=45, pfBits=[]; const pfcv=document.createElement("canvas"), pfcx=pfcv.getContext("2d");
-  function startPF(){ const sd=Math.random()<.5?-1:1; pf={t:0,sd,x0:-sd*rnd(.25,.4),wx:sd*rnd(1.1,1.4)}; const sx=W/2+pf.x0*H*.5/.8;
-    for(let i=0;i<34;i++) pfBits.push({x:sx+rnd(-60,60),y:H+rnd(0,20),vx:rnd(-160,160),vy:-rnd(260,560),r:rnd(3,9),rot:rnd(0,6),vr:rnd(-8,8),c:pick(["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#6b7a34","#8a9a46"]),life:rnd(1,1.8)});   /* grass and seed heads thrown up at the lens */
-    natureSfx.flush&&natureSfx.flush("pheas",sx/W); setTimeout(()=>natureSfx.crow&&natureSfx.crow((sx/W*2-1)*.8),180); }
-  function pheas3D(x,P,V,flap,glide,proj,Kw){
-    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-    const v0=nrm(V), f=nrm([v0[0],Math.max(-.55,v0[1]*.45),v0[2]*.7]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f);
-    const pt=(a,b,c)=>proj(P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw);
-    const under=-(P[0]*u[0]+P[1]*u[1]+P[2]*u[2])<0, fl0=glide? .15 : Math.sin(flap)*.85+.1;
-    const CU=[176,92,40], CU2=[206,128,58], WG=[118,90,58], WG2=[150,118,80], UN=[168,144,110], DK=[44,30,22], GRN=[30,76,58], RED=[196,44,32], WH=[238,234,226], TL=[126,94,56];
-    const poly=(pts,col)=>{ x.fillStyle=rgb(col); x.beginPath(); x.moveTo(pts[0][0],pts[0][1]); for(const q of pts) x.lineTo(q[0],q[1]); x.closePath(); x.fill(); };
-    const wing1=(sd,fl)=>{ const h=c=>c*fl, sh=pt(5,sd*2.6,0), wf=pt(5,sd*9,h(5.5)), tp=pt(.5,sd*14.5,h(8.6)), tb=pt(-6,sd*13,h(7.8)), tr=pt(-9,sd*7,h(4.4)), rt=pt(-7,sd*2.6,0);   /* short, broad, rounded wings */
-      x.beginPath(); x.moveTo(sh[0],sh[1]); x.quadraticCurveTo(wf[0],wf[1],tp[0],tp[1]); x.quadraticCurveTo(tb[0],tb[1],tr[0],tr[1]); x.quadraticCurveTo((tr[0]+rt[0])/2,(tr[1]+rt[1])/2,rt[0],rt[1]); x.closePath();
-      const g=x.createLinearGradient(sh[0],sh[1],tp[0],tp[1]); g.addColorStop(0,rgb(under? UN : WG2)); g.addColorStop(1,rgb(under? mulv(UN,.8) : mulv(WG,.85))); x.fillStyle=g; x.fill();
-      if(!under) for(const k of [.3,.5,.7,.88]){ const a=pt(4-k*3,sd*(2.6+k*11),h(k*8)), b=pt(-7+k*2,sd*(2.6+k*9),h(k*6.5)); x.strokeStyle=rgb(mulv(WG,.6),.8); x.lineWidth=1; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); } };
-    const wing=sd=>{ if(glide){ wing1(sd,fl0); return; } const a0=x.globalAlpha; for(const d of [-.55,0,.55]){ x.globalAlpha=a0*(d?.4:.75); wing1(sd,Math.sin(flap+d)*.85+.1); } x.globalAlpha=a0; };   /* whirring: a blur of beats */
-    const dl=(P[0]-r[0]*.05)**2+(P[1]-r[1]*.05)**2+(P[2]-r[2]*.05)**2, dr=(P[0]+r[0]*.05)**2+(P[1]+r[1]*.05)**2+(P[2]+r[2]*.05)**2;
-    wing(dl>dr? -1 : 1);
-    const t0=pt(-6,0,0), tt=pt(-26,0,-1.2); { const tm=pt(-4,0,.4); x.strokeStyle=rgb(TL); x.lineCap="round"; x.lineWidth=Math.max(1,Math.hypot(...[0,1].map(i=>pt(-4,0,1.4)[i]-tm[i]))); x.beginPath(); x.moveTo(tm[0],tm[1]); x.lineTo(tt[0],tt[1]); x.stroke(); }   /* the tail has some depth when seen edge-on */
-    poly([pt(-5,-2.4,0),pt(-17,-1.8,-.6),tt,pt(-17,1.8,-.6),pt(-5,2.4,0)],TL);                  /* the long pointed tail */
-    for(let i=1;i<6;i++){ const a=pt(-6-i*3.4,-1.5+i*.12,-i*.12), b=pt(-6-i*3.4,1.5-i*.12,-i*.12); x.strokeStyle=rgb(DK); x.lineWidth=1; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); }
-    const mid=pt(0,0,0), hd=pt(8.2,0,.9), w0=Math.max(1,Math.hypot(...[0,1].map(i=>pt(0,3.6,0)[i]-mid[i])),Math.hypot(...[0,1].map(i=>pt(0,0,3.2)[i]-mid[i]))), ang=Math.atan2(hd[1]-t0[1],hd[0]-t0[0]), len=Math.hypot(hd[0]-t0[0],hd[1]-t0[1]);
-    { const bg=x.createRadialGradient(mid[0]-w0*.3,mid[1]-w0*.4,w0*.2,mid[0],mid[1],Math.max(w0,len*.42)); bg.addColorStop(0,rgb(under? UN : CU2)); bg.addColorStop(1,rgb(under? mulv(UN,.75) : mulv(CU,.7))); x.fillStyle=bg; x.beginPath(); x.ellipse(mid[0],mid[1],Math.max(w0,len*.42),w0,ang,0,6.283); x.fill(); }
-    if(!under){ x.fillStyle=rgb(CU2); x.beginPath(); x.ellipse(mid[0],mid[1],Math.max(w0*.7,len*.3),w0*.55,ang,0,6.283); x.fill();
-      x.strokeStyle=rgb(DK,.28); x.lineWidth=Math.max(.5,w0*.08); for(let i=0;i<6;i++){ const a=pt(-3.5+i*1.4,-1.6,.5), b=pt(-3.5+i*1.4,1.6,.5), c=pt(-2.8+i*1.4,0,1.2); x.beginPath(); x.moveTo(a[0],a[1]); x.quadraticCurveTo(c[0],c[1],b[0],b[1]); x.stroke(); } }   /* fine dark scalloping on the copper */
-    const nk=pt(5.4,0,.5), ring=Math.max(1,w0*.42); x.strokeStyle=rgb(WH); x.lineWidth=ring; const r1=pt(5.4,-1.5,.5), r2=pt(5.4,1.5,.5); x.beginPath(); x.moveTo(r1[0],r1[1]); x.quadraticCurveTo(nk[0],nk[1],r2[0],r2[1]); x.stroke();   /* the white neck ring */
-    x.fillStyle=rgb(GRN); x.beginPath(); x.arc(hd[0],hd[1],w0*.4,0,6.283); x.fill(); const n2=pt(6.4,0,.7); x.beginPath(); x.arc(n2[0],n2[1],w0*.42,0,6.283); x.fill();   /* the dark green head */
-    for(const sd of [-1,1]){ const rf=pt(8.4,sd*.7,1.0); x.fillStyle=rgb(RED); x.beginPath(); x.arc(rf[0],rf[1],w0*.18,0,6.283); x.fill(); }   /* red face wattles */
-    const bk=pt(10,0,.6); x.strokeStyle=rgb([196,180,140]); x.lineWidth=Math.max(.8,w0*.2); x.beginPath(); x.moveTo(hd[0],hd[1]); x.lineTo(bk[0],bk[1]); x.stroke();
-    wing(dl>dr? 1 : -1);
+  /* how a flushed rooster really goes: an explosive near-vertical climb on whirring wings, a moment hanging and flailing as it swings round to pick its line,
+     then off low and fast, a burst of beats and a long glide on bowed wings, another burst, another glide */
+  function startPF(){ const sd=Math.random()<.5?-1:1;
+    pf={t:0,sd,P:[sd*rnd(.05,.16),.36,.78],h0:sd>0? Math.PI-.75 : .75,h1:sd>0? .5 : Math.PI-.5,fl:0,beatAmp:1,turned:false,cyc:0};
+    const sx=W/2+pf.P[0]*H*.5/pf.P[2];
+    for(let i=0;i<40;i++) pfBits.push({x:sx+rnd(-80,80),y:H+rnd(-10,30),vx:rnd(-180,180),vy:-rnd(280,620),r:rnd(3,10),rot:rnd(0,6),vr:rnd(-9,9),c:pick(["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#6b7a34","#8a9a46","#a8884a"]),life:rnd(1,1.9)});   /* grass and seed heads thrown up at the lens */
+    natureSfx.flush&&natureSfx.flush("pheas",sx/W); setTimeout(()=>natureSfx.crow&&natureSfx.crow((sx/W*2-1)*.8),150); }
+  function pheas3D(x,P,f,flap,amp,glide,proj,Kw){
+    const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; };
+    const r=nrm(crs(f,[0,-1,0])), u=crs(r,f);
+    const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*Kw, P[1]+(f[1]*a+r[1]*b+u[1]*c)*Kw, P[2]+(f[2]*a+r[2]*b+u[2]*c)*Kw];
+    const pt=(a,b,c)=>{ const w=W3(a,b,c); return proj(w[0],w[1],w[2]); };
+    const under=-(P[0]*u[0]+P[1]*u[1]+P[2]*u[2])<0;
+    const sc=a=>{ const w=W3(a,0,0), p0=proj(w[0],w[1],w[2]), p1=proj(w[0]+Kw,w[1],w[2]); return Math.hypot(p1[0]-p0[0],p1[1]-p0[1]); };   /* pixels per body unit here */
+    const poly=(pts,col)=>{ x.fillStyle=col; x.beginPath(); x.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) x.lineTo(pts[i][0],pts[i][1]); x.closePath(); x.fill(); };
+    const smooth=(pts,col)=>{ x.fillStyle=col; x.beginPath(); const n=pts.length, m=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2]; let q=m(pts[n-1],pts[0]); x.moveTo(q[0],q[1]); for(let i=0;i<n;i++){ const a=pts[i], b=pts[(i+1)%n], mm=m(a,b); x.quadraticCurveTo(a[0],a[1],mm[0],mm[1]); } x.closePath(); x.fill(); };
+    const COV=[136,120,96], SEC=[140,106,68], PRI=[118,92,60], BAR=[70,52,34], PALE=[214,190,140], UND=[204,192,168], CU=[178,90,38], CU2=[214,132,60], CHE=[132,52,26], RUMP=[132,138,112], GRN=[22,74,58], PUR=[60,40,80], RED=[200,40,30], WH=[240,236,228], TL=[150,128,82], TLD=[54,40,26];
+    /* a wing: the shape of the real thing, short and broad and rounded, coverts, secondaries, a fan of primaries with their bars */
+    const wing=(sd,fl)=>{ const h=k=>fl*k, bend=Math.abs(fl)*.25;
+      const S=pt(3.6,sd*2.4,.6), Wr=pt(2.4,sd*8.2,h(5.2)+bend), Tp=pt(-1.4,sd*14.2,h(9)), T2=pt(-5.4,sd*12.4,h(8)), Tr=pt(-8.2,sd*8.6,h(5)), R0=pt(-6,sd*2.4,.4);
+      const g=x.createLinearGradient(S[0],S[1],Tp[0],Tp[1]); g.addColorStop(0,rgb(under? UND : COV)); g.addColorStop(.45,rgb(under? UND : SEC)); g.addColorStop(1,rgb(under? mulv(UND,.86) : PRI));
+      smooth([S,Wr,pt(.6,sd*11.5,h(7.4)),Tp,T2,Tr,R0],g);
+      x.lineCap="round";
+      for(let i=0;i<6;i++){ const k=.62+i*.07, a0=pt(2-i*1.1,sd*(8.6+i*.5),h(5.4+i*.4)), a1=pt(.4-i*1.25,sd*(12.6+i*.15-i*i*.14),h(8.2+i*.1)); x.strokeStyle=rgb(under? mulv(UND,.78) : mulv(PRI,.7),.8); x.lineWidth=Math.max(.6,sc(0)*.32); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.stroke(); }   /* primary shafts */
+      for(const k of [.25,.42,.58,.74,.9]){ const a0=pt(3.2-k*4.4,sd*(2.6+k*10.6),h(k*8)), a1=pt(-5.6+k*2.8,sd*(2.6+k*8.8),h(k*6.2)); x.strokeStyle=rgb(under? mulv(UND,.82) : (k>.6? PALE : BAR),under?.35:.55); x.lineWidth=Math.max(.6,sc(0)*.38); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.stroke(); } };   /* barring across the flight feathers */
+    const dl=(P[0]-r[0]*.05)**2+(P[1]-r[1]*.05)**2+(P[2]-r[2]*.05)**2, dr=(P[0]+r[0]*.05)**2+(P[1]+r[1]*.05)**2+(P[2]+r[2]*.05)**2, farS=dl>dr? -1 : 1;
+    const wings=sd=>{ if(glide){ wing(sd,-.16); return; } const a0=x.globalAlpha; for(const d of [-.45,0,.45]){ x.globalAlpha=a0*(d? .5 : .96); wing(sd,(Math.sin(flap+d)*.9+.08)*amp); } x.globalAlpha=a0; };   /* whirring: a blur of beats */
+    wings(farS);
+    /* the long barred tail: a fan of pointed feathers, the middle pair longest */
+    for(const [len,off] of [[-20,-2.6],[-20,2.6],[-24,-1.6],[-24,1.6],[-28.5,-.5],[-28.5,.5]]){
+      const b0=pt(-5.5,off*.35-.6,0), b1=pt(-5.5,off*.35+.6,0), tip=pt(len,off,-1.2-(len+20)*.04), m0=pt((len-5.5)/2,off*.7-.9,-.6), m1=pt((len-5.5)/2,off*.7+.9,-.6);
+      poly([b0,m0,tip,m1,b1],rgb(TL)); x.strokeStyle=rgb(TLD,.42); x.lineWidth=Math.max(.5,sc(-10)*.28);
+      for(let a=-8;a>len+2;a-=2.6){ const k=(a+5.5)/(len+5.5), q0=pt(a,off*(.35+.65*k)-.9*(1-k*.6),-.6*k), q1=pt(a,off*(.35+.65*k)+.9*(1-k*.6),-.6*k); x.beginPath(); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); x.stroke(); } }
+    /* the body, built from overlapping rounded sections so it reads as solid from any angle */
+    /* one smooth body: a silhouette swept from tail to breast, then shaded as a whole (light on the back, dark under the belly) */
+    const body=new Path2D(); for(let a=-6;a<=5.6;a+=.6){ const rr=3.6*Math.sqrt(Math.max(.18,1-((a+.3)/6.4)**2)), q=pt(a,0,.4); body.moveTo(q[0]+Math.max(.8,sc(a)*rr),q[1]); body.arc(q[0],q[1],Math.max(.8,sc(a)*rr),0,6.283); }
+    x.fillStyle=rgb(under? CHE : CU); x.fill(body);
+    x.save(); x.clip(body);
+    { const tp=pt(0,0,4.4), bt=pt(0,0,-3.4), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]); g.addColorStop(0,"rgba(255,214,150,.34)"); g.addColorStop(.45,"rgba(255,200,130,0)"); g.addColorStop(1,"rgba(36,16,6,.5)"); x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); }
+    if(!under){ const rp=pt(-4.8,0,2.6), rr=Math.max(1,sc(-4.8)*2.4); const g=x.createRadialGradient(rp[0],rp[1],0,rp[0],rp[1],rr); g.addColorStop(0,rgb(RUMP,.75)); g.addColorStop(1,rgb(RUMP,0)); x.fillStyle=g; x.fillRect(rp[0]-rr,rp[1]-rr,rr*2,rr*2); }   /* the greyish-green rump */
+    { const br=pt(4.4,0,-.4), rr=Math.max(1,sc(4.4)*2.8); const g=x.createRadialGradient(br[0],br[1],0,br[0],br[1],rr); g.addColorStop(0,rgb(CHE,.8)); g.addColorStop(1,rgb(CHE,0)); x.fillStyle=g; x.fillRect(br[0]-rr,br[1]-rr,rr*2,rr*2); }   /* deep chestnut breast */
+    x.restore();
+    if(!under){ x.fillStyle=rgb([40,24,14],.45); for(let i=0;i<14;i++){ const a=-4.5+(i%7)*1.4, b=(i<7?-1:1)*(.8+(i%3)*.5), q=pt(a,b,2.4+((i*7)%3)*.25); x.beginPath(); x.arc(q[0],q[1],Math.max(.5,sc(a)*.32),0,6.283); x.fill(); } }   /* the dark spangles on the copper */
+    /* neck, white collar, iridescent head with ear tufts and the red face */
+    const nk=pt(6.6,0,1.1), hd=pt(8.8,0,1.6), rN=Math.max(.8,sc(6.6)*1.7), rH=Math.max(.8,sc(8.8)*1.45);
+    x.strokeStyle=rgb(WH); x.lineWidth=Math.max(1,sc(5.6)*1.1); const c0=pt(5.7,-1.8,.9), c1=pt(5.7,1.8,.9), cm=pt(5.9,0,2.4); x.beginPath(); x.moveTo(c0[0],c0[1]); x.quadraticCurveTo(cm[0],cm[1],c1[0],c1[1]); x.stroke();
+    { const g=x.createRadialGradient(nk[0],nk[1],0,nk[0],nk[1],rN); g.addColorStop(0,rgb(PUR)); g.addColorStop(1,rgb(mulv(GRN,.8))); x.fillStyle=g; x.beginPath(); x.arc(nk[0],nk[1],rN,0,6.283); x.fill(); }
+    { const g=x.createRadialGradient(hd[0]-rH*.3,hd[1]-rH*.3,0,hd[0],hd[1],rH); g.addColorStop(0,rgb([60,130,96])); g.addColorStop(1,rgb(GRN)); x.fillStyle=g; x.beginPath(); x.arc(hd[0],hd[1],rH,0,6.283); x.fill(); }
+    for(const sd of [-1,1]){ const e0=pt(8.2,sd*.9,2.6), e1=pt(7.2,sd*1.1,3.6); x.strokeStyle=rgb(GRN); x.lineWidth=Math.max(.6,sc(8)*.5); x.beginPath(); x.moveTo(e0[0],e0[1]); x.lineTo(e1[0],e1[1]); x.stroke();   /* ear tufts */
+      const fc=pt(9.4,sd*1.05,1.5); x.fillStyle=rgb(RED); x.beginPath(); x.ellipse(fc[0],fc[1],Math.max(.6,sc(9)*.75),Math.max(.6,sc(9)*.55),0,0,6.283); x.fill(); }   /* the red wattles */
+    const bk=pt(10.8,0,1.3); x.strokeStyle=rgb([214,200,160]); x.lineWidth=Math.max(.7,sc(10)*.55); x.lineCap="round"; x.beginPath(); x.moveTo(hd[0],hd[1]); x.lineTo(bk[0],bk[1]); x.stroke();
+    wings(-farS);
   }
   function drawPheasFront(dt,dark){
-    for(let i=pfBits.length-1;i>=0;i--){ const b=pfBits[i]; b.vy+=420*dt; b.vx*=.99; b.x+=b.vx*dt; b.y+=b.vy*dt; b.rot+=b.vr*dt; b.life-=dt; if(b.life<=0){ pfBits.splice(i,1); continue; }
+    for(let i=pfBits.length-1;i>=0;i--){ const b=pfBits[i]; b.vy+=430*dt; b.vx*=.99; b.x+=b.vx*dt; b.y+=b.vy*dt; b.rot+=b.vr*dt; b.life-=dt; if(b.life<=0){ pfBits.splice(i,1); continue; }
       ctx.save(); ctx.globalAlpha=Math.min(1,b.life*2)*.9; ctx.filter="blur(2px)"; ctx.translate(b.x,b.y); ctx.rotate(b.rot); ctx.fillStyle=b.c; ctx.fillRect(-b.r,-b.r*.3,b.r*2,b.r*.6); ctx.restore(); ctx.filter="none"; }
     nextPF-=dt; if(!pf&&nextPF<=0) startPF(); if(!pf) return;
     const p=pf; p.t+=dt; const T=p.t, F=H*.5, cx=W/2, cy=H*.52;
-    let P, glide;
-    if(T<1.6){ const u=T/1.6, e=u*(2-u); P=[p.x0+p.wx*.55*u, lerp(.36,-.02,e), lerp(.8,1.05,u)]; glide=false; }       /* straight up out of the grass at your feet, wings a blur */
-    else { const u=Math.min(1,(T-1.6)/5.4), e=u*(2-u); P=[p.x0+p.wx*(.55+1.2*e), lerp(-.02,.05,e)+Math.sin(u*Math.PI)*-.05, lerp(1.05,9,u*u)]; glide=(T%1.3)>.55; }   /* then away low over the field, whirr and glide */
-    if(T>7){ pf=null; nextPF=rnd(110,220); return; }
-    const V=p.pp? [P[0]-p.pp[0],P[1]-p.pp[1],P[2]-p.pp[2]] : [p.sd,-.5,.05]; p.pp=P; if(Math.hypot(...V)>1e-7) p.V=p.V? p.V.map((v,i)=>lerp(v,V[i],.2)) : V;
-    p.fl=(p.fl||0)+dt*(glide?0:(T<1.6?17:11))*Math.PI*2;
+    let h, pitch, spd, amp, glide=false, hz;
+    if(T<.8){ h=p.h0; pitch=1.05; spd=.85; amp=1; hz=17; }                                                              /* the explosive climb */
+    else if(T<1.95){ const u=ease((T-.8)/1.15); h=lerp(p.h0,p.h1,u); pitch=lerp(.95,.42,u); spd=.28+.1*Math.sin(u*Math.PI); amp=1.25; hz=12;   /* hanging there, flailing, swinging round */
+      if(!p.turned&&u>.3){ p.turned=true; natureSfx.flush&&natureSfx.flush("pheas",(cx+p.P[0]*F/p.P[2])/W); } }
+    else { const u=Math.min(1,(T-1.95)/1.2); h=p.h1+Math.sin(T*.7)*.05; pitch=lerp(.42,-.04,u); spd=lerp(.6,1.75,u); amp=.85; hz=13;          /* away low and fast: whirr, glide, whirr */
+      const c=(T-1.95)%1.6; glide=T>2.6&&c>.65; if(glide) pitch-=.04; }
+    const fwd=[Math.cos(pitch)*Math.cos(h),-Math.sin(pitch),Math.cos(pitch)*Math.sin(h)];
+    p.P=[p.P[0]+fwd[0]*spd*dt, p.P[1]+fwd[1]*spd*dt+(T>.8&&T<1.95? Math.sin(T*9)*.03*dt : 0), p.P[2]+fwd[2]*spd*dt];
+    p.fl+=dt*(glide?0:hz)*Math.PI*2;
+    const P=p.P; if(P[2]>11||T>9||P[2]<.25){ pf=null; nextPF=rnd(110,220); return; }
     const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(pfcv.width!==cw||pfcv.height!==ch){ pfcv.width=cw; pfcv.height=ch; }
     const x=pfcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
-    pheas3D(x,P,p.V||V,p.fl,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],.016);
+    const look=[Math.cos(pitch*.85)*Math.cos(h),-Math.sin(pitch*.85),Math.cos(pitch*.85)*Math.sin(h)];                      /* the body rides a little flatter than its climb */
+    pheas3D(x,P,look,p.fl,amp,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],.016);
     const sx=cx+P[0]*F/P[2], sy=cy+P[1]*F/P[2];
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
-    x.fillStyle="rgba(40,24,12,.22)"; x.fillRect(0,0,cw,ch); const sp=sun(), rl=x.createLinearGradient(sx*.6-80,0,sx*.6+80,0), sd2=sp.x>sx?1:-1; rl.addColorStop(sd2>0?0:1,"rgba(20,12,6,.18)"); rl.addColorStop(sd2>0?1:0,"rgba(255,190,110,.26)"); x.fillStyle=rl; x.fillRect(0,0,cw,ch);   /* rim-lit from the sun's side */
+    x.fillStyle="rgba(40,24,12,.2)"; x.fillRect(0,0,cw,ch); const sp=sun(), rl=x.createLinearGradient(sx*.6-90,0,sx*.6+90,0), sd2=sp.x>sx?1:-1; rl.addColorStop(sd2>0?0:1,"rgba(20,12,6,.2)"); rl.addColorStop(sd2>0?1:0,"rgba(255,190,110,.28)"); x.fillStyle=rl; x.fillRect(0,0,cw,ch);   /* rim-lit from the sun's side */
     if(!p.skyC||(p.skyT=(p.skyT||0)-1)<=0){ p.skyT=5; const ip=toImg(sx,sy); p.skyC=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[170,150,110]; }
-    x.fillStyle=rgb(p.skyC,Math.min(.65,Math.max(0,(P[2]-1.5)/12))); x.fillRect(0,0,cw,ch);
+    x.fillStyle=rgb(p.skyC,Math.min(.65,Math.max(0,(P[2]-1.4)/12))); x.fillRect(0,0,cw,ch);
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(0,0,cw,ch); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,ch); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(0,0,cw,ch); }
     x.globalCompositeOperation="source-over";
-    const bl=P[2]<.9? (.9-P[2])*10+.5 : .5+Math.max(0,P[2]-6)*.12;                                                            /* too near for the lens at first, then soft with distance */
-    ctx.save(); ctx.globalAlpha=Math.min(1,(7-T)/.8); ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(pfcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
+    const bl=P[2]<.95? (.95-P[2])*9+.6 : .6+Math.max(0,P[2]-6)*.12;                                                      /* too near for the lens at first, then soft with distance */
+    ctx.save(); ctx.globalAlpha=Math.min(1,T/.12,(11-P[2])/1.5); ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(pfcv,0,0,cw,ch,0,0,W,H); ctx.restore(); ctx.filter="none";
   }
   /* ---- a red-tailed hawk (a "chicken hawk"), in true 3D like the other birds: it comes over your shoulder from behind, sails out over the lawn on broad wings,
      flares and drops into the grass, sits up tall turning its head, then beats off away from you into the distance ---- */
@@ -2523,7 +2561,7 @@ const ambient=(function(){
     const d=duskV; if(d<=.01) return; const hz=gnd().vy;
     const g=ctx.createLinearGradient(0,0,0,hz+20); g.addColorStop(0,`rgba(16,20,48,${(.5*d).toFixed(3)})`); g.addColorStop(.7,`rgba(40,30,60,${(.22*d).toFixed(3)})`); g.addColorStop(1,"rgba(40,30,60,0)");
     ctx.fillStyle=g; ctx.fillRect(0,0,W,hz+20);
-    ctx.fillStyle=`rgba(12,10,20,${(.16*d).toFixed(3)})`; ctx.fillRect(0,hz,W,H-hz);                       /* the land dims a little too */
+    { const lg=ctx.createLinearGradient(0,hz-50,0,hz+70); lg.addColorStop(0,"rgba(12,10,20,0)"); lg.addColorStop(1,`rgba(12,10,20,${(.16*d).toFixed(3)})`); ctx.fillStyle=lg; ctx.fillRect(0,hz-50,W,H-hz+50+Math.abs(camY)+40); }   /* the land dims a little too, eased in so there's no seam at the horizon */
     if(!stars.length) for(let i=0;i<(MOBILE()?26:46);i++) stars.push({x:Math.random(),y:Math.random()*.42,r:rnd(.4,1.1),ph:rnd(0,6),on:rnd(.25,.6)});
     const sp=sun(), ve=[sp.x-W*.16,sp.y-H*.17];                                                            /* Venus, the evening star, first to show */
     if(d>.18){ const a=Math.min(1,(d-.18)/.15); ctx.save(); ctx.globalCompositeOperation="lighter"; const gl=ctx.createRadialGradient(ve[0],ve[1],0,ve[0],ve[1],9); gl.addColorStop(0,`rgba(255,250,236,${(.95*a).toFixed(2)})`); gl.addColorStop(.25,`rgba(255,240,210,${(.35*a).toFixed(2)})`); gl.addColorStop(1,"rgba(255,240,210,0)"); ctx.fillStyle=gl; ctx.fillRect(ve[0]-9,ve[1]-9,18,18); ctx.restore(); }
