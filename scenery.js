@@ -243,20 +243,26 @@ var natureSfx=(function(){
   /* a flock of Canada geese going over. Each goose's call is the real two-part "ah-HONK": a short low grunt that breaks up into a loud, nasal,
      brassy honk a good fifth higher, sliding down at the end. The nasal colour comes from a buzzy source pushed through a few resonances,
      with a little rasp in it. Each goose honks from its own place in the stereo field. */
-  function gooseCall(at,pan,vol,near){ const out=voice(master,pan), f1=R(330,380), f2=f1*R(1.3,1.42), d1=R(.05,.08), d2=R(.17,.26), end=at+d1+d2+.05;
-    const o=ctx.createOscillator(); o.type="sawtooth";
-    o.frequency.setValueAtTime(f1*.92,at); o.frequency.linearRampToValueAtTime(f1,at+d1*.7); o.frequency.linearRampToValueAtTime(f2*1.03,at+d1+.025); o.frequency.linearRampToValueAtTime(f2,at+d1+d2*.45); o.frequency.exponentialRampToValueAtTime(f2*.86,at+d1+d2);   /* ah — HONK, the pitch snapping up then sagging */
-    const sub=ctx.createOscillator(); sub.type="sine"; sub.frequency.setValueAtTime(f1/2,at); sub.frequency.linearRampToValueAtTime(f2/2,at+d1+.025); sub.frequency.exponentialRampToValueAtTime(f2*.43,at+d1+d2);
-    const am=ctx.createGain(); am.gain.value=.65; const sg=ctx.createGain(); sg.gain.value=.35; sub.connect(sg); sg.connect(am.gain);   /* period-doubling: the rough, doubled buzz of a goose's syrinx */
-    const ws=ctx.createWaveShaper(); { const n=1024, c=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(x*3.2); } ws.curve=c; }   /* hard, brassy edge */
-    const pre=ctx.createGain(); pre.gain.value=1.4; o.connect(am); am.connect(pre); pre.connect(ws);
-    const sum=ctx.createGain();
-    for(const [fq,q,gn] of [[620,4,.7],[1150,5,1],[2350,6,.75],[3500,7,.35]]){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=fq*R(.95,1.05); bp.Q.value=q; const gg=ctx.createGain(); gg.gain.value=gn; ws.connect(bp); bp.connect(gg); gg.connect(sum); }   /* the nasal resonances */
-    const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nb=ctx.createBiquadFilter(); nb.type="bandpass"; nb.frequency.value=2200; nb.Q.value=.9; const ng=ctx.createGain(); ng.gain.value=.07; n.connect(nb); nb.connect(ng); ng.connect(sum);   /* breath and rasp */
-    const env=ctx.createGain(); env.gain.setValueAtTime(0,at); env.gain.linearRampToValueAtTime(vol*.4,at+.012); env.gain.setValueAtTime(vol*.35,at+d1-.008); env.gain.linearRampToValueAtTime(vol,at+d1+.015); env.gain.setValueAtTime(vol*.92,at+d1+d2*.55); env.gain.exponentialRampToValueAtTime(.0001,at+d1+d2+.03);
-    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1700+Math.min(1,near)*4800;   /* far off: softer and duller */
-    sum.connect(env); env.connect(lp); lp.connect(out);
-    if(near<.6){ const dl=ctx.createDelay(.5); dl.delayTime.value=R(.12,.2); const dg=ctx.createGain(); dg.gain.value=.22; lp.connect(dl); dl.connect(dg); dg.connect(out); }   /* the call coming back off the hills */
+  /* a Canada goose: a short low "h'" that breaks up into a round, nasal "ONK", then sags. Built from a soft harmonic tone shaped by the throat's resonances
+     (no hard distortion), with only a little reedy roughness on the peak, and heard through open air: duller and roomier the farther off it is */
+  let gWave=null, gRev=null;
+  function gooseCall(at,pan,vol,near){
+    if(!gWave){ const N=24, re=new Float32Array(N+1), im=new Float32Array(N+1); for(let k=1;k<=N;k++) im[k]=Math.pow(k,-.95)*(k%2? 1 : .8); gWave=ctx.createPeriodicWave(re,im); }
+    if(!gRev){ const len=Math.floor(ctx.sampleRate*1.6), buf=ctx.createBuffer(2,len,ctx.sampleRate); for(let c=0;c<2;c++){ const d=buf.getChannelData(c); for(let i=0;i<len;i++){ const tt=i/ctx.sampleRate; d[i]=(Math.random()*2-1)*Math.exp(-tt*3.2)*(tt<.02? tt/.02 : 1); } }
+      gRev=ctx.createConvolver(); gRev.buffer=buf; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1800; const g=ctx.createGain(); g.gain.value=.5; gRev.connect(lp); lp.connect(g); g.connect(master); }   /* the open valley the calls ring out over */
+    const out=voice(master,pan), nr=Math.min(1,near), f1=R(250,330), f2=f1*R(1.5,1.7), d1=R(.04,.065), d2=R(.15,.22), end=at+d1+d2+.08;
+    const o=ctx.createOscillator(); o.setPeriodicWave(gWave);
+    o.frequency.setValueAtTime(f1,at); o.frequency.linearRampToValueAtTime(f1*1.04,at+d1*.8); o.frequency.exponentialRampToValueAtTime(f2,at+d1+.03); o.frequency.setValueAtTime(f2,at+d1+d2*.35); o.frequency.exponentialRampToValueAtTime(f2*.9,at+d1+d2);
+    const sub=ctx.createOscillator(); sub.type="sine"; sub.frequency.setValueAtTime(f1/2,at); sub.frequency.exponentialRampToValueAtTime(f2/2,at+d1+.03); sub.frequency.exponentialRampToValueAtTime(f2*.45,at+d1+d2);
+    const am=ctx.createGain(); am.gain.value=.88; const sg=ctx.createGain(); sg.gain.setValueAtTime(0,at); sg.gain.linearRampToValueAtTime(.12,at+d1+.04); sg.gain.linearRampToValueAtTime(.03,at+d1+d2); sub.connect(sg); sg.connect(am.gain);   /* a touch of reedy roughness on the honk */
+    o.connect(am); const sum=ctx.createGain();
+    for(const [fq,q,gn] of [[480,2.2,.55],[1050,2.8,1],[1900,3,.42],[2800,3.5,.12]]){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=fq*R(.93,1.07); bp.Q.value=q; const gg=ctx.createGain(); gg.gain.value=gn; am.connect(bp); bp.connect(gg); gg.connect(sum); }   /* the nasal throat */
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf; const nb=ctx.createBiquadFilter(); nb.type="bandpass"; nb.frequency.value=1300; nb.Q.value=1.2; const ng=ctx.createGain(); ng.gain.setValueAtTime(0,at); ng.gain.linearRampToValueAtTime(.05,at+.01); ng.gain.linearRampToValueAtTime(.015,at+d1+d2); n.connect(nb); nb.connect(ng); ng.connect(sum);   /* breath */
+    const env=ctx.createGain(); env.gain.setValueAtTime(0,at); env.gain.linearRampToValueAtTime(vol*.3,at+.02); env.gain.linearRampToValueAtTime(vol*.25,at+d1); env.gain.linearRampToValueAtTime(vol,at+d1+.035); env.gain.linearRampToValueAtTime(vol*.8,at+d1+d2*.6); env.gain.exponentialRampToValueAtTime(.0001,at+d1+d2+.06);
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1100+nr*2000; lp.Q.value=.5;   /* far off: softer and duller */
+    const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=160;
+    sum.connect(env); env.connect(hp); hp.connect(lp); lp.connect(out);
+    const send=ctx.createGain(); send.gain.value=.25+(1-nr)*.5; lp.connect(send); send.connect(gRev);
     o.start(at); sub.start(at); n.start(at,R(0,2),end-at); o.stop(end); sub.stop(end); }
   /* the side-by-side: a small engine's lumpy putter (the firing pulses chopping a low buzz), a whine from the drive belt that rises with speed, and grass and gravel under the tyres */
   let utvN=null;
@@ -280,7 +286,7 @@ var natureSfx=(function(){
     tone(at,1500,1550,.13,vv*.7,out); tone(at+.3,1650,3300,.28,vv,out); tone(at+.3,3300,6600,.24,vv*.08,out); }
   function honk(xFrac,near,spread){
     if(!ctx||!live) return; const now=ctx.currentTime+.02, base=Math.max(-1,Math.min(1,(xFrac*2-1)*1.4)), sp=Math.max(.35,spread||.5);
-    const v=.03+.15*near; let at=now; const n=2+Math.floor(Math.random()*4);
+    const v=.018+.075*Math.min(1.4,near); let at=now; const n=2+Math.floor(Math.random()*4);
     for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))); gooseCall(at,pan,v*R(.6,1),near); if(Math.random()<.35) gooseCall(at+R(.28,.36),pan,v*R(.5,.8),near); at+=R(.18,.45); }   /* overlapping voices, some geese honking twice */
   }
   function apply(){
