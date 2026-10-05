@@ -670,7 +670,7 @@ const ambient=(function(){
     b.climb=lerp(b.climb||1.1,Math.atan2(dY/dt||0,b.v||1),Math.min(1,dt*3));
     const pheas=b.kind==="pheas", burst=b.age<(pheas?1.4:1.1), cyc=(b.age-(pheas?1.4:1.1))%(pheas?2.2:1.6), flap=burst||cyc<(pheas?.6:.75);
     b.ph+=dt*(burst?(pheas?24:28):flap?(pheas?15:17):0);
-    const s=w2s(b.X,b.Y,b.Z), worldSpan=pheas?.26:.22, u=worldSpan*s.k/60; b.st=Math.max(1,Math.min(2.2,u*1.6));
+    const s=w2s(b.X,b.Y,b.Z), worldSpan=b.kind==="pheas"?.26:.22, u=worldSpan*s.k/60; b.sx=s.x; b.sy=s.y; b.sr=Math.max(26,worldSpan*s.k*.7); b.st=Math.max(1,Math.min(2.2,u*1.6));
     const haze=Math.max(0,Math.min(.8,(b.Z-4)/22)), hz=dark?[60,52,44]:[200,176,134];
     const lit=dark?.5:.72, M=c=>rgb(mixv(mulv(c,lit),hz,haze));
     const C= pheas? {wing:M([128,94,58]),body:M([150,76,34]),head:M([22,58,50]),tail:M([124,88,52]),ring:M([214,206,192]),dark:M([40,30,20])}
@@ -3044,14 +3044,22 @@ const ambient=(function(){
     for(const f of flies) tag(f.x,f.y,10,"Firefly",true);
     for(const m of motes2) tag(m.x,m.y,18,"Miller moth");
     for(const f of flocks){ const c=w2s(f.X,f.Y,f.Z); tag(c.x,c.y,Math.max(30,40*9/Math.max(4,f.Z)),"Canada geese"); }
+    if(grouse&&grouse.sx!=null) tag(grouse.sx,grouse.sy,grouse.sr,"Ruffed grouse"); if(pheas&&pheas.sx!=null) tag(pheas.sx,pheas.sy,pheas.sr,"Ring-necked pheasant");
+    if(pheasW) T(pheasW,"Ring-necked pheasant",26);
+    if(pf){ const F=H*.5; tag(W/2+pf.P[0]*F/pf.P[2],H*.52+pf.P[1]*F/pf.P[2],Math.min(260,.016*20*F/Math.max(.3,pf.P[2])),"Ring-necked pheasant"); }
+    if(jays) for(const k of ["b0","b1"]){ const b=jays[k]; if(b&&b.pp){ const F=H*.5; tag(W/2+b.pp[0]*F/b.pp[2],H*.52+b.pp[1]*F/b.pp[2],Math.min(160,.011*18*F/Math.max(.3,b.pp[2])),"Blue jay"); } }
     if(ban&&ban.sx!=null) tag(ban.sx,ban.sy,90,"Eastern bluebirds"); if(moonAt) tag(moonAt[0],moonAt[1],moonAt[2],"Crescent moon");
     for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,26,b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
   }
   document.addEventListener("click",e=>{
     if(SC.identify===false||!on) return; collectTags();
-    if(e.target.closest&&e.target.closest("a,button,input,textarea,select,label,summary,[role=button],[contenteditable],h1,h2,h3,p,li,.note,.lockup,[data-no-scenery]")) return;
-    const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n,mn] of tags){ const d=Math.hypot(qx-x,qy-y), zone=mn? r+30 : r*1.5+Math.max(56,Math.min(W,H)*.06), sc=mn? d*1.6+20 : d; if(d<zone&&sc<bd){ bd=sc; best=[x,y,n]; } }   /* the animals win over a leaf or petal drifting nearby */
-    if(!best) return; tagEl.textContent=best[2]; tagEl.style.left=e.clientX+"px"; tagEl.style.top=e.clientY+"px"; tagEl.style.opacity="1";
+    if(e.target.closest&&e.target.closest("a,button,input,textarea,select,label,summary,[role=button],[role=dialog],[contenteditable],.card,.panel,.lightbox,[data-no-scenery]")) return;
+    const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n,mn] of tags){ const d=Math.hypot(qx-x,qy-y), zone=mn? r+40 : r*1.5+Math.max(56,Math.min(W,H)*.06), sc=mn? d*1.3+12 : d; if(d<zone&&sc<bd){ bd=sc; best=[x,y,n]; } }   /* the animals win over a leaf or petal drifting nearby */
+    if(!best) return; tagEl.textContent=best[2]; tagEl.style.transform="none"; tagEl.style.left="0px"; tagEl.style.top="0px";
+    { const r=tagEl.getBoundingClientRect(), vw=innerWidth, vh=innerHeight, m=10, w=r.width, h=r.height;      /* above the tap, centred, but always kept inside the window */
+      let lx=e.clientX-w/2, ly=e.clientY-h-18; if(ly<m) ly=e.clientY+22; lx=Math.max(m,Math.min(vw-w-m,lx)); ly=Math.max(m,Math.min(vh-h-m,ly));
+      tagEl.style.left=lx+"px"; tagEl.style.top=ly+"px"; }
+    tagEl.style.opacity="1";
     clearTimeout(tagTimer); tagTimer=setTimeout(()=>{ tagEl.style.opacity="0"; },2600);
   });
   /* ---- a black Lab: trots in, nose to the ground, tail going, wanders the lawn and sniffs a long while, then heads off ---- */
