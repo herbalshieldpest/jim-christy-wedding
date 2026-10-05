@@ -1088,7 +1088,7 @@ const ambient=(function(){
   function critterBlit(cv,cx,f,s,k,P,parts,yaw,hgt,wid,shadowR,blades,alpha,haze){
     const R=.6, w=Math.ceil(wid*k*R), h=Math.ceil(hgt*k*R), now=performance.now();
     if(!f.cv){ f.cv=document.createElement("canvas"); f.cx=f.cv.getContext("2d"); }
-    if(f.rt && now-f.rt<64 && f.rw===w){ const ax0=w*.5, ay0=h*.88; ctx.save(); ctx.globalAlpha=alpha; ctx.drawImage(f.cv,0,0,w,h,s.x-ax0/R,s.y-ay0/R,w/R,h/R); ctx.restore(); return; }
+    if(f.rt && now-f.rt<64 && f.rw===w){ const ax0=w*.5, ay0=h*.88; ctx.save(); ctx.globalAlpha=alpha; if(f.air&&f.air.blur) ctx.filter=`blur(${f.air.blur}px)`; ctx.drawImage(f.cv,0,0,w,h,s.x-ax0/R,s.y-ay0/R,w/R,h/R); ctx.restore(); return; }
     f.rt=now; f.rw=w; cv=f.cv; cx=f.cx; if(typeof parts==="function") parts=parts();
     if(cv.width<w||cv.height<h){ cv.width=Math.max(cv.width,w); cv.height=Math.max(cv.height,h); }
     const x=cx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cv.width,cv.height);
@@ -1102,8 +1102,9 @@ const ambient=(function(){
     x.globalCompositeOperation="source-atop";
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,w,h); }
     else { const tn2=tint(); if(tn2.a>0){ x.globalAlpha=tn2.a; x.fillStyle=tn2.c; x.fillRect(0,0,w,h); x.globalAlpha=1; } }
+    if(f.air){ x.fillStyle=rgb(f.air.c,f.air.a); x.fillRect(0,0,w,h); }                                             /* far away: washed toward the air between it and you */
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=alpha; ctx.drawImage(cv,0,0,w,h,s.x-ax/R,s.y-ay/R,w/R,h/R); ctx.restore();
+    ctx.save(); ctx.globalAlpha=alpha; if(f.air&&f.air.blur) ctx.filter=`blur(${f.air.blur}px)`; ctx.drawImage(cv,0,0,w,h,s.x-ax/R,s.y-ay/R,w/R,h/R); ctx.restore(); ctx.filter="none";
   }
   function groundPal(s,dark){ const ip=toImg(s.x,s.y), g=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]+.01))))||[120,110,60]; return {g, shadow:mulv(g,.42), grassA:mulv(g,.85), grassB:mixv(g,[230,200,120],.25)}; }
 
@@ -2123,7 +2124,10 @@ const ambient=(function(){
     const sitBlit=a=>{ const s=toScreen(h.Xw,h.Dw); h.ct=(h.ct||0)-dt; if(h.ct<=0||!h.pal){ h.ct=1.5; const G=groundPal(s,dark), lit=dark?.45:.62;
         h.pal={...G, back:mulv([100,68,44],lit), breast:mulv([224,212,190],lit), band:mulv([70,46,30],lit), wing:mulv([86,58,38],lit), head:mulv([92,62,40],lit), beak:mulv([70,66,64],lit), leg:mulv([210,178,70],lit), tail:mulv([184,88,44],lit)}; }
       if(!h.blades) h.blades=Array.from({length:10},()=>({ox:rnd(-14,14),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-      h.rt=0; critterBlit(null,null,h,s,kL,h.pal,()=>hawkSitParts(h,h.pal),h.yaw,40,40,10,h.blades,a); return s; };
+      if(!h.airC||(h.airT=(h.airT||0)-dt)<=0){ h.airT=.6; const ip=toImg(s.x,s.y-30*kL), ip2=toImg(s.x,s.y-90*kL); const c1=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[150,130,90], c2=(ip2&&sampleAt(Math.max(0,Math.min(1,ip2[0])),Math.max(0,Math.min(1,ip2[1]))))||c1;
+        h.airC=mixv(mixv(c1,c2,.5),[236,184,126],.35); }                                                              /* the warm, dusty evening air between you and the far edge of the lawn */
+      h.air={c:h.airC,a:dark?.32:.4,blur:.6};
+      h.rt=0; critterBlit(null,null,h,s,kL,h.pal,()=>hawkSitParts(h,h.pal),h.yaw,40,40,10,h.blades,a,.7); return s; };
     if(layer==="ground"&&inAir){ if(h.state==="leave"&&h.st<.5) sitBlit(1-h.st/.5); return; }                       /* lifting off: the sitting bird fades as the flying one takes over */
     h.t+=dt; h.st+=dt;
     let P=null, flare=0, glide=false;
@@ -2153,10 +2157,10 @@ const ambient=(function(){
     x.fillStyle=`rgba(20,14,8,${(1-lt).toFixed(2)})`; x.fillRect(0,0,sz,sz); x.fillStyle="rgba(255,164,80,.16)"; x.fillRect(0,0,sz,sz);
     const rl=x.createLinearGradient(sz/2-sdx*sz*.25,0,sz/2+sdx*sz*.25,0); rl.addColorStop(0,"rgba(20,12,6,.2)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,"rgba(255,196,120,.28)"); x.fillStyle=rl; x.fillRect(0,0,sz,sz);
     if(!h.bg||(h.bgT=(h.bgT||0)-1)<=0){ h.bgT=8; const ip=toImg(h.x,h.y); h.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,130,90]; }
-    const haze=Math.min(.7,Math.max(0,(zT/h.m-2)/12)+.06); x.fillStyle=rgb(h.bg,haze); x.fillRect(0,0,sz,sz);
+    const haze=Math.min(.78,Math.max(0,(zT/h.m-2)/12)+.18); x.fillStyle=rgb(mixv(h.bg,[236,184,126],.25),haze); x.fillRect(0,0,sz,sz);
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    const bl=Math.max(0,h.m-3)*.4; ctx.save(); ctx.globalAlpha=h.state==="leave"? Math.min(1,(1-h.st/5)*3,h.st/.5) : h.state==="land"? h.drawA : Math.min(1,h.st*2); ctx.filter=bl>.4? `blur(${bl.toFixed(1)}px)` : "none"; ctx.drawImage(hkcv,0,0,sz,sz,h.x-sz/2,h.y-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
+    const bl=.6+Math.max(0,h.m-3)*.4; ctx.save(); ctx.globalAlpha=h.state==="leave"? Math.min(1,(1-h.st/5)*3,h.st/.5) : h.state==="land"? h.drawA : Math.min(1,h.st*2); ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(hkcv,0,0,sz,sz,h.x-sz/2,h.y-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
   }
   /* ---- little brown bats in 3D: membrane wings on finger bones, beating deep and fast, jinking after insects over the lawn ---- */
   function bat3D(x,P,V,ph,proj,K){
