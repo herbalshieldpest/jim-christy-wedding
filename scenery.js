@@ -228,8 +228,8 @@ var natureSfx=(function(){
       o.connect(bp); o.connect(bp2); bp2.connect(g2); g2.connect(g); bp.connect(g); g.connect(out); o.start(at); lfo.start(at); o.stop(at+d+.05); lfo.stop(at+d+.05); at+=d+R(.15,.3); } }
   function honk(xFrac,near,spread){
     if(!ctx||!live) return; const now=ctx.currentTime+.02, base=Math.max(-1,Math.min(1,(xFrac*2-1)*1.4)), sp=Math.max(.35,spread||.5);
-    const v=.075*Math.max(.35,near); let at=now; const n=2+Math.floor(Math.random()*4);
-    for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))), o=voice(master,pan), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(880,1020); bp.Q.value=1.6; bp.connect(o);
+    const v=.02+.11*near; let at=now; const n=2+Math.floor(Math.random()*4);
+    for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))), o=voice(master,pan), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(880,1020); bp.Q.value=1.6; const lpf=ctx.createBiquadFilter(); lpf.type="lowpass"; lpf.frequency.value=1400+Math.min(1,near)*4000; bp.connect(lpf); lpf.connect(o);   /* far off they are softer and duller; close overhead, clear and full */
       const f=R(300,390), vv=v*R(.6,1); tone(at,f*.82,f,.05,vv*.6,bp,"sawtooth"); tone(at+.045,f,f*.86,.17,vv,bp,"sawtooth"); tone(at+.045,f*2.02,f*1.72,.15,vv*.35,bp,"square"); at+=R(.14,.38); }   /* the two-part a-honk, overlapping voices */
   }
   function apply(){
@@ -437,7 +437,7 @@ const ambient=(function(){
       f.X+=f.hx*f.sp*dt; f.Z+=f.hz*f.sp*dt; f.bob+=dt*.5;
       if(f.Z<4) f.done=true;
       const haze=Math.max(0,Math.min(.85,(f.Z-8)/50)); let any=false;
-      f.honk-=dt; if(f.honk<=0){ f.honk=rnd(.7,2.4); const c=w2s(f.X,f.Y,f.Z); if(c.x>0&&c.x<W&&typeof natureSfx!=="undefined") natureSfx.honk(c.x/W,Math.min(1,9/f.Z),Math.min(.9,Math.max(.35,40/f.Z))); }
+      f.honk-=dt; if(f.honk<=0){ f.honk=rnd(.7,2.4); const c=w2s(f.X,f.Y,f.Z); if(c.x>0&&c.x<W&&typeof natureSfx!=="undefined") natureSfx.honk(c.x/W,Math.min(1.8,Math.pow(10/f.Z,1.4)),Math.min(.9,Math.max(.35,40/f.Z)));   /* louder the closer and bigger they are */ }
       ctx.save(); ctx.lineCap="round"; ctx.lineJoin="round";
       for(const bd of f.birds){ bd.ph+=dt*bd.f;
         const X=f.X+f.hx*bd.b+f.px*bd.s, Z=f.Z+f.hz*bd.b+f.pz*bd.s, Y=f.Y+bd.y+Math.sin(f.bob+bd.b)*.04;
