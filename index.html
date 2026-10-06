@@ -58,9 +58,9 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
   .ub::before,.ub:hover::before,.ub:focus-visible::before{transform:none}
   .ub.snd.ask svg{animation:none}
 }
-/* phones: the same column, down in the bottom-right corner where a thumb finds it; icons only */
+/* phones: a row along the bottom, centred, where a thumb finds it; icons only */
 @media (max-width:640px){
-  .util{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  .util{top:auto;right:auto;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));flex-direction:row;gap:30px}
   .ub::before,.ub::after{display:none}
 }
 /* with the column in the corner: mid-size screens keep the open card clear of it; on phones the column steps aside while a card is open,

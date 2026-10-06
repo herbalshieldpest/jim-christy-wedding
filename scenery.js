@@ -6886,7 +6886,9 @@ const viewBird=(function(){
         if(k>12) leave(); } }
     if(s.ph==="away"){ const k=(now-s.ta)/1000; if(k<.25){ x=s.P[0]; y=s.P[1]; } else { if(perchG.style.display!=="none"){ perchG.style.display="none"; flyG.style.display=""; } const u=(k-.25)/1.6; x=s.P[0]-u*u*innerWidth*.9; y=s.P[1]-u*180+Math.sin(u*Math.PI*4)*12; flip=true; rot=-8;
         const fl=Math.sin(now/1000*Math.PI*2*13); wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); if(u>=1){ el.style.display="none"; st=null; nextT=performance.now()+(35+Math.random()*40)*1000; return; } } }
-    if(s.ph==="say"){ const sr=el.getBoundingClientRect(); say.style.left=""; say.style.right=(innerWidth-sr.left+4)+"px"; say.style.top=(sr.top+sr.height*.42-say.offsetHeight/2)+"px"; }
+    if(s.ph==="say"){ const sr=el.getBoundingClientRect(), bb=r||sr;
+      if(innerWidth<=640&&bb.top>innerHeight*.6){ const w=say.offsetWidth; say.style.right=""; say.style.left=Math.max(8,Math.min(innerWidth-w-8,sr.left+sr.width/2-w/2))+"px"; say.style.top=(Math.min(sr.top,bb.top)-say.offsetHeight-8)+"px"; }   /* phone row along the bottom: the card unfurls above the bird, clear of the other buttons */
+      else { say.style.left=""; say.style.right=(innerWidth-sr.left+4)+"px"; say.style.top=(sr.top+sr.height*.42-say.offsetHeight/2)+"px"; } }
     el.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${(flip?-1:1)*s.sc},${s.sc}) rotate(${rot}deg)`; raf=requestAnimationFrame(tick); }
   function loop(){ const now=performance.now(); if(!st&&now>nextT&&nextT>0) start(); setTimeout(loop,1000); }
   D.addEventListener("mouseover",e=>{ if(st&&cur&&st.ph==="say"&&e.target.closest&&e.target.closest(cur.sel)) leave(); });
