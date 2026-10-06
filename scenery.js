@@ -740,14 +740,14 @@ const ambient=(function(){
     drawRain(a*.7,.55,95,[.08,.6]);
     /* the bow is a ring about the same centre as the sun dogs' halo, only much wider: here we see just its left side, standing in the shower over the far ridge
        and climbing out of the top of the frame; a smooth spectrum, red on the outside, with the faint second bow beyond it, its colours reversed */
-    const sp=sun(), cxr=sp.x, cyr=sp.y, R=sdDist()*1.9, bw=R*.055;
+    const sp=sun(), cxr=sp.x, cyr=sp.y, R=sdDist()*1.9, bw=R*.11;
     const cw=Math.ceil(W), ch=Math.ceil(Math.max(10,IY(.56))); if(rbC.width!==cw||rbC.height!==ch){ rbC.width=cw; rbC.height=ch; }
     const x=rbX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch);
     const ring=(r0,r1,stops,al)=>{ const g=x.createRadialGradient(cxr,cyr,r0,cxr,cyr,r1); stops.forEach(([p,c,k])=>g.addColorStop(p,rgb(c,k*al))); x.fillStyle=g; x.beginPath(); x.arc(cxr,cyr,r1,0,6.283); x.arc(cxr,cyr,r0,6.283,0,true); x.fill(); };
     const SPEC=[[0,[150,90,220],0],[.12,[120,90,240],.55],[.26,[70,130,255],.75],[.42,[80,210,120],.8],[.58,[250,236,90],.85],[.72,[255,160,50],.85],[.86,[255,70,50],.8],[1,[255,60,50],0]];
     ring(R-bw*7,R-bw,[[0,[255,250,240],0],[1,[255,250,240],.1]],1);   /* the sky a touch brighter just inside the bow */
     ring(R-bw,R+bw*.15,SPEC,1);
-    ring(R*1.33-bw*.2,R*1.33+bw*1.5,SPEC.map(([p,c,k])=>[1-p,c,k]).reverse(),.3);   /* the second bow */
+    ring(R*1.36-bw*.2,R*1.36+bw*1.4,SPEC.map(([p,c,k])=>[1-p,c,k]).reverse(),.3);   /* the second bow */
     x.globalCompositeOperation="destination-in";
     { const g=x.createLinearGradient(0,0,0,ch); g.addColorStop(0,"rgba(0,0,0,.08)"); g.addColorStop(.45,"rgba(0,0,0,.6)"); g.addColorStop(1,"#000"); x.fillStyle=g; x.fillRect(0,0,cw,ch); }   /* strongest low down where it stands in the rain, fading as it climbs */
     ctx.save(); ridgePath(ctx,SKYL.near,1); ctx.clip(); ctx.globalAlpha=a*.95; ctx.globalCompositeOperation="screen"; ctx.drawImage(rbC,0,0); ctx.restore(); }
@@ -829,12 +829,13 @@ const ambient=(function(){
     return {t:0,dur:75,dir,x0:dir>0? -.07 : 1.07,y0:rnd(.16,.24),sz:rnd(.85,1.05),pal,burn:0,nb:rnd(2,5),ph:rnd(0,6),spin:rnd(0,6),pat:Math.floor(rnd(0,3))}; }
   const blC=document.createElement("canvas"), blX=blC.getContext("2d");
   function drawBalloon(){ const b=balloon; if(!b) return; const u=b.t/b.dur, a=Math.min(1,b.t/2.5,(b.dur-b.t)/3); if(a<=0) return;
-    const sp=sun(), x=W*(b.x0+b.dir*1.14*u), y=H*(b.y0-u*.04)+Math.sin(b.t*.35+b.ph)*H*.005, R=Math.min(W,H)*.046*b.sz;
+    const sp=sun(), x=W*(b.x0+b.dir*1.14*u), y=H*(b.y0-u*.04)+Math.sin(b.t*.35+b.ph)*H*.005, R=Math.min(W,H)*.042*b.sz;
     const dt0=Math.min(.1,t-(b.lt??t)); b.lt=t; b.nb-=dt0; if(b.nb<=0){ b.nb=rnd(4,9); b.burn=1; } b.burn=Math.max(0,b.burn-dt0/1.8); b.spin+=dt0*.06*b.dir;
     const S=2, cw=Math.ceil(R*2.6*S), ch=Math.ceil(R*4.2*S); if(blC.width!==cw||blC.height!==ch){ blC.width=cw; blC.height=ch; }
     const c=blX; c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cw,ch); c.setTransform(S,0,0,S,cw/2,R*1.45*S);   /* drawn at twice the size, origin at the envelope's centre */
     /* the envelope's profile: radius at each height v (-1 at the crown, +1 at the mouth) */
-    const top=-R*1.32, bot=R*1.5, prof=v=>{ const yy=lerp(top,bot,(v+1)/2); if(yy<-R*.15){ const k=(yy+R*.15)/(R*1.17); return R*Math.sqrt(Math.max(0,1-k*k)); } const k=(yy+R*.15)/(bot+R*.15); return R*(1-.82*Math.pow(k,1.35))*(1-.04*k); };
+    const top=-R*1.02, bot=R*1.32, prof=v=>{ const yy=lerp(top,bot,(v+1)/2); if(yy<-R*.12){ const k=(yy+R*.12)/(R*.9); return R*Math.pow(Math.max(0,1-k*k),.55); }   /* a full, slightly flattened crown */
+      const k=(yy+R*.12)/(bot+R*.12); return R*(1-.78*Math.pow(k,1.7)); };   /* broad shoulders, then a smooth taper to the mouth */
     const Y=v=>lerp(top,bot,(v+1)/2), NV=28, NG=16;
     const lsx=Math.sign(sp.x-x)||1, P=b.pal, pat=b.pat;
     const gcol=k=>[246,241,228];   /* an ivory envelope, to carry the Appeal to Heaven pine */
@@ -881,8 +882,12 @@ const ambient=(function(){
     { const bx=-R*.14, by=bot+R*.42, bw=R*.28, bh=R*.22, g=c.createLinearGradient(bx,0,bx+bw,0); g.addColorStop(0,lsx<0? "rgb(150,108,66)" : "rgb(70,48,30)"); g.addColorStop(1,lsx<0? "rgb(70,48,30)" : "rgb(150,108,66)"); c.fillStyle=g; c.beginPath(); c.moveTo(bx,by); c.lineTo(bx+bw,by); c.lineTo(bx+bw*.93,by+bh); c.lineTo(bx+bw*.07,by+bh); c.closePath(); c.fill();
       c.fillStyle="rgba(190,150,100,.9)"; c.fillRect(bx-R*.01,by-R*.02,bw+R*.02,R*.035); c.strokeStyle="rgba(40,26,16,.35)"; c.lineWidth=R*.008; c.beginPath(); for(let i=1;i<4;i++){ c.moveTo(bx+bw*.05,by+bh*i/4); c.lineTo(bx+bw*.95,by+bh*i/4); } c.stroke(); }   /* the wicker basket */
     /* far off in the evening air: haze softens and warms it */
-    c.setTransform(1,0,0,1,0,0); c.globalCompositeOperation="source-atop"; c.fillStyle="rgba(214,170,128,.24)"; c.fillRect(0,0,cw,ch); c.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=a; if("filter" in ctx) ctx.filter="blur(.35px)"; ctx.drawImage(blC,x-cw/S/2,y-R*1.45,cw/S,ch/S); ctx.filter="none"; ctx.restore(); }
+    if(!b.bg||(b.bgT=(b.bgT||0)-1)<=0){ b.bgT=20; const ip=toImg(x,y); b.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,160,120]; }
+    c.setTransform(1,0,0,1,0,0); c.globalCompositeOperation="source-atop";
+    c.fillStyle="rgba(255,168,92,.14)"; c.fillRect(0,0,cw,ch);   /* the same warm evening cast as the photo */
+    c.fillStyle=rgb(b.bg,.34); c.fillRect(0,0,cw,ch);   /* and the air between: it takes on the colour of the sky around it */
+    c.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=a*.97; if("filter" in ctx) ctx.filter="blur(.6px) saturate(.85) contrast(.92)"; ctx.drawImage(blC,x-cw/S/2,y-R*1.45,cw/S,ch/S); ctx.filter="none"; ctx.restore(); }
   /* a sunburst: the clouds part, the sun blazes out, and long beams fan down through the gaps across the valley, then it closes up again */
   const sbC=document.createElement("canvas"), sbX=sbC.getContext("2d");
   function drawSunburst(){ if(sbA<=.01) return; const sp=sun(), L=Math.hypot(W,H)*1.2, a=sbA;
@@ -912,13 +917,13 @@ const ambient=(function(){
       mk([[0,"rgba(180,255,140,0)"],[.015,"rgba(220,255,180,1)"],[.07,"rgba(110,255,150,.9)"],[.24,"rgba(60,230,140,.55)"],[.42,"rgba(150,170,150,.32)"],[.6,"rgba(240,60,120,.34)"],[.8,"rgba(200,40,140,.18)"],[1,"rgba(150,40,160,0)"]]),
       mk([[0,"rgba(180,255,140,0)"],[.02,"rgba(200,255,170,.95)"],[.08,"rgba(100,255,150,.85)"],[.26,"rgba(60,220,150,.5)"],[.46,"rgba(220,70,140,.38)"],[.7,"rgba(190,50,160,.2)"],[1,"rgba(140,50,180,0)"]],true)]; })();
   const AUR=[  /* hem path across the sky (x as a fraction of the width, y as a fraction of the way down to the ridge), how tall its rays stand, brightness, fold count */
-    {P:[[.36,.97],[.52,.46],[.74,.8],[1.04,.34]],h:.3,amp:1.25,folds:5,ph:0,sp:1},
-    {P:[[.5,1],[.64,.82],[.84,.92],[1.06,.7]],h:.18,amp:.95,folds:7,ph:2.3,sp:.8},
-    {P:[[.58,.6],[.7,.3],[.86,.4],[1.05,.12]],h:.2,amp:.75,folds:4,ph:4.1,sp:1.15}];
+    {P:[[.34,1.35],[.5,.62],[.72,1.12],[1.04,.5]],h:.32,amp:1.25,folds:5,ph:0,sp:1},
+    {P:[[.48,1.4],[.64,1.18],[.84,1.3],[1.06,1.05]],h:.3,amp:.95,folds:7,ph:2.3,sp:.8},
+    {P:[[.58,.7],[.7,.34],[.86,.46],[1.05,.16]],h:.22,amp:.75,folds:4,ph:4.1,sp:1.15}];
   AUR.forEach(R=>{ R.rnd=Array.from({length:900},()=>[Math.random(),Math.random(),Math.random()]); });
-  function drawAurora(a){ if(a<=.01) return; const q=2, cw=Math.ceil(W/q), ch=Math.ceil(IY(.5)/q); if(auC.width!==cw||auC.height!==ch){ auC.width=cw; auC.height=ch; }
+  function drawAurora(a){ if(a<=.01) return; const q=2, cw=Math.ceil(W/q), ch=Math.ceil(IY(.62)/q); if(auC.width!==cw||auC.height!==ch){ auC.width=cw; auC.height=ch; }
     const x=auX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.globalAlpha=1; x.clearRect(0,0,cw,ch); x.globalCompositeOperation="lighter"; x.setTransform(1/q,0,0,1/q,0,0);
-    const hz=ridgeY(SKYL.far,.75), mob=MOBILE(), T=t;
+    const hz=IY(.4), mob=MOBILE(), T=t;   /* placed against the sky itself, not the ridgeline, so the mountains simply cut across the bottom of the curtains */
     for(const R of AUR){ const P=R.P.map(([px,py],i)=>[px*W+Math.sin(T*.05*R.sp+i*1.7+R.ph)*W*.025, py*hz+Math.sin(T*.06*R.sp+i*2.3+R.ph)*hz*.05]);
       const base=u=>{ const v=1-u; return [v*v*v*P[0][0]+3*v*v*u*P[1][0]+3*v*u*u*P[2][0]+u*u*u*P[3][0], v*v*v*P[0][1]+3*v*v*u*P[1][1]+3*v*u*u*P[2][1]+u*u*u*P[3][1]]; };
       const N=mob? 600 : 1300, len=W*.75, foldA=len/R.folds*.07;
