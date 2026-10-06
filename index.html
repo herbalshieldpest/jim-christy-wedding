@@ -29,6 +29,7 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 .line{margin:calc(var(--size)*.228) 0 0;position:relative;top:calc(var(--size)*-.210);left:calc(var(--size)*1.073);font:300 calc(var(--size)*.1424)/1.5 var(--caps);letter-spacing:.06em;color:var(--ink-soft);text-shadow:0 1px 10px rgba(0,0,0,.4)}
 .snd{position:fixed;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:3;font:600 13px/1 var(--caps);letter-spacing:.24em;text-transform:uppercase;color:var(--ink);background:rgba(24,16,8,.58);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:3px;border-radius:2px;padding:9px 13px 8px calc(13px + .24em);box-shadow:0 10px 30px -12px rgba(0,0,0,.6);text-shadow:0 1px 6px rgba(0,0,0,.4);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);cursor:pointer;transition:background .2s,border-color .2s}.snd:hover{background:rgba(24,16,8,.72);border-color:rgba(255,250,242,.6)}
 .snd:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.snd{box-sizing:border-box;width:40px;height:40px;padding:0;display:grid;place-items:center;letter-spacing:0}.snd svg{width:21px;height:21px;display:block;filter:drop-shadow(0 1px 4px rgba(0,0,0,.4))}.snd.ask svg{animation:sndAsk 2.6s ease-in-out infinite}@keyframes sndAsk{0%,100%{opacity:1}50%{opacity:.4}}@media (prefers-reduced-motion:reduce){.snd.ask svg{animation:none}}
 /* phones: the fine lines would shrink to a few pixels with the rest of the lockup, so here they stack centred at a readable size */
 @media (max-width:640px){
   .lockup{--size:min(11.4vw,168px);--x:0;--y:-.04;top:42px}
@@ -54,7 +55,7 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 </head>
 <body>
 <div class="veil" aria-hidden="true"></div>
-<button type="button" class="snd" id="snd" data-sound-toggle>Turn Sound On</button>
+<button type="button" class="snd" id="snd" data-sound-toggle aria-label="Turn sound on" title="Turn sound on"></button>
 <main>
   <div class="lockup">
     <p class="kicker">The wedding of</p>
@@ -79,8 +80,9 @@ h1 .amp{font-family:"Pinyon Script","Mrs Saint Delafield",cursive;font-size:.42e
 <script src="scenery.js"></script>
 <script>
 const b=document.getElementById("snd");
-/* the label says what a press will do, based on whether sound is actually playing right now */
-const lab=()=>{ b.textContent=natureSfx.playing?"Turn Sound Off":natureSfx.blocked?"Tap for Sound":"Turn Sound On"; };   /* browsers hold sound back until the first tap; say so rather than look switched off */
+/* a speaker: waves when sound is playing, crossed out when it isn't; it pulses gently while the browser is holding sound back for a first tap */
+const SPK='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 9.4h3.4l5-4.1v13.4l-5-4.1H3.5z" fill="currentColor"/>', SPK_ON=SPK+'<path d="M15.3 9.2a4 4 0 0 1 0 5.6M17.9 6.6a7.7 7.7 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>', SPK_OFF=SPK+'<path d="M15.6 9.6l4.8 4.8M20.4 9.6l-4.8 4.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+let sndSt=null; const lab=()=>{ const s=natureSfx.playing?"on":natureSfx.blocked?"ask":"off"; if(s===sndSt) return; sndSt=s; b.innerHTML=s==="on"?SPK_ON:SPK_OFF; const l=s==="on"?"Turn sound off":s==="ask"?"Tap for sound":"Turn sound on"; b.setAttribute("aria-label",l); b.title=l; b.classList.toggle("ask",s==="ask"); };
 b.onclick=()=>{ if(natureSfx.playing) natureSfx.set(false); else natureSfx.set(true); setTimeout(lab,150); }; lab(); setInterval(lab,600);
 </script>
 
