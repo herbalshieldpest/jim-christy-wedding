@@ -309,10 +309,21 @@ var natureSfx=(function(){
   /* a press on the page's own sound button is left to that button, so it can't start the sound and then have the same press turn it off */
   const GEST=["pointerdown","pointerup","click","keydown","touchstart","touchend"];   /* phones (iPhones especially) only unlock sound on the end of a tap */
   const skip=e=>!!(e&&e.target&&e.target.closest&&e.target.closest("[data-sound-toggle]"));
-  function arm(){ if(armed) return; armed=true; const go=e=>{ if(skip(e)) return; GEST.forEach(ev=>document.removeEventListener(ev,go,true)); if(wanted()&&init()) apply(); else armed=false; };
+  /* iPhones: Web Audio is silenced by the ring/silent switch and only wakes inside a tap. So, inside every tap: ask for the
+     "playback" audio session (iOS 17+), keep a silent looping <audio> element going (older iOS: that flips the phone into
+     media playback so the switch no longer mutes us), play one silent sample and resume the context. */
+  let tag=null;
+  function unlock(){ try{ if(navigator.audioSession&&navigator.audioSession.type!=="playback") navigator.audioSession.type="playback"; }catch(e){}
+    try{ if(!tag){ const sr=8000, n=800, b=new ArrayBuffer(44+n), v=new DataView(b), w=(o,t)=>{ for(let i=0;i<t.length;i++) v.setUint8(o+i,t.charCodeAt(i)); };
+        w(0,"RIFF"); v.setUint32(4,36+n,true); w(8,"WAVEfmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,sr,true); v.setUint32(28,sr,true); v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,"data"); v.setUint32(40,n,true); for(let i=0;i<n;i++) v.setUint8(44+i,128);
+        tag=document.createElement("audio"); tag.setAttribute("playsinline",""); tag.setAttribute("x-webkit-airplay","deny"); tag.preload="auto"; tag.loop=true; tag.src=URL.createObjectURL(new Blob([b],{type:"audio/wav"})); }
+      if(tag.paused&&wanted()) { const pr=tag.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){}
+    if(ctx){ try{ const s=ctx.createBufferSource(); s.buffer=ctx.createBuffer(1,1,22050); s.connect(ctx.destination); s.start(0); }catch(e){} if(ctx.state!=="running") ctx.resume().then(()=>{ if(ctx.state==="running") apply(); }).catch(()=>{}); } }
+  const tapEnd={touchend:1,click:1,pointerup:1,keydown:1};
+  function arm(){ if(armed) return; armed=true; const go=e=>{ if(skip(e)) return; if(!tapEnd[e.type]) return; GEST.forEach(ev=>document.removeEventListener(ev,go,true)); if(wanted()&&init()){ unlock(); apply(); } else armed=false; };
     GEST.forEach(ev=>document.addEventListener(ev,go,true)); }
-  document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
-  GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
+  document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); try{ if(tag&&!wanted()) tag.pause(); }catch(e){} });
+  GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&(ctx.state!=="running"||((!tag||tag.paused)&&tapEnd[e.type]))) { if(tapEnd[e.type]) unlock(); else ctx.resume().then(apply).catch(()=>{}); } },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
   /* one-shot songs for an animal that has been called: the same voices as the chorus, but right now and nearer */
   function sing(kind,pan){ if(!ctx||!live) return; const out=voice(master,pan||0); let at=ctx.currentTime+.05;
@@ -331,7 +342,7 @@ var natureSfx=(function(){
     else if(kind==="oriole"){ for(const [f0,f1,d] of [[1800,2300,.18],[2300,2000,.14],[2000,2600,.2],[2600,2200,.12],[1900,2400,.26]]){ tone(at,f0,f1,d,.05,out); at+=d+.07; } }   /* the rich, whistled oriole song */
     else if(kind==="waxwing"){ for(let i=0;i<7;i++){ tone(at,R(7200,7800),R(6800,7400),.16,.018,out); at+=R(.22,.4); } }   /* thin, high sreee notes */
     else if(kind==="tanager"){ for(let i=0;i<5;i++){ tone(at,R(2400,3000),R(2200,2800),.2,.035,out); at+=.26; } tone(at+.3,2200,2000,.08,.04,out); tone(at+.42,2400,2200,.12,.04,out); } }   /* a hoarse robin-like carol, then chick-burr */
-  return { sing, get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, thunder, peck, paw, scratch, gobble, whistle, raven, falcon, stoop, heron, utv, bobwhite, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
+  return { sing, get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()){ unlock(); apply(); } else arm(); } else { apply(); try{ tag&&tag.pause(); }catch(e){} } }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, thunder, peck, paw, scratch, gobble, whistle, raven, falcon, stoop, heron, utv, bobwhite, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
