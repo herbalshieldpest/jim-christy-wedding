@@ -3104,7 +3104,7 @@ const ambient=(function(){
     if(venB!=null){ const u=(t-venB)/1.4; if(u>=1) venB=null; else starBurst(ve[0],ve[1],Math.min(1,(d-.18)/.15)*Math.sin(Math.PI*u)**1.5,16); }
     /* shooting stars: once the stars are out, every so often a meteor scratches a fine, fast line across the sky, brightest at its head, and fades;
        now and then a brighter one that leaves a lingering, flickering train. They all fall from the same part of the sky, like a shower */
-    { const vis=Math.max(0,Math.min(1,(d-.26)/.2))*(dark?1:.9);
+    { const vis=Math.max(dark? .85 : 0,Math.min(1,(d-.1)/.14));   /* from the first deepening of the dusk (under a minute in), and right away on a dark screen */
       if(vis>0&&t>metNext&&meteors.length<2){ metNext=t+rnd(9,28)*(meteors.length?1.5:1); const big=Math.random()<.18, ang=rnd(.42,.78), L=(big? rnd(.26,.4) : rnd(.12,.24))*W,
           x0=rnd(.08,.94)*W, y0=rnd(.02,.2)*hz, dir=x0<sp.x? -1 : 1;
         meteors.push({x0,y0,vx:Math.cos(ang)*dir,vy:Math.sin(Math.abs(ang)),L,dur:big? rnd(.9,1.3) : rnd(.35,.7),t0:t,big,w:big? rnd(2.1,2.8) : rnd(1.2,1.7),tint:pick([[255,252,244],[236,255,240],[255,246,226],[230,240,255]])}); }
