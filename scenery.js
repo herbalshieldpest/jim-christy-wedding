@@ -1230,19 +1230,21 @@ const ambient=(function(){
       const ch=legChain(top[0],top[1],z,hind?3.0:2.2,segs);
       parts.push({p:ch.slice(0,2),c:far(z)?coatFar:coat},{p:ch.slice(1),c:far(z)?dkFar:dk});
     }
-    parts.push({p:[B(-10,12.6,0,3.8),B(-5.5,12.3,0,4.4),B(0,12.2,0,4.5),B(5,12.8,0,4.6),B(8.5,13.6,0,4.0)],c:coat,sh});
+    parts.push({p:[B(-10,12.9,0,3.7),B(-5.5,12.8,0,3.8),B(-.5,12.6,0,3.9),B(4.6,12.6,0,4.7),B(8.4,13.4,0,4.3)],c:coat,sh});   /* a slim waist, a deep chest */
+    parts.push({p:[B(-9,14.4,0,2.4),B(-3,14.9,0,2.8),B(3,15.1,0,2.8),B(8,15.3,0,2.4)],c:rgb(mixv(mulv(P.coat,.8),P.dark,.12),.45),bias:-.15});   /* the darker saddle along the back */
+    parts.push({p:[B(-7,10.4,0,2.3),B(-1,10.1,0,2.8),B(5,10.6,0,2.6)],c:P.flank? rgb(P.flank,.6) : rgb(mixv(P.coat,P.white,.5),.5),bias:-.12});   /* paler, creamy along the belly (on a gray fox, the rusty flanks) */
     /* neck and head: down to the grass to sniff, up and snapping around when it looks */
     const hd=f.head, hc0=T(lerp(13.6,15.2,Math.max(0,hd))-Math.min(0,hd)*-.5, lerp(18.6,5.2,Math.max(0,hd))-Math.min(0,hd)*3), hc=[hc0[0],hc0[1],0];
     const nb=B(8.6,14.4,0,3.4), nm=[(nb[0]+hc[0])/2-.4,(nb[1]+hc[1])/2+.3,0,2.8];
     parts.push({p:[nb,nm,[hc[0]-.6,hc[1]-.3,0,2.4]],c:coat});
-    parts.push({p:[B(9.6,11.4,0,2.1),[nm[0]+.9,nm[1]-1.6,0,1.7]],c:wh,bias:-.6});
+    parts.push({p:[B(9.6,11.4,0,1.9),[nm[0]+.9,nm[1]-1.6,0,1.5]],c:rgb(mixv(P.white,P.coat,.18),.85),bias:-.6});
     const sn=f.state==="sniff"? Math.sin(f.sniff*14)*.25 : 0, hp=hd*.9+.12+sn*.2, hy=f.turn;
     const Hh=(u,v,w,r)=>{ if(f.cy&&u>1.5) u=1.5+(u-1.5)*1.22; const t=headPt(hc,hp,hy,u,v,w); return [t[0],t[1],t[2],r]; };   /* a longer, narrower muzzle on the coyote */
     parts.push({p:[Hh(-.2,0,0,3.0),Hh(1.2,.1,0,2.8),Hh(2.7,-.5,0,1.9),Hh(4.7,-.9,0,1.15),Hh(5.8+sn,-1.05,0,.62)],c:coat});
     parts.push({p:[Hh(.5,-1.6,0,1.9),Hh(2.4,-1.5,0,1.35),Hh(4.4,-1.35,0,.75)],c:wh,bias:-.2});
     parts.push({p:[Hh(6.0+sn,-1.0,0,.55)],c:dk,bias:-.5});
     for(const sd of [-1,1]){
-      parts.push({p:[Hh(2.1,.85,1.55*sd,.42)],c:dk,bias:-.6});
+      parts.push({p:[Hh(2.1,.85,1.55*sd,.46)],c:rgb(mixv(P.coat,[220,160,40],.5)),bias:-.6}); parts.push({p:[Hh(2.25,.85,1.62*sd,.24)],c:"rgba(10,8,6,.95)",bias:-.65}); parts.push({p:[Hh(2.6,.4,1.45*sd,.18),Hh(3.6,-.45,1.15*sd,.12)],c:rgb(mulv(P.dark,1.1)),bias:-.62});   /* amber eyes and the dark tear line */
       parts.push({poly:true,p:earPts(Hh,sd,[-.3,1.9,1.5],[-.15,.9,.35],[.8,.05,.5],f.cy?5.6:4.8,f.cy?2.0:1.7,[[0,1],[.45,.62],[.8,.25]]),c:P.ear?rgb(far(sd)?mulv(P.ear,.8):P.ear):(far(sd)?dkFar:dk)});
     }
     /* the brush: a wave runs down it, streaming out behind at a run, swaying low when it stands */
@@ -1251,9 +1253,9 @@ const ambient=(function(){
     for(let i=0;i<10;i++){
       const va=base+i*(running?.015:.07)+Av*Math.sin(t*om-i*.55)-(running?bob*.03*i:0), la=Al*Math.sin(t*om*.8-i*.5+1);
       tp=[tp[0]-Math.cos(va)*Math.cos(la)*1.65, tp[1]-Math.sin(va)*1.65, tp[2]+Math.cos(va)*Math.sin(la)*1.65];
-      tail.push([...tp,[2.3,3.0,3.4,3.6,3.6,3.3,2.9,2.3,1.6,.7][i]]);
+      tail.push([...tp,[2.5,3.3,3.9,4.2,4.2,3.8,3.2,2.4,1.4,.5][i]]);
     }
-    parts.push({p:tail.slice(0,9),c:coat,sh},{p:tail.slice(8),c:P.tip?rgb(P.tip):wh,bias:-.05});
+    parts.push({p:tail.slice(0,9),c:coat,sh},{p:tail.slice(1,8).map(q=>[q[0],q[1]+q[3]*.38,q[2],q[3]*.55]),c:rgb(mixv(P.coat,P.dark,.4),.5),bias:-.08},{p:tail.slice(8).map((q,i)=>[q[0],q[1],q[2],q[3]*(i? .8 : .92)]),c:P.tip?rgb(P.tip):rgb(mixv(P.white,P.coat,.2),.85),bias:-.05});   /* black guard hairs along the top of the brush */
     return parts;
   }
   function drawFox(dt,dark){
@@ -1263,22 +1265,10 @@ const ambient=(function(){
     if(f.yaw==null) f.yaw=0; if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(running&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*9); } idleTurn(f,dt,running); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
     f.ct=(f.ct||0)-dt;
     if(f.ct<=0||!f.pal){ f.ct=1.5; const ip=toImg(s.x,s.y), g=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),ip[1]+.01))||[120,110,60];
-      const lit=dark?.45:.6; f.pal={coat:mixv(mulv([186,92,42],lit),mulv(g,.55),.25), dark:mulv([46,32,22],lit), white:mixv(mulv([226,218,202],lit),mulv(g,.6),.2), shadow:mulv(g,.42), grassA:mulv(g,.85), grassB:mixv(g,[230,200,120],.25)}; }
-    const P=f.pal, R=.6, w=Math.ceil(100*k*R), h=Math.ceil(50*k*R);
-    if(fsp.width<w||fsp.height<h){ fsp.width=Math.max(fsp.width,w); fsp.height=Math.max(fsp.height,h); }
-    const x=fsx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,fsp.width,fsp.height);
-    const ax=w*.5, ay=h*.9; x.translate(ax,ay); x.scale(k*R,k*R);
-    x.save(); const sg=x.createRadialGradient(0,0,0,0,0,22); sg.addColorStop(0,rgb(P.shadow,.5)); sg.addColorStop(1,rgb(P.shadow,0)); x.fillStyle=sg; x.scale(1,.16); x.beginPath(); x.arc(0,4,22,0,6.283); x.fill(); x.restore();
-    rigDraw(x,foxParts(f,P,running||f.turning),rigView(f.yaw,viewPitch(f.Dw)),1);
-    x.setTransform(1,0,0,1,0,0); rigLight(x,ax,ay-26*k*R,ay,30*k*R,sun().x-s.x,0);
-    x.setTransform(1,0,0,1,0,0); x.translate(ax,ay); x.scale(k*R,k*R); x.lineCap="round";
+      const lit=dark?.45:.6; f.pal={coat:mixv(mulv([196,96,40],lit),mulv(g,.55),.18), dark:mulv([40,28,20],lit), white:mixv(mulv([232,224,206],lit),mulv(g,.6),.15), shadow:mulv(g,.42), grassA:mulv(g,.85), grassB:mixv(g,[230,200,120],.25)}; }
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-22,22),h:rnd(3,7),lean:rnd(-.5,.5),c:Math.random()}));
-    for(const b of f.blades){ const s2=Math.sin(t*1.4+b.ox)*.08; x.strokeStyle=rgb(b.c<.4?P.grassA:P.grassB,.75); x.lineWidth=.9; x.beginPath(); x.moveTo(b.ox,2.5); x.quadraticCurveTo(b.ox+(b.lean+s2)*b.h*.5,-b.h*.5+2,b.ox+(b.lean+s2)*b.h,-b.h+2.5); x.stroke(); }
-    x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
-    if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,w,h); }
-    else { const tn2=tint(); if(tn2.a>0){ x.globalAlpha=tn2.a; x.fillStyle=tn2.c; x.fillRect(0,0,w,h); x.globalAlpha=1; } }
-    x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=f.alpha; ctx.drawImage(fsp,0,0,w,h,s.x-ax/R,s.y-ay/R,w/R,h/R); ctx.restore();
+    f.fur=f.fur||{len:.85,nap:.3};
+    critterBlit(null,null,f,s,k,f.pal,()=>foxParts(f,f.pal,running||f.turning),f.yaw,50,100,22,f.blades,f.alpha);
   }
   /* ---- a gray fox: grizzled silver back, rusty sides and neck, white throat, black-tipped tail; trots in, sniffs and stares, then slips off ---- */
   let coyote=null, nextCoyote=200;
@@ -1294,9 +1284,9 @@ const ambient=(function(){
     if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(running&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*6); } idleTurn(f,dt,running); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
     f.ct=(f.ct||0)-dt;
     if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), g=G.g, lit=dark?.45:.6;
-      f.pal={...G, coat:mixv(mulv([128,126,122],lit),mulv(g,.55),.15), dark:mulv([150,92,52],lit), white:mixv(mulv([222,216,204],lit),mulv(g,.6),.15), ear:mulv([160,100,58],lit), tip:mulv([26,22,20],lit)}; }
+      f.pal={...G, flank:mulv([164,98,52],lit), coat:mixv(mulv([128,126,122],lit),mulv(g,.55),.15), dark:mulv([150,92,52],lit), white:mixv(mulv([222,216,204],lit),mulv(g,.6),.15), ear:mulv([160,100,58],lit), tip:mulv([26,22,20],lit)}; }
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-24,24),h:rnd(3,7),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>foxParts(f,f.pal,running||f.turning),f.yaw,52,104,22,f.blades,f.alpha);
+    f.fur=f.fur||{len:.85,nap:.3}; critterBlit(null,null,f,s,k,f.pal,()=>foxParts(f,f.pal,running||f.turning),f.yaw,52,104,22,f.blades,f.alpha);
   }
   /* ---- a coyote: rangy and long-legged, tawny grey with a long narrow muzzle and big ears, tail hung low; lopes in, stops to stare, then trots off ---- */
   let coy2=null, nextCoy2=140;
@@ -1315,11 +1305,36 @@ const ambient=(function(){
     if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), g=G.g, lit=dark?.45:.6;
       f.pal={...G, coat:mixv(mulv([156,134,104],lit),mulv(g,.55),.18), dark:mulv([128,104,78],lit), white:mixv(mulv([216,204,182],lit),mulv(g,.6),.18), ear:mulv([170,128,88],lit), tip:mulv([40,32,26],lit)}; }
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-26,26),h:rnd(3,7),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>foxParts(f,f.pal,running||f.turning),f.yaw,62,110,24,f.blades,f.alpha);
+    f.fur=f.fur||{len:.9,nap:.3}; critterBlit(null,null,f,s,k,f.pal,()=>foxParts(f,f.pal,running||f.turning),f.yaw,62,110,24,f.blades,f.alpha);
   }
   /* ---- shared: paint a rigged ground animal into a small sprite and set it in the photo's light ---- */
+  /* fur, painted over a finished sprite: the silhouette broken into hairs that lie back and down along the body, a nap of fine hairs over the coat, and
+     (for a black bear) the glossy sheen of long guard hairs. Hairs are placed by a fixed hash of where they sit, so the coat doesn't crawl from frame to frame */
+  const hairPat={}; function hairPattern(dir){ if(hairPat[dir]) return hairPat[dir]; const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d"); x.lineCap="round";
+    let sd=7; const R=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
+    for(let i=0;i<260;i++){ const px=R()*48, py=R()*48, l=2.4+R()*3.2, a=(dir>0? .35 : Math.PI-.35)+(R()-.5)*.5, lt=R()<.5;
+      x.strokeStyle=lt? `rgba(255,236,210,${(.10+R()*.12).toFixed(2)})` : `rgba(0,0,0,${(.12+R()*.16).toFixed(2)})`; x.lineWidth=.55+R()*.4;
+      for(const [ox,oy] of [[0,0],[48,0],[-48,0],[0,48],[0,-48]]){ x.beginPath(); x.moveTo(px+ox,py+oy); x.lineTo(px+ox+Math.cos(a)*l,py+oy+Math.sin(a)*l); x.stroke(); } }
+    return hairPat[dir]=c; }
+  function furPass(x,w,h,L,o){ if(L<.7||w<4||h<4) return; let id; try{ id=x.getImageData(0,0,w,h); }catch(e){ return; }
+    const d=id.data, A=(i,j)=>d[(j*w+i)*4+3], hash=(i,j)=>{ let v=(i*374761393+j*668265263)|0; v=(v^(v>>>13))*1274126177|0; return ((v^(v>>>16))>>>0)/4294967296; };
+    const back=o.back||0, step=Math.max(1,Math.round(L*.3));
+    x.save(); x.lineCap="round";
+    for(let j=1;j<h-1;j++) for(let i=1+(j%step);i<w-1;i+=step){ const a=A(i,j); if(a<150) continue;
+      const gx=A(i+1,j)-A(i-1,j), gy=A(i,j+1)-A(i,j-1), g=Math.hypot(gx,gy); if(g<70) continue;
+      const nx=-gx/g, ny=-gy/g, r=hash(i,j); if(ny>.75&&j>h*.82) continue;   /* not under the feet */
+      const si=Math.max(0,Math.min(w-1,Math.round(i-nx*L*.7))), sj=Math.max(0,Math.min(h-1,Math.round(j-ny*L*.7))), k=(sj*w+si)*4;   /* the coat's colour from just inside the edge */
+      if(d[k+3]<120) continue;
+      for(let hh=0;hh<2;hh++){ const rr=hash(i+hh*17,j+hh*31), len=L*(.45+rr*.6)*(ny<-.3? 1.1 : .85), ang=(rr-.5)*.7, cs=Math.cos(ang), sn=Math.sin(ang);
+        let dx=nx*.7+back*.6, dy=ny*.7+.4; [dx,dy]=[dx*cs-dy*sn,dx*sn+dy*cs]; const dl=Math.hypot(dx,dy)||1;
+        x.strokeStyle=`rgba(${d[k]},${d[k+1]},${d[k+2]},${(.38+rr*.3).toFixed(2)})`; x.lineWidth=Math.max(.45,L*(.07+rr*.06));
+        x.beginPath(); x.moveTo(i-nx*L*.3,j-ny*L*.3); x.quadraticCurveTo(i+dx/dl*len*.5,j+dy/dl*len*.5-L*.06,i+dx/dl*len,j+dy/dl*len); x.stroke(); } }   /* fine hairs breaking the outline */
+    const pat=x.createPattern(hairPattern(back>=0?1:-1),"repeat"); if(pat){ try{ pat.setTransform(new DOMMatrix().scaleSelf(L/3.2,L/3.2)); }catch(e){}
+      x.globalCompositeOperation="source-atop"; x.globalAlpha=o.nap??.55; x.fillStyle=pat; x.fillRect(0,0,w,h); x.globalAlpha=1; }   /* the nap of the coat */
+    if(o.sheen){ x.globalCompositeOperation="source-atop"; const g=x.createLinearGradient(0,h*.15,0,h*.6); g.addColorStop(0,`rgba(170,180,200,${o.sheen})`); g.addColorStop(1,"rgba(170,180,200,0)"); x.fillStyle=g; x.fillRect(0,0,w,h); }   /* light sliding off long black guard hairs */
+    x.restore(); }
   function critterBlit(cv,cx,f,s,k,P,parts,yaw,hgt,wid,shadowR,blades,alpha,haze){
-    const R=.6, w=Math.ceil(wid*k*R), h=Math.ceil(hgt*k*R), now=performance.now();
+    const R=f.fur? 1.15 : .6, w=Math.ceil(wid*k*R), h=Math.ceil(hgt*k*R), now=performance.now();
     if(!f.cv){ f.cv=document.createElement("canvas"); f.cx=f.cv.getContext("2d"); }
     if(f.rt && now-f.rt<64 && f.rw===w){ const ax0=w*.5, ay0=h*.88; ctx.save(); ctx.globalAlpha=alpha; if(f.air&&f.air.blur) ctx.filter=`blur(${f.air.blur}px)`; ctx.drawImage(f.cv,0,0,w,h,s.x-ax0/R,s.y-ay0/R,w/R,h/R); ctx.restore(); return; }
     f.rt=now; f.rw=w; cv=f.cv; cx=f.cx; if(typeof parts==="function") parts=parts();
@@ -1329,8 +1344,9 @@ const ambient=(function(){
     x.save(); const sg=x.createRadialGradient(0,0,0,0,0,shadowR); sg.addColorStop(0,rgb(P.shadow,.5)); sg.addColorStop(1,rgb(P.shadow,0)); x.fillStyle=sg; x.scale(1,.18); x.beginPath(); x.arc(0,3,shadowR,0,6.283); x.fill(); x.restore();
     rigDraw(x,parts,rigView(yaw,viewPitch(f.Dw)),1);
     x.setTransform(1,0,0,1,0,0); rigLight(x,ax,ay-hgt*.8*k*R,ay,wid*.4*k*R,sun().x-s.x,haze||0);
+    if(f.fur){ x.setTransform(1,0,0,1,0,0); furPass(x,w,h,f.fur.len*k*R,{back:-Math.cos(yaw)*.9,nap:f.fur.nap,sheen:f.fur.sheen}); }
     if(blades){ x.translate(ax,ay); x.scale(k*R,k*R); x.lineCap="round";
-      for(const b of blades){ const s2=Math.sin(t*1.4+b.ox)*.08; x.strokeStyle=rgb(b.c<.4?P.grassA:P.grassB,.75); x.lineWidth=.9; x.beginPath(); x.moveTo(b.ox,2.5); x.quadraticCurveTo(b.ox+(b.lean+s2)*b.h*.5,-b.h*.5+2,b.ox+(b.lean+s2)*b.h,-b.h+2.5); x.stroke(); }
+      for(const b of blades){ const s2=Math.sin(t*1.4+b.ox)*.08; x.strokeStyle=rgb(mulv(b.c<.4?P.grassA:P.grassB,.82),.42); x.lineWidth=.7; x.beginPath(); x.moveTo(b.ox,2.5); x.quadraticCurveTo(b.ox+(b.lean+s2)*b.h*.5,-b.h*.5+2,b.ox+(b.lean+s2)*b.h,-b.h+2.5); x.stroke(); }
       x.setTransform(1,0,0,1,0,0); }
     x.globalCompositeOperation="source-atop";
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,w,h); }
@@ -1505,7 +1521,9 @@ const ambient=(function(){
       const e=ch[2]; parts.push({p:[[e[0]-.6,e[1]+.4,z,2.3],[e[0]+1.4,e[1]-.2,z,1.9]],c:far(z)?furFar:fur,bias:-.01});
       if(!hind) for(const cz of [-.9,0,.9]) parts.push({p:[[e[0]+2.6,e[1]-.4,z+cz,.32],[e[0]+3.4,e[1]-.9,z+cz*1.1,.15]],c:rgb(P.claw),bias:-.05});   /* curved pale claws */
     }
-    parts.push({p:[B(-8.6,13.4,0,6.0),B(-3.4,14.8,0,6.8),B(2,14.6,0,6.6),B(6,13.6,0,5.4)],c:fur,sh});
+    parts.push({p:[B(-8.6,13.4,0,6.2),B(-3.4,14.9,0,7.0),B(2,14.7,0,6.8),B(6,13.6,0,5.6)],c:fur,sh});
+    parts.push({p:[B(-7.6,17.4,0,2.6),B(-2.4,19.2,0,3.0),B(2.4,19.0,0,2.8),B(5.6,17.6,0,2.2)],c:rgb(mixv(P.fur,[150,140,132],.16),.55),bias:-.2});   /* the light catching the long guard hairs on its back */
+    parts.push({p:[B(-9.6,10.4,0,3.0),B(-2,9.4,0,3.6),B(4.6,9.8,0,3.0)],c:rgb(mulv(P.fur,.6)),bias:-.15});   /* the shaggy fall of belly fur */
     parts.push({p:[B(-11.6,14.4,0,1.4)],c:fur,bias:.1});
     parts.push({p:[B(-6,9.6,0,4.2),B(2,9.2,0,4.4)],c:rgb(mulv(P.fur,.72)),bias:.4});                                        /* the darker, heavier belly fur */
     if(f.adult) parts.push({p:[B(1.5,15.6,0,6.2),B(4.2,16.2,0,5.4)],c:fur,sh});   /* a grown bear's shoulder hump */
@@ -1514,11 +1532,11 @@ const ambient=(function(){
     const sn=f.state==="sniff"? Math.sin(f.sniff*11)*.2 : 0, hp=hd*.85+.08, hy=f.turn;
     const Hh=(u,v,w,r)=>{ const t2=headPt(hc,hp,hy,u,v,w); return [t2[0],t2[1],t2[2],r]; };
     parts.push({p:[Hh(-.4,.2,0,4.6),Hh(1.6,-.2,0,3.9)],c:fur,sh});
-    const sl=f.adult?.9:0; parts.push({p:[Hh(2.6,-.6,0,2.7),Hh(5.6+sl+sn,-1.7,0,1.6)],c:rgb(P.muzzle),sh:[rgb(mulv(P.muzzle,.7)),rgb(mixv(P.muzzle,[255,220,170],.2))],bias:-.1});   /* the tan muzzle */
+    const sl=f.adult?.9:0; parts.push({p:[Hh(2.1,-.4,0,2.6),Hh(4.2+sl*.6,-1.2,0,1.85),Hh(5.6+sl+sn,-1.7,0,1.35)],c:rgb(P.muzzle),sh:[rgb(mulv(P.muzzle,.7)),rgb(mixv(P.muzzle,[255,220,170],.2))],bias:-.1});   /* the tan muzzle */
     parts.push({p:[Hh(1.2,1.4,0,2.2),Hh(2.6,1,0,1.6)],c:rgb(mulv(P.fur,.85)),bias:-.06});                                  /* the brow over the eyes */
     parts.push({p:[Hh(6.6+sl+sn,-1.5,0,.95)],c:rgb(mulv(P.fur,.38)),bias:-.3}); parts.push({p:[Hh(6.9+sl+sn,-1.1,.25,.28)],c:"rgba(210,200,190,.55)",bias:-.4});   /* wet nose, with a glint */
     parts.push({p:[Hh(4.4+sl,-2.6,0,.7),Hh(5.6+sl,-2.5,0,.5)],c:rgb(mulv(P.muzzle,.75)),bias:-.12});                        /* the lower lip and chin */
-    for(const sd of [-1,1]){ parts.push({p:[Hh(-1.3,f.adult?3.9:4.3,(f.adult?2.8:3.0)*sd,f.adult?1.3:1.85)],c:far(sd)?furFar:fur,bias:.05}); parts.push({p:[Hh(-.9,f.adult?3.9:4.3,(f.adult?2.8:3.0)*sd,f.adult?.75:1.1)],c:rgb(mixv(P.fur,[120,90,70],.35)),bias:.02});   /* round ears with lighter insides */
+    for(const sd of [-1,1]){ parts.push({p:[Hh(-1.3,f.adult?3.9:4.3,(f.adult?2.8:3.0)*sd,f.adult?1.1:1.55)],c:far(sd)?furFar:fur,bias:.05}); parts.push({p:[Hh(-.95,f.adult?3.9:4.3,(f.adult?2.8:3.0)*sd,f.adult?.55:.8)],c:rgb(mixv(P.fur,[96,72,58],.22)),bias:.02});   /* round ears with lighter insides */
       parts.push({p:[Hh(2.2,1.1,2.4*sd,.5)],c:"rgba(30,18,12,.95)",bias:-.3}); parts.push({p:[Hh(2.45,1.25,2.45*sd,.14)],c:"rgba(230,220,200,.6)",bias:-.35}); }   /* small dark-brown eyes, catching the light */
     return parts;
   }
@@ -1530,9 +1548,9 @@ const ambient=(function(){
     const f=cub, s=toScreen(f.Xw,f.Dw), k=.16*s.g/26, walking=f.state==="run"||f.state==="leave";
     if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(walking&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*4); } idleTurn(f,dt,walking); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
     f.ct=(f.ct||0)-dt;
-    if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, fur:mixv(mulv([42,30,22],lit/.68),mulv(G.g,.3),.06), muzzle:mulv([168,128,88],lit), claw:mulv([190,176,150],lit)}; }
+    if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, fur:mixv(mulv([42,30,22],lit/.68),mulv(G.g,.3),.06), muzzle:mixv(mulv([132,98,70],lit),mulv([42,30,22],lit),.2), claw:mulv([190,176,150],lit)}; }
     if(!f.blades) f.blades=Array.from({length:10},()=>({ox:rnd(-20,20),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha,.75);   /* a black coat barely takes the warm rim light */
+    f.fur=f.fur||{len:f.adult? 1.05 : .95,nap:.35,sheen:.09}; critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha,.75);   /* a black coat barely takes the warm rim light */
   }
   /* ---- the cub's mother: a little while after the cub wanders out she comes out of the tall field looking for it, walks over, noses it, and leads it away ---- */
   let mom=null;
@@ -1562,9 +1580,9 @@ const ambient=(function(){
     const f=mom, s=toScreen(f.Xw,f.Dw), k=.16*s.g/26*2.1, walking=f.state==="run"||f.state==="leave";
     if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(walking&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*3); } idleTurn(f,dt,walking); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
     f.ct=(f.ct||0)-dt;
-    if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, fur:mixv(mulv([34,25,19],lit/.68),mulv(G.g,.3),.06), muzzle:mulv([150,112,78],lit), claw:mulv([190,176,150],lit)}; }
+    if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68; f.pal={...G, fur:mixv(mulv([34,25,19],lit/.68),mulv(G.g,.3),.06), muzzle:mixv(mulv([122,90,64],lit),mulv([36,26,20],lit),.2), claw:mulv([190,176,150],lit)}; }
     if(!f.blades) f.blades=Array.from({length:12},()=>({ox:rnd(-11,11),h:rnd(1.4,2.8),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha,.75);   /* a black coat barely takes the warm rim light */
+    f.fur=f.fur||{len:f.adult? 1.05 : .95,nap:.35,sheen:.09}; critterBlit(null,null,f,s,k,f.pal,()=>cubParts(f,f.pal,walking||f.turning),f.yaw,40,64,18,f.blades,f.alpha,.75);   /* a black coat barely takes the warm rim light */
   }
   /* only one of the ground hunters and wanderers is out at a time */
   /* a newcomer scares off whoever is already out: they bolt away from it, off the far side */
@@ -4577,5 +4595,5 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { jayDbg(){ return jays&&{t:+jays.t.toFixed(1),x:Math.round(jays.ax||0),y:Math.round(jays.ay||0),z:+(jays.zs||0).toFixed(2)}; }, metDbg(){ return {m:meteors.map(m=>[Math.round(m.x0),Math.round(m.y0),+(t-m.t0).toFixed(2),m.big]),comet:[Math.round(W*.34),Math.round(Math.max(H*.075,scr(.335,.058)[1]))],d:+duskV.toFixed(3)}; }, hazeDbg(){ return plumes.map(q=>[q.kind,q.spot,+q.t.toFixed(1),q.parts.length]); }, dogDbg(){ return [dog,lab].map(d=>d&&{...(({x,y})=>({x:Math.round(x),y:Math.round(y)}))(toScreen(d.Xw,d.Dw)),st:d.state,ch:!!d.chase,led:!!d.led}); }, scrDbg(x,y){ return scr(x,y).map(Math.round); }, chDbg(){ return {mons:mons.map(m=>[Math.round(m.sx),Math.round(m.sy),+m.t.toFixed(1)]),ch:bbChase&&[Math.round(bbChase.sx||0),Math.round(bbChase.sy||0),+bbChase.t.toFixed(1)],nc:+nextChase.toFixed(1),life:mons.map(m=>+m.life.toFixed(1))}; }, utvPts(){ return UTV_PATH.map(([ix,iy])=>{ const s0=scr(ix,iy), g=toGround(s0[0],s0[1]); return [Math.round(s0[0]),Math.round(s0[1]),+g.Xw.toFixed(2),+trueZ(g.Dw).toFixed(2)]; }).concat([[gnd().vy,FOC(),GF]]); }, utvDbg(){ if(!utv) return null; const q=utvAt(utv,utv.d); return {d:+utv.d.toFixed(2),len:+utv.len.toFixed(1),X:+q[0].toFixed(2),Z:+q[1].toFixed(2),sx:Math.round(utv.sx||0),sy:Math.round(utv.sy||0),r:Math.round(utv.sr||0),hv:+(utv.hv||0).toFixed(4),pi:+(utv.pitch||0).toFixed(3),ro:+(utv.roll||0).toFixed(3),v:+utv.v.toFixed(3),yaw:+(utv.yaw||0).toFixed(2),dm:+utv.cum[utv.iM].toFixed(2),aw:utv.away}; }, soarDbg(k){ return soarers.filter(b=>b.kind===k).map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,b.st||'',+b.Y.toFixed(2),+b.Z.toFixed(1)]; }); }, ravDbg(){ return soarers.filter(b=>b.kind==="raven").map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,!!b.roll]; }); }, bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; startJays(); } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="quail"){ quails=[]; startQuail(); } else if(n==="chase"){ bbChase=null; nextChase=0; } else if(n==="utv"){ utv=null; startUtv(); } else if(n==="utv2"){ utv=null; utvRoute=1; startUtv(); } else if(n==="utv1"){ utv=null; utvRoute=0; startUtv(); } else if(n==="falcon"){ soarers=soarers.filter(b=>b.kind!=="falcon"); startFalcon(); } else if(n==="heron"){ soarers=soarers.filter(b=>b.kind!=="heron"); startHeron(); } else if(n==="hawkv"){ soarers=soarers.filter(b=>b.kind!=="hawk"); startHawk(); } else if(n==="ravens"){ soarers=soarers.filter(b=>b.kind!=="raven"); startRavens(); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="smoke"){ nextSmoke=0; } else if(n==="mistcol"){ nextMistC=0; } else if(n==="meteor"){ duskV=Math.max(duskV,.62); metNext=t; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+  return { critDbg(){ const o={}; for(const [k,v] of [["fox",fox],["gray",coyote],["cub",cub],["mom",mom]]) if(v){ const q=toScreen(v.Xw,v.Dw); o[k]=[Math.round(q.x),Math.round(q.y),+q.g.toFixed(1),v.state]; } return o; }, jayDbg(){ return jays&&{t:+jays.t.toFixed(1),x:Math.round(jays.ax||0),y:Math.round(jays.ay||0),z:+(jays.zs||0).toFixed(2)}; }, metDbg(){ return {m:meteors.map(m=>[Math.round(m.x0),Math.round(m.y0),+(t-m.t0).toFixed(2),m.big]),comet:[Math.round(W*.34),Math.round(Math.max(H*.075,scr(.335,.058)[1]))],d:+duskV.toFixed(3)}; }, hazeDbg(){ return plumes.map(q=>[q.kind,q.spot,+q.t.toFixed(1),q.parts.length]); }, dogDbg(){ return [dog,lab].map(d=>d&&{...(({x,y})=>({x:Math.round(x),y:Math.round(y)}))(toScreen(d.Xw,d.Dw)),st:d.state,ch:!!d.chase,led:!!d.led}); }, scrDbg(x,y){ return scr(x,y).map(Math.round); }, chDbg(){ return {mons:mons.map(m=>[Math.round(m.sx),Math.round(m.sy),+m.t.toFixed(1)]),ch:bbChase&&[Math.round(bbChase.sx||0),Math.round(bbChase.sy||0),+bbChase.t.toFixed(1)],nc:+nextChase.toFixed(1),life:mons.map(m=>+m.life.toFixed(1))}; }, utvPts(){ return UTV_PATH.map(([ix,iy])=>{ const s0=scr(ix,iy), g=toGround(s0[0],s0[1]); return [Math.round(s0[0]),Math.round(s0[1]),+g.Xw.toFixed(2),+trueZ(g.Dw).toFixed(2)]; }).concat([[gnd().vy,FOC(),GF]]); }, utvDbg(){ if(!utv) return null; const q=utvAt(utv,utv.d); return {d:+utv.d.toFixed(2),len:+utv.len.toFixed(1),X:+q[0].toFixed(2),Z:+q[1].toFixed(2),sx:Math.round(utv.sx||0),sy:Math.round(utv.sy||0),r:Math.round(utv.sr||0),hv:+(utv.hv||0).toFixed(4),pi:+(utv.pitch||0).toFixed(3),ro:+(utv.roll||0).toFixed(3),v:+utv.v.toFixed(3),yaw:+(utv.yaw||0).toFixed(2),dm:+utv.cum[utv.iM].toFixed(2),aw:utv.away}; }, soarDbg(k){ return soarers.filter(b=>b.kind===k).map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,b.st||'',+b.Y.toFixed(2),+b.Z.toFixed(1)]; }); }, ravDbg(){ return soarers.filter(b=>b.kind==="raven").map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,!!b.roll]; }); }, bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; if(n==="fox"){ nextFox=0; dog=lab=null; rompAt=null; } else if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; startJays(); } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="quail"){ quails=[]; startQuail(); } else if(n==="chase"){ bbChase=null; nextChase=0; } else if(n==="utv"){ utv=null; startUtv(); } else if(n==="utv2"){ utv=null; utvRoute=1; startUtv(); } else if(n==="utv1"){ utv=null; utvRoute=0; startUtv(); } else if(n==="falcon"){ soarers=soarers.filter(b=>b.kind!=="falcon"); startFalcon(); } else if(n==="heron"){ soarers=soarers.filter(b=>b.kind!=="heron"); startHeron(); } else if(n==="hawkv"){ soarers=soarers.filter(b=>b.kind!=="hawk"); startHawk(); } else if(n==="ravens"){ soarers=soarers.filter(b=>b.kind!=="raven"); startRavens(); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; nextBB=0; } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="smoke"){ nextSmoke=0; } else if(n==="mistcol"){ nextMistC=0; } else if(n==="meteor"){ duskV=Math.max(duskV,.62); metNext=t; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
