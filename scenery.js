@@ -304,7 +304,17 @@ var natureSfx=(function(){
   document.addEventListener("visibilitychange",()=>{ if(ctx) apply(); });
   GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&ctx.state!=="running") ctx.resume().then(apply).catch(()=>{}); },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
-  return { get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, whistle, raven, falcon, stoop, heron, utv, bobwhite, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
+  /* one-shot songs for an animal that has been called: the same voices as the chorus, but right now and nearer */
+  function sing(kind,pan){ if(!ctx||!live) return; const out=voice(master,pan||0); let at=ctx.currentTime+.05;
+    if(kind==="peeper"){ const f=R(2800,3100); for(let i=0;i<5;i++){ tone(at,f*.86,f,.12,.05,out); at+=R(.45,.7); } }
+    else if(kind==="katydid"){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(2800,3300); bp.Q.value=5; bp.connect(out);
+      for(let k=0;k<3;k++){ const n=k%2?2:3; for(let i=0;i<n;i++){ const sN=ctx.createBufferSource(); sN.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09,at+.01); g.gain.setValueAtTime(.09,at+.06); g.gain.exponentialRampToValueAtTime(.001,at+.11); sN.connect(g); g.connect(bp); sN.start(at,R(0,2.5),.13); at+=.16; } at+=.7; } }   /* katy-did, katy-didn't */
+    else if(kind==="whippoorwill"){ for(let i=0;i<5;i++){ tone(at,1500,2100,.09,.06,out); tone(at+.12,1300,1200,.12,.05,out); tone(at+.29,1400,2500,.22,.06,out); at+=.85; } }
+    else if(kind==="cardinal"){ for(let i=0;i<4;i++){ tone(at,3600,1800,.22,.05,out); at+=.32; } at+=.2; for(let i=0;i<5;i++){ tone(at,2400,3200,.09,.04,out); at+=.13; } }   /* cheer cheer cheer, purty-purty-purty */
+    else if(kind==="killdeer"){ for(let i=0;i<4;i++){ tone(at,3000,3400,.08,.05,out); tone(at+.1,3600,2600,.22,.05,out); at+=.55; } }   /* kill-DEEE */
+    else if(kind==="bunting"){ const fs=[6200,6200,5200,5200,6800,6800,5600,4800]; for(const f of fs){ tone(at,f,f*.92,.09,.025,out); at+=.15; } }   /* what! what! where? where? see it! see it! */
+    else if(kind==="tanager"){ for(let i=0;i<5;i++){ tone(at,R(2400,3000),R(2200,2800),.2,.035,out); at+=.26; } tone(at+.3,2200,2000,.08,.04,out); tone(at+.42,2400,2200,.12,.04,out); } }   /* a hoarse robin-like carol, then chick-burr */
+  return { sing, get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()) apply(); else arm(); } else apply(); }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, peck, paw, scratch, gobble, whistle, raven, falcon, stoop, heron, utv, bobwhite, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
@@ -1352,7 +1362,7 @@ const ambient=(function(){
     const x=cx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cv.width,cv.height);
     const ax=w*.5, ay=h*.88; x.translate(ax,ay); x.scale(k*R,k*R);
     x.save(); const sg=x.createRadialGradient(0,0,0,0,0,shadowR); sg.addColorStop(0,rgb(P.shadow,.5)); sg.addColorStop(1,rgb(P.shadow,0)); x.fillStyle=sg; x.scale(1,.18); x.beginPath(); x.arc(0,3,shadowR,0,6.283); x.fill(); x.restore();
-    rigDraw(x,parts,rigView(yaw,viewPitch(f.Dw)),1); if(f.post) f.post(x,rigView(yaw,viewPitch(f.Dw)));
+    const pit=f.pitch!=null? f.pitch : viewPitch(f.Dw); rigDraw(x,parts,rigView(yaw,pit),1); if(f.post) f.post(x,rigView(yaw,pit));
     x.setTransform(1,0,0,1,0,0); rigLight(x,ax,ay-hgt*.8*k*R,ay,wid*.4*k*R,sun().x-s.x,haze||0);
     if(f.fur){ x.setTransform(1,0,0,1,0,0); furPass(x,w,h,f.fur.len*k*R,{back:-Math.cos(yaw)*.9,nap:f.fur.nap,sheen:f.fur.sheen}); }
     if(blades){ x.translate(ax,ay); x.scale(k*R,k*R); x.lineCap="round";
@@ -2134,10 +2144,12 @@ const ambient=(function(){
   }
   /* ---- once in a while a little bbFlock of eastern bluebirds comes over your shoulder from behind and flies off over the field ---- */
   let bbFlock=null, nextBB=38; const fcv=document.createElement("canvas"), fcx=fcv.getContext("2d");
+  const BUNT={wing:[38,66,168],wing2:[70,110,214],dk:[20,30,86],und:[58,92,196],breast:[50,92,206],wh:[86,116,206],head:[46,84,204],body:[56,96,210],back:[62,104,218]}, TANG={wing:[20,16,16],wing2:[36,30,28],dk:[10,8,8],und:[204,40,36],breast:[222,38,32],wh:[232,64,52],head:[224,36,30],body:[216,32,30],back:[222,42,34]}, WPW={wing:[92,74,54],wing2:[128,102,74],dk:[52,40,30],und:[150,122,92],breast:[118,94,70],wh:[206,186,156],head:[110,88,64],body:[102,82,60],back:[116,92,66]};   /* indigo bunting, scarlet tanager, whip-poor-will */
   const GOLDF={wing:[26,24,22],wing2:[44,40,36],dk:[16,14,12],und:[238,214,90],breast:[246,212,46],wh:[240,236,220],head:[32,28,22],body:[244,206,40],back:[246,214,50]};   /* American goldfinch: lemon yellow, black cap and wings */
-  function startFlock(kind){ kind=kind||(Math.random()<.4?"finch":"blue"); const n=kind==="finch"? 4+Math.floor(Math.random()*5) : 5+Math.floor(Math.random()*4), sd=Math.random()<.5?-1:1;
+  function startFlock(kind){ kind=kind||(Math.random()<.4?"finch":Math.random()<.25?"bunting":Math.random()<.2?"tanager":"blue"); const n=kind==="finch"? 4+Math.floor(Math.random()*5) : kind==="bunting"? 1+Math.floor(Math.random()*2) : kind==="tanager"||kind==="wpw"? 1 : 5+Math.floor(Math.random()*4), sd=Math.random()<.5?-1:1;
     bbFlock={kind,t:0,X0:sd*rnd(.02,.1),Y0:-rnd(.1,.16),wx:rnd(-1.6,1.6),wy:-rnd(.25,.6),birds:Array.from({length:n},(_,i)=>({ox:rnd(-.22,.22),oy:rnd(-.1,.1),oz:rnd(-.1,.35)+i*.04,ph:rnd(0,6),f:rnd(10,13),glide:rnd(0,6)}))};
-    if(kind!=="finch") natureSfx.bluebird&&natureSfx.bluebird(); }
+    if(kind==="wpw"){ bbFlock.Y0=-rnd(.02,.05); bbFlock.wy=rnd(.02,.06); }   /* the nightjar: low over the lawn at dusk */
+    if(kind==="blue") natureSfx.bluebird&&natureSfx.bluebird(); else if(kind==="bunting"||kind==="tanager"||kind==="wpw") natureSfx.sing&&natureSfx.sing(kind==="wpw"?"whippoorwill":kind,sd*.6); }
   function bluebird(x,flap,glide){
     /* seen from behind and above as it flies away: swept, pointed wings beating up and down, blue back, rusty flanks */
     const BL=[52,104,204], BL2=[112,164,232], RU=[200,116,60], DK=[34,54,112];
@@ -2552,11 +2564,11 @@ const ambient=(function(){
     let zc=0, n=0, any=false, sxC=0, syC=0;
     for(const b of f.birds){
       const z=Math.max(.06,(.09+b.oz*.25)*Math.exp(T*.55)), pull=ease(T/3.5), tX=f.wx, tY=f.wy;   /* they hold their height above you and level off toward the horizon */
-      const X=lerp(f.X0+b.ox,tX+b.ox*1.5,pull), Y=lerp(f.Y0+b.oy,tY+b.oy*1.2,pull)+Math.sin(T*2.6+b.ph)*.03;   /* the bluebird's gentle bounding flight */
+      const nj=f.kind==="wpw", X=lerp(f.X0+b.ox,tX+b.ox*1.5,pull)+(nj? Math.sin(T*4.3)*.05+Math.sin(T*7.1)*.02 : 0), Y=lerp(f.Y0+b.oy,tY+b.oy*1.2,pull)+Math.sin(T*2.6+b.ph)*.03+(nj? Math.sin(T*5.7)*.03 : 0);   /* the nightjar jinks after moths */   /* the bluebird's gentle bounding flight */
       const sx=cx+X*F/z, sy=cy+Y*F/z; b.sx=sx; b.sy=sy; if(z>14) continue; any=true;
       const fin=bbFlock.kind==="finch", bnd=fin? ((T*1.6+b.ph*.2)%1)>.5 : false, glide=fin? bnd : Math.sin(T*1.7+b.glide)>.55, flap=T*b.f*(fin?1.3:1)+b.ph, Pn=[X,Y+(fin? Math.sin((T*1.6+b.ph*.2)*Math.PI*2)*.012 : 0),z], V=b.pp? [Pn[0]-b.pp[0],Pn[1]-b.pp[1],Pn[2]-b.pp[2]] : [0,.1,1]; b.pp=Pn;
       if(Math.hypot(...V)>1e-6) b.V=b.V? b.V.map((v,i)=>lerp(v,V[i],.25)) : V;
-      bluebird3D(x,Pn,b.V||V,flap,glide,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],fin? GOLDF : null);   /* goldfinches: bounding, wings closed between bursts */
+      bluebird3D(x,Pn,b.V||V,flap*(f.kind==="wpw"?.55:1),glide||(f.kind==="wpw"&&Math.sin(T*2.2)>.3),(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],fin? GOLDF : f.kind==="bunting"? BUNT : f.kind==="tanager"? TANG : f.kind==="wpw"? WPW : null);   /* goldfinches: bounding, wings closed between bursts */
       zc+=z; n++; sxC+=sx; syC+=sy; }
     if(!any&&T>3){ bbFlock=null; nextBB=rnd(120,240); return; }
     if(!n) return; zc/=n; sxC/=n; syC/=n;
@@ -2727,7 +2739,7 @@ const ambient=(function(){
     return monSpr=mipChain(c); }
   /* ---- the other butterflies of these hills, painted on the same wing frame as the monarch: each wing an outline, borders laid inside it, spot rows stepped in from the margin ---- */
   const BFLY={monarch:{k:1,name:"Monarch butterfly"},tiger:{k:1.18,name:"Eastern tiger swallowtail",body:[30,26,18]},spice:{k:1.08,name:"Spicebush swallowtail",body:[18,18,20]},frit:{k:1.02,name:"Great spangled fritillary",body:[60,40,24]},
-    admiral:{k:.84,name:"Red admiral",body:[24,20,18]},cloak:{k:1.06,name:"Mourning cloak",body:[40,24,20]},sulphur:{k:.7,name:"Clouded sulphur",body:[120,110,60]}};
+    admiral:{k:.84,name:"Red admiral",body:[24,20,18]},cloak:{k:1.06,name:"Mourning cloak",body:[40,24,20]},sulphur:{k:.7,name:"Clouded sulphur",body:[120,110,60]},diana:{k:1.12,name:"Diana fritillary",body:[40,30,24]},rosy:{k:.72,name:"Rosy maple moth",body:[236,206,90]}};
   const bflySpr={};
   function butterflySprite(kind){ if(kind==="monarch"||!BFLY[kind]) return monarchSprite(); if(bflySpr[kind]) return bflySpr[kind];
     const c=document.createElement("canvas"); c.width=26*MR; c.height=34*MR; const x=c.getContext("2d"); x.setTransform(MR,0,0,MR,-MX0*MR,-MY0*MR); x.lineJoin="round"; x.lineCap="round";
@@ -2764,6 +2776,12 @@ const ambient=(function(){
     else if(kind==="sulphur"){ const Y=[238,226,118];
       fill(HROUND,Y); band(HROUND,[52,40,22],1.4); fill([[8.6,6.4],[10,6.6],[9.8,7.8],[8.4,7.6]],[236,150,60]);
       fill(FORE,Y); band(FORE,[52,40,22],1.8); spots(FORE,[FO[0]+1,FO[1]-1],1.1,.5,Y,3); fill([[9.8,-4.6],[11,-4.8],[10.8,-3.6],[9.7,-3.6]],[40,30,20]); }
+    else if(kind==="diana"){ const DK=[34,26,22], OR=[226,124,40];   /* the male Diana: velvety dark brown inside, a broad blazing orange border */
+      fill(HROUND,DK); x.save(); path(HROUND); x.clip(); x.strokeStyle=rgb(OR); x.lineWidth=9; path(HROUND); x.stroke(); x.restore(); spots(HROUND,[HRO[0],HRO[1]],3.2,.4,[120,60,20],2); band(HROUND,[60,30,14],.5);
+      fill(FORE,DK); x.save(); path(FORE); x.clip(); x.strokeStyle=rgb(OR); x.lineWidth=8; path(FORE); x.stroke(); x.restore(); spots(FORE,[FO[0],FO[1]],3.6,.45,[60,30,14],2); spots(FORE,[FO[0]+1,FO[1]-1],2,.35,[90,46,18],3); band(FORE,[60,30,14],.5); }
+    else if(kind==="rosy"){ const PK=[226,96,140], YL=[244,214,96];   /* the rosy maple moth: raspberry pink with a soft butter-yellow band, a pale yellow hindwing */
+      fill(HROUND,[246,222,140]); wash(HROUND,3,3,9,[236,140,160],.55);
+      fill(FORE,PK); x.save(); path(FORE); x.clip(); x.fillStyle=rgb(YL); x.beginPath(); x.moveTo(6,-8); x.bezierCurveTo(10,-6,13,-3,12,3); x.lineTo(17,3); x.bezierCurveTo(19,-3,17,-8,13,-11); x.closePath(); x.fill(); x.restore(); wash(FORE,4,-1,7,[250,190,210],.4); }
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop"; x.fillStyle="rgba(255,150,40,.08)"; x.fillRect(0,0,c.width,c.height); x.globalCompositeOperation="source-over";
     return bflySpr[kind]=mipChain(c); }
   function monarch3D(x,P,V,ang,proj,kind){ const BK0=BFLY[kind]||BFLY.monarch;
@@ -2782,7 +2800,7 @@ const ambient=(function(){
   }
   let cmon=null, nextCmon=rnd(40,80); const cmcv=document.createElement("canvas"), cmcx=cmcv.getContext("2d");
   function startCmon(kind){ const inn=Math.random()<.5, side=Math.random()<.5?-1:1, far={x:W*rnd(.3,.7),y:H*rnd(.32,.55)}, near={x:W/2+side*W*rnd(.22,.4),y:H*rnd(.4,.7)};
-    cmon={kind:kind||(Math.random()<.5?"monarch":pick(["tiger","spice","frit","admiral","cloak","sulphur"])),t:0,dur:rnd(7,9.5),inn,a:inn? far : near,b:inn? near : far,ph:rnd(0,6),flapT:0,glide:0,ang:.4,wx:rnd(0,6),wy:rnd(0,6)}; }
+    cmon={kind:kind||(Math.random()<.5?"monarch":pick(["tiger","spice","frit","admiral","cloak","sulphur","diana"])),t:0,dur:rnd(7,9.5),inn,a:inn? far : near,b:inn? near : far,ph:rnd(0,6),flapT:0,glide:0,ang:.4,wx:rnd(0,6),wy:rnd(0,6)}; }
   function drawCmon(dt,dark){
     nextCmon-=(lull>0?0:dt); if(!cmon&&nextCmon<=0){ if(stageBusy()) nextCmon=rnd(12,25); else startCmon(); } if(!cmon) return;
     const m=cmon, F=H*.5, cx=W/2, cy=H*.52; m.t+=dt; const u=m.t/m.dur; if(u>=1){ cmon=null; nextCmon=rnd(90,180); return; }
@@ -2911,6 +2929,9 @@ const ambient=(function(){
   /* ---- american woodcocks: plump, long-billed little birds that come out of the brush onto the lawn edge at dusk,
      doing their funny rocking walk, probing the ground with their bills, then scuttling off in a quick run ---- */
   const wcs=[]; let nextWc=25;
+  function startSongbirds(kind){ wcs.length=0; const sx0=rnd(W*.25,W*.75), n=kind==="card"?2:1;
+    for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-60,60))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(kind==="card"?4:30,kind==="card"?30:100)); wcs.push({kind,male:i===0,Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.4,1.2),life:rnd(32,48),alpha:0,head:0,cock:0,peck:0,hopA:0}); }
+    natureSfx.sing&&natureSfx.sing(kind==="card"?"cardinal":"killdeer",(sx0/W*2-1)*.8); }
   function startRobins(){ const n=1+Math.floor(Math.random()*2), sx0=rnd(W*.25,W*.8);
     for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-120,120))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(20,90)); wcs.push({kind:"robin",Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.6,1.8),life:rnd(30,50),alpha:0,head:0,cock:0,worm:0}); } }
   function startWoodcocks(){ const n=2+Math.floor(Math.random()*2), sx0=rnd(W*.2,W*.85);
@@ -2938,7 +2959,7 @@ const ambient=(function(){
     return parts;
   }
   function stepWoodcock(w,dt){
-    if(w.kind==="robin") return stepRobin(w,dt);
+    if(w.kind==="robin"||w.kind==="kill") return stepRobin(w,dt); if(w.kind==="card") return stepHopper(w,dt);
     w.t+=dt; if(w.t<0) return;
     if(w.state==="wait"){ w.state="walk"; w.t=0; wcTarget(w); }
     w.alpha= w.leaving? Math.max(0,w.alpha-dt*1.2) : Math.min(1,w.alpha+dt*1.2);
@@ -2963,15 +2984,18 @@ const ambient=(function(){
     w.ct=(w.ct||0)-dt; if(w.ct<=0||!w.pal){ w.ct=1.5; const G=groundPal(s,dark), lit=dark?.42:.6;
       w.pal={...G, body:mulv([156,116,74],lit), back:mulv([92,66,44],lit), buff:mulv([200,164,114],lit), dark:mulv([40,28,20],lit), leg:mulv([186,140,120],lit), bill:mulv([150,120,96],lit)}; }
     if(!w.blades) w.blades=Array.from({length:7},()=>({ox:rnd(-12,12),h:rnd(2,4),lean:rnd(-.5,.5),c:Math.random()}));
+    if(w.kind==="card"||w.kind==="kill"){ if(!w.rpal||w.ct===1.5){ const G=groundPal(s,dark), lit=dark?.45:.68; w.rpal= w.kind==="kill"? {...G, back:mulv([136,104,72],lit), white:mulv([240,236,224],lit), dark:mulv([24,20,18],lit), rump:mulv([214,120,52],lit), leg:mulv([196,180,140],lit)} : w.male? {...G, body:mulv([204,32,30],lit), wing:mulv([164,26,26],lit), tail:mulv([150,24,24],lit), mask:mulv([18,12,12],lit), bill:mulv([236,110,64],lit), leg:mulv([170,120,100],lit)} : {...G, body:mulv([182,152,120],lit), wing:mulv([178,92,68],lit), tail:mulv([170,80,60],lit), mask:mulv([80,64,52],lit), bill:mulv([236,120,70],lit), leg:mulv([170,120,100],lit)}; }
+      critterBlit(null,null,w,s,k*(w.kind==="kill"?1.05:.95),w.rpal,()=>songParts(w,w.rpal),w.yaw,w.kind==="kill"?26:22,30,8,w.blades,w.alpha); return; }
     if(w.kind==="robin"){ if(!w.rpal||w.ct===1.5){ const G=groundPal(s,dark), lit=dark?.45:.66; w.rpal={...G, back:mulv([92,82,72],lit), breast:mulv([196,86,40],lit), belly:mulv([226,214,196],lit), tail:mulv([40,36,34],lit), head:mulv([42,38,36],lit), ring:mulv([236,232,222],lit), bill:mulv([232,184,60],lit), leg:mulv([110,92,76],lit), worm:mulv([190,120,110],lit)}; }
       critterBlit(null,null,w,s,k*1.1,w.rpal,()=>robinParts(w,w.rpal),w.yaw,26,30,8,w.blades,w.alpha); return; }
     critterBlit(null,null,w,s,k,w.pal,()=>woodcockParts(w,w.pal),w.yaw,22,36,9,w.blades,w.alpha);
   }
 
   /* ---- a raccoon: humped and grizzled, the black mask and white brows, dark little hands, the ringed tail carried low behind; it shuffles in, noses about, and goes ---- */
-  let racc=null, nextRacc=rnd(150,260); let beaver=null, nextBeaver=rnd(200,340);
-  function startWaddler(kind){ const b=foxBounds(), g=rnd(b.gmin+40,b.gmax-10), side=Math.random()<.5, p=toGround(side? W+60 : -60, gnd().vy+g);
-    const o={kind,Xw:p.Xw,Dw:p.Dw,state:"run",t:rnd(2,3.5),cycles:2+Math.floor(Math.random()*2),head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,alpha:1,spd:kind==="beaver"? .2 : .34,cad:kind==="beaver"? .5 : .6,yaw:side?Math.PI:0,fur:{len:kind==="beaver"? .7 : .95,nap:.32,sheen:kind==="beaver"? .12 : .05}};
+  let racc=null, nextRacc=rnd(150,260); let beaver=null, nextBeaver=rnd(200,340); let hog=null, possum=null;
+  const WAD={racc:{get:()=>racc,set:v=>racc=v,next:rnd(150,260)},beaver:{get:()=>beaver,set:v=>beaver=v,next:rnd(200,340)},hog:{get:()=>hog,set:v=>hog=v,next:rnd(120,260)},possum:{get:()=>possum,set:v=>possum=v,next:rnd(180,320)}};
+  function startWaddler(kind){ if(false) return; const b=foxBounds(), g=rnd(b.gmin+40,b.gmax-10), side=Math.random()<.5, p=toGround(side? W+60 : -60, gnd().vy+g);
+    const o={kind,Xw:p.Xw,Dw:p.Dw,state:"run",t:rnd(2,3.5),cycles:2+Math.floor(Math.random()*2),head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,alpha:1,spd:kind==="beaver"? .2 : kind==="possum"? .26 : kind==="hog"? .3 : .34,cad:kind==="beaver"? .5 : kind==="possum"? .55 : .6,yaw:side?Math.PI:0,fur:{len:kind==="beaver"? .7 : .95,nap:.32,sheen:kind==="beaver"? .12 : .05}};
     const q=toGround(W*(side?rnd(.55,.8):rnd(.2,.45)),gnd().vy+g); o.tX=q.Xw; o.tD=q.Dw; o.ang=null; arrive(side?W+60:-60,o); return o; }
   function raccoonParts(f,P,walking){
     const q=f.ph*Math.PI*1.3, yaw=f.yaw, far=z=>z*Math.cos(yaw)>0, parts=[];
@@ -3023,16 +3047,65 @@ const ambient=(function(){
       for(const [u2,w2] of [[.15,-.2],[.8,.3],[.92,-.4]]){ const m=[lerp(a[0],b2[0],u2),lerp(a[1],b2[1],u2),lerp(a[2],b2[2],u2)]; parts.push({p:[[m[0],m[1]+.3,m[2],.55],[m[0]+.6,m[1]+1.1+w2*.4,m[2]+w2,.3]],c:rgb(P.leaf),bias:-.36}); } }
     return parts;
   }
+  /* ---- a groundhog: stout and grizzled brown, short legs, a short furry tail; it stops and sits bolt upright to look about ---- */
+  function groundhogParts(f,P,walking){
+    const q=f.ph*Math.PI*1.3, yaw=f.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], up=f.up||0;
+    const fur=rgb(P.fur), furF=rgb(mulv(P.fur,.74)), dk=rgb(P.dark), sh=[rgb(mulv(P.fur,.55)),rgb(mixv(P.fur,[255,214,160],.25))];
+    const roll=walking? Math.sin(q)*.45 : 0, bob=walking? Math.abs(Math.sin(q))*.3 : 0, ua=up*1.15, cu=Math.cos(ua), su=Math.sin(ua);
+    const B=(x,y,z,r2)=>{ const X=x+5.4, Y=y-5.2, xr=-5.4+X*cu-Y*su, yr=5.2+X*su+Y*cu; return [xr,yr+bob,z+roll*(y/9),r2]; };   /* sits up about the haunches */
+    for(const [lx,ly,z,ph,hind] of [[3.6,4.6,-2.0,0,0],[3.6,4.6,2.0,Math.PI,0],[-5.0,5.4,-2.6,Math.PI,1],[-5.0,5.4,2.6,0,1]]){
+      const sw=walking&&!up?Math.sin(q+ph):0, lift=walking&&!up?Math.max(0,-Math.cos(q+ph)):0;
+      if(!hind&&up>.3){ const t0=B(lx,ly,z,0); parts.push({p:[[t0[0],t0[1],z,1.0],[t0[0]+1.2,t0[1]-1.4,z*.7,.75],[t0[0]+1.6,t0[1]-.6,z*.6,.55]],c:far(z)?rgb(mulv(P.dark,.8)):dk}); continue; }   /* forepaws held to the chest */
+      const top=hind? [lx,ly,z,0] : B(lx,ly,z,0), ch=legChain(top[0],top[1],z,hind?2.6:1.9,hind? [[2.6,.25+.35*sw,1.5],[2.4,-.3+.35*sw-lift*.4,1.0]] : [[2.4,.4*sw,1.0],[2.1,.35*sw-lift*.7,.75]]);
+      parts.push({p:ch,c:far(z)?furF:fur}); const e=ch[ch.length-1]; parts.push({p:[[e[0]-.3,e[1]+.15,z,.75],[e[0]+.9,e[1]-.05,z,.5]],c:far(z)?rgb(mulv(P.dark,.8)):dk,bias:-.01}); }
+    parts.push({p:[[-7.6,6.0,0,4.6],[-4.4,7.4,0,5.8],[-.6,7.2,0,5.4],[2.8,6.4,0,4.4],[5.0,6.0,0,3.4]].map(([a,b2,c,r2])=>B(a,b2,c,r2)),c:fur,sh});
+    parts.push({p:[B(-5,10.6,0,2.2),B(-1,10.4,0,2.0)],c:rgb(mixv(P.fur,P.pale,.22)),bias:-.03});                     /* grizzled tips along the back */
+    parts.push({p:[B(-9.6,6.2,0,1.5),B(-12,5.2,0,1.2),B(-13.2,4.6,0,.8)],c:rgb(mulv(P.fur,.8)),bias:.1});             /* the short bushy tail */
+    const hd=f.head, hc0=B(lerp(7.4,8.2,Math.max(0,hd)),lerp(7.0,3.2,Math.max(0,hd)),0,0), hc=[hc0[0],hc0[1],hc0[2]];
+    parts.push({p:[B(5,6.6,0,3.0),[hc[0]-.6,hc[1],hc[2],2.5]],c:fur,sh});
+    const hp=hd*.8+.1-up*.9, Hh=(u,v,w,r2)=>{ const t2=headPt(hc,hp,f.turn||0,u,v,w); return [t2[0],t2[1],t2[2],r2]; };
+    parts.push({p:[Hh(-.3,.2,0,2.6),Hh(1.3,-.2,0,2.0),Hh(2.6,-.6,0,1.3)],c:fur,sh});
+    parts.push({p:[Hh(2.2,-.9,0,1.0),Hh(2.9,-1.0,0,.6)],c:rgb(P.pale),bias:-.12}); parts.push({p:[Hh(3.2,-.75,0,.42)],c:dk,bias:-.3});   /* the pale muzzle, dark nose */
+    parts.push({p:[Hh(2.7,-1.6,0,.3)],c:rgb([236,232,220]),bias:-.25});                                                 /* the white incisors */
+    for(const sd of [-1,1]){ parts.push({p:[Hh(.8,.9,1.6*sd,.3)],c:"rgba(8,6,6,.95)",bias:-.3}); parts.push({p:[Hh(-.9,1.8,1.7*sd,.55)],c:far(sd)?furF:fur,bias:.02}); }
+    return parts; }
+  /* ---- a Virginia opossum: grizzled grey with a white face, black ears and legs, a long bare tail; if a dog comes near it plays dead ---- */
+  function possumParts(f,P,walking){
+    const q=f.ph*Math.PI*1.3, yaw=f.yaw, far=z=>z*Math.cos(yaw)>0, parts=[];
+    const fur=rgb(P.fur), furF=rgb(mulv(P.fur,.76)), dk=rgb(P.dark), sh=[rgb(mulv(P.fur,.55)),rgb(mixv(P.fur,[255,230,200],.25))];
+    const roll=walking? Math.sin(q)*.4 : 0, bob=walking? Math.abs(Math.sin(q))*.3 : 0, B=(x,y,z,r2)=>[x,y+bob,z+roll*(y/10),r2];
+    for(const [lx,ly,z,ph,hind] of [[4.4,5.8,-2.0,0,0],[4.4,5.8,2.0,Math.PI,0],[-5.6,6.6,-2.4,Math.PI,1],[-5.6,6.6,2.4,0,1]]){
+      const sw=walking?Math.sin(q+ph):0, lift=walking?Math.max(0,-Math.cos(q+ph)):0, top=B(lx,ly,z,0);
+      const ch=legChain(top[0],top[1],z,hind?2.4:1.8,hind? [[3.4,.3+.4*sw,1.3],[3.0,-.4+.4*sw-lift*.5,.85]] : [[3.0,-.05+.45*sw,1.0],[2.7,.4*sw-lift*.9,.7]]);
+      parts.push({p:ch,c:far(z)?rgb(mulv(P.dark,.8)):dk}); const e=ch[ch.length-1]; parts.push({p:[[e[0]-.2,e[1]+.1,z,.6],[e[0]+.9,e[1],z,.45]],c:rgb(P.skin),bias:-.01}); }   /* black legs, pale little hands */
+    parts.push({p:[[-8,8.6,0,4.2],[-4.4,9.6,0,5.2],[-.4,9.2,0,4.8],[3,8.2,0,3.8],[5.2,7.8,0,3.0]].map(([a,b2,c,r2])=>B(a,b2,c,r2)),c:fur,sh});
+    parts.push({p:[B(-5,13.4,0,2.4),B(-1,12.8,0,2.2)],c:rgb(mixv(P.fur,P.white,.35)),bias:-.03});                     /* the long white guard hairs */
+    let tp=B(-10.6,7.8,0,0).slice(0,3); for(let i=0;i<10;i++){ const a=-.5-i*.06+Math.sin(t*1.1-i*.4)*.06, np=[tp[0]-Math.cos(a)*1.4,tp[1]+Math.sin(a)*1.4+(i>6?.25:0),tp[2]+Math.sin(t*.8-i*.5)*.25]; parts.push({p:[[...tp,1.0-i*.07],[...np,.9-i*.07]],c:rgb(i<2?mixv(P.dark,P.skin,.3):P.skin),bias:.2}); tp=np; }   /* the bare, scaly tail */
+    const hd=f.head, hc0=B(lerp(7.4,8.2,Math.max(0,hd)),lerp(8.0,3.2,Math.max(0,hd)),0,0), hc=[hc0[0],hc0[1],hc0[2]];
+    parts.push({p:[B(5,8,0,2.6),[hc[0]-.6,hc[1],hc[2],2.2]],c:fur,sh});
+    const hp=hd*.8+.15, Hh=(u,v,w,r2)=>{ const t2=headPt(hc,hp,f.turn||0,u,v,w); return [t2[0],t2[1],t2[2],r2]; };
+    parts.push({p:[Hh(-.4,.2,0,2.2),Hh(1.4,-.3,0,1.5),Hh(2.9,-.8,0,.9),Hh(4.2,-1.1,0,.5)],c:rgb(P.white),sh:null});   /* the long white face */
+    parts.push({p:[Hh(4.5,-1.1,0,.42)],c:rgb(P.nose),bias:-.3});
+    if(f.dead) parts.push({p:[Hh(3.6,-1.7,0,.3),Hh(4.2,-1.8,0,.25)],c:rgb([180,120,120]),bias:-.25});              /* mouth agape */
+    for(const sd of [-1,1]){ parts.push({p:[Hh(1.2,.6,1.2*sd,.3)],c:"rgba(6,4,4,.95)",bias:-.3}); parts.push({p:[Hh(-.8,1.8,1.6*sd,.9)],c:dk,bias:.03}); }   /* black eyes, black ears */
+    return parts; }
   function drawWaddler(dt,dark,kind){
-    const cur=kind==="racc"? racc : beaver;
-    if(!cur){ if(kind==="racc"){ nextRacc-=(lull>0?0:dt); if(nextRacc<=0){ if(groundBusy()) nextRacc=12; else racc=startWaddler("racc"); } } else { nextBeaver-=(lull>0?0:dt); if(nextBeaver<=0){ if(groundBusy()) nextBeaver=14; else beaver=startWaddler("beaver"); } } return; }
-    const f=cur; foxStep(f,dt); if(f.gone){ if(kind==="racc"){ racc=null; nextRacc=rnd(200,360); } else { beaver=null; nextBeaver=rnd(240,420); } return; }
-    const s=toScreen(f.Xw,f.Dw), k=.16*s.g/26*(kind==="beaver"? 1.05 : 1), walking=f.state==="run"||f.state==="leave";
+    const cur=WAD[kind].get();
+    if(!cur){ WAD[kind].next-=(lull>0?0:dt); if(WAD[kind].next<=0){ if(groundBusy()) WAD[kind].next=14; else WAD[kind].set(startWaddler(kind)); } return; }
+    const f=cur;
+    if(kind==="possum"){ const dg=[dog,lab].find(d=>d&&!d.gone&&!d.hidden&&Math.abs(toScreen(d.Xw,d.Dw).x-toScreen(f.Xw,f.Dw).x)<W*.14); if(dg&&!f.dead&&f.state!=="leave"){ f.dead=rnd(6,9); } }   /* a dog close by: it keels over and plays dead */
+    if(f.dead>0){ f.dead-=dt; f.rollA=(f.rollA||0)+(Math.PI*.5-(f.rollA||0))*Math.min(1,dt*6); if(f.dead<=0){ f.dead=0; } }
+    else { if(f.rollA) f.rollA=Math.max(0,f.rollA-dt*2); foxStep(f,dt); }
+    if(kind==="hog") f.up=(f.up||0)+(((f.state==="look"&&f.sentry)?1:0)-(f.up||0))*Math.min(1,dt*4); if(kind==="hog"&&f.state==="sniff") f.sentry=Math.random()<.7;   /* up on its haunches to look about */
+    if(f.gone){ WAD[kind].set(null); WAD[kind].next=rnd(200,380); return; }
+    const s=toScreen(f.Xw,f.Dw), k=.16*s.g/26*(kind==="beaver"? 1.05 : kind==="hog"? .95 : kind==="possum"? .9 : 1), walking=!f.dead&&(f.state==="run"||f.state==="leave");
     if(f.pw){ const dX=f.Xw-f.pw[0], dZ=trueZ(f.Dw)-f.pw[1]; if(walking&&Math.hypot(dX,dZ)>1e-5) f.yaw=angTo(f.yaw,Math.atan2(dZ,dX),dt*5); } idleTurn(f,dt,walking); keepOnLawn(f); f.pw=[f.Xw,trueZ(f.Dw)];
     f.ct=(f.ct||0)-dt; if(f.ct<=0||!f.pal){ f.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.68;
-      f.pal= kind==="racc"? {...G, fur:mulv([128,120,108],lit), dark:mulv([30,27,26],lit/.68*.68), pale:mulv([226,220,206],lit)} : {...G, fur:mulv([110,70,42],lit), dark:mulv([40,30,24],lit), tail:mulv([44,40,38],lit), teeth:mulv([226,128,40],lit), stick:mulv([150,120,84],lit), leaf:mulv([92,110,52],lit)}; }
+      f.pal= kind==="hog"? {...G, fur:mulv([126,96,64],lit), dark:mulv([44,34,26],lit), pale:mulv([196,170,130],lit)} : kind==="possum"? {...G, fur:mulv([150,146,140],lit), dark:mulv([28,26,26],lit), white:mulv([238,234,226],lit), skin:mulv([212,176,170],lit), nose:mulv([222,150,150],lit)} : kind==="racc"? {...G, fur:mulv([128,120,108],lit), dark:mulv([30,27,26],lit/.68*.68), pale:mulv([226,220,206],lit)} : {...G, fur:mulv([110,70,42],lit), dark:mulv([40,30,24],lit), tail:mulv([44,40,38],lit), teeth:mulv([226,128,40],lit), stick:mulv([150,120,84],lit), leaf:mulv([92,110,52],lit)}; }
     if(!f.blades) f.blades=Array.from({length:9},()=>({ox:rnd(-18,18),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
-    critterBlit(null,null,f,s,k,f.pal,()=>(kind==="racc"? raccoonParts : beaverParts)(f,f.pal,walking||f.turning),f.yaw,kind==="racc"?32:28,kind==="racc"?70:64,16,f.blades,f.alpha,.3);
+    const PF={racc:raccoonParts,beaver:beaverParts,hog:groundhogParts,possum:possumParts}[kind], roll=()=>{ const P=PF(f,f.pal,walking||f.turning), A=f.rollA||0; if(A<.01) return P; const ca=Math.cos(A), sa=Math.sin(A), yc=8, drop=(yc-4.5)*Math.min(1,A/1.57);
+      for(const pt of P) pt.p=pt.p.map(q=>{ const y=yc+(q[1]-yc)*ca-q[2]*sa-drop, z=(q[1]-yc)*sa+q[2]*ca; return [q[0],Math.max((q[3]||0)*.7,y),z,q[3]]; }); return P; };   /* keeled over on its side */
+    critterBlit(null,null,f,s,k,f.pal,roll,f.yaw,kind==="hog"?(f.up>.2?34:28):32,70,16,f.blades,f.alpha,.3);
   }
   /* ---- a red eft: the land-going young of the eastern newt, bright orange with a row of black-ringed red spots, creeping over the grass right in front of you ---- */
   let eft=null, nextEft=rnd(110,220);
@@ -3055,7 +3128,7 @@ const ambient=(function(){
     const s=toScreen(e.Xw,e.Dw), k=.16*s.g/26*1.35;
     e.ct=(e.ct||0)-dt; if(e.ct<=0||!e.pal){ e.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.75; e.pal={...G, body:mulv([238,112,32],lit), spot:mulv([214,42,26],lit)}; }
     if(!e.blades) e.blades=Array.from({length:8},()=>({ox:rnd(-10,10),h:rnd(1.5,3),lean:rnd(-.5,.5),c:Math.random()}));
-    e.res=1.4; critterBlit(null,null,e,s,k,e.pal,()=>eftParts(e,e.pal),e.yaw,6,22,6,e.blades,e.alpha,.2);
+    e.res=1.4; e.pitch=.8; critterBlit(null,null,e,s,k,e.pal,()=>eftParts(e,e.pal),e.yaw,6,22,6,e.blades,e.alpha,.2);
   }
   /* ---- an American robin on the lawn: runs a few quick steps, stops dead, cocks its head to listen, then stabs and tugs up a worm ---- */
   function robinParts(w,P){
@@ -3074,16 +3147,47 @@ const ambient=(function(){
     const ba=-.25-(w.head||0)*1.0; parts.push({p:[[H0[0]+1.2,H0[1]-.1,0,.42],[H0[0]+1.2+Math.cos(ba)*1.7,H0[1]-.1+Math.sin(ba)*1.7,0,.16]],c:rgb(P.bill),bias:-.1});
     if(w.worm>0){ const bx=H0[0]+1.2+Math.cos(ba)*1.6, by=H0[1]-.1+Math.sin(ba)*1.6, gy=0; parts.push({p:[[bx,by,0,.22],[bx+.2,(by+gy)/2+Math.sin(t*20)*.1,0,.2],[bx+.1,Math.max(gy,by-w.worm*3),0,.18]],c:rgb(P.worm),bias:-.15}); }   /* a stretching worm */
     return parts; }
+  /* ---- ground songbirds: a pair of northern cardinals hopping and picking up seed at the edge of the lawn, and a killdeer running in bursts over the short grass ---- */
+  function songParts(w,P){
+    const yaw=w.yaw, far=z=>z*Math.cos(yaw)>0, parts=[], kill=w.kind==="kill", q=w.ph, run=w.state==="run", hopA=w.hopA||0;
+    const bob=run? Math.abs(Math.sin(q))*.2 : 0, peck=w.peck||0, lg=kill? 1.45 : .85, B=(x,y,z,r2)=>[x,y+bob+hopA*2.4+(kill?1.6:0),z,r2];
+    for(const [z,ph] of [[-.75,0],[.75,Math.PI]]){ const sw=run?Math.sin(q+ph)*.7:0, lift=run?Math.max(0,-Math.cos(q+ph))*.8:0, tuck=hopA*.6;
+      parts.push({p:legChain(.3,(kill?5.4:3.3)+bob+hopA*2.4,z,.33,[[1.8*lg,.2+sw+tuck,.28],[1.9*lg,-.3+sw-lift-tuck,.22]]),c:far(z)?rgb(mulv(P.leg,.75)):rgb(P.leg),bias:.02}); }
+    if(kill){ parts.push({p:[B(-3.6,4.4,0,1.3),B(-1.4,4.8,0,2.0),B(1,5.0,0,2.1),B(2.4,5.6,0,1.6)],c:rgb(P.back),sh:[rgb(mulv(P.back,.6)),rgb(mixv(P.back,[255,220,170],.2))]});
+      for(const sd of [-1,1]) parts.push({p:[B(-1.6,3.9,sd*.9,1.4),B(.8,4.2,sd*.9,1.6),B(2.2,4.9,sd*.7,1.2)],c:rgb(P.white),bias:-.03});
+      parts.push({p:[B(-6.6,4.6,0,.8),B(-4,4.6,0,1.1)],c:rgb(P.rump),bias:.04},{p:[B(-7.6,4.4,0,.6)],c:rgb(P.dark),bias:.03});   /* the orange rump, the long tail */
+      for(const [x0,y0] of [[2.6,5.2],[1.6,4.6]]) parts.push({p:[B(x0,y0+.6,-1.2,.42),B(x0+.5,y0+.1,0,.5),B(x0,y0+.6,1.2,.42)],c:rgb(P.dark),bias:-.1});   /* the two black breast bands */ }
+    else { parts.push({p:[B(-3.4,4.0,0,1.5),B(-1.2,4.5,0,2.2),B(1.0,4.8,0,2.2),B(2.4,5.6,0,1.7)],c:rgb(P.body),sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,220,180],.22))]});
+      for(const sd of [-1,1]) parts.push({p:[B(-1.8,4.9,sd*1.2,1.2),B(-4.2,4.4,sd*.9,.7)],c:rgb(P.wing),bias:-.02});
+      parts.push({p:[B(-4.2,4.2,0,1.0),B(-8.2,3.4,0,.85)],c:rgb(P.tail)}); }
+    const hx=(kill?3.2:2.9)+peck*1.4, hy=(kill?7.6:6.8)-peck*3.4, H0=B(hx,hy,0,0);
+    parts.push({p:[B(2,6,0,1.4),[H0[0],H0[1],0,kill?1.25:1.45]],c:rgb(kill?P.back:P.body)});
+    if(kill){ parts.push({p:[[H0[0]+.3,H0[1]-.5,0,1.0]],c:rgb(P.white),bias:-.05},{p:[[H0[0]+.9,H0[1]+.4,0,.5]],c:rgb(P.white),bias:-.1});
+      for(const sd of [-1,1]) parts.push({p:[[H0[0]+.2,H0[1]+.3,sd*.95,.42]],c:rgb([200,60,40]),bias:-.2},{p:[[H0[0]+.25,H0[1]+.3,sd*1.0,.24]],c:"rgba(6,4,4,.95)",bias:-.3});   /* red eye-ring */
+      parts.push({p:[[H0[0]+1.1,H0[1]-.1,0,.28],[H0[0]+2.3,H0[1]-.3-peck*.5,0,.14]],c:rgb(P.dark),bias:-.1}); }
+    else { parts.push({p:[[H0[0]-.3,H0[1]+.9,0,1.0],[H0[0]-1.1,H0[1]+2.4,0,.5]],c:rgb(P.body),bias:-.04});                /* the pointed crest */
+      for(const sd of [-1,1]) parts.push({p:[[H0[0]+.9,H0[1]-.2,sd*.75,.7]],c:rgb(P.mask),bias:-.15},{p:[[H0[0]+.4,H0[1]+.25,sd*1.0,.22]],c:"rgba(6,4,4,.95)",bias:-.3});   /* the black mask round the bill */
+      parts.push({p:[[H0[0]+1.1,H0[1]-.2,0,.75],[H0[0]+2.1,H0[1]-.4-peck*.4,0,.3]],c:rgb(P.bill),bias:-.2}); }       /* the thick conical red bill */
+    return parts; }
+  function stepHopper(w,dt){
+    w.t+=dt; if(w.t<0) return; w.alpha= w.leaving? Math.max(0,w.alpha-dt*1.5) : Math.min(1,w.alpha+dt*1.5); if(w.leaving&&w.alpha<=0){ w.gone=true; return; }
+    if(w.state==="wait"){ w.state="hop"; w.t=0; wcTarget(w); w.hopT=0; }
+    if(w.t>w.life&&!w.leaving) w.leaving=true;
+    if(w.state==="hop"){ w.hopT+=dt; const u=Math.min(1,w.hopT/.22); w.hopA=Math.sin(u*Math.PI); if(w.hopT<dt*1.5){ w.h0=[w.Xw,w.Dw]; const dX=w.tX-w.Xw, dD=w.tD-w.Dw, d=Math.hypot(dX,dD*.25)||1e-6, L=Math.min(d,.07); w.h1=[w.Xw+dX/d*L,w.Dw+dD/d*L]; w.yaw=angTo(w.yaw,Math.atan2(trueZ(w.tD)-trueZ(w.Dw),dX),1); }
+      w.Xw=lerp(w.h0[0],w.h1[0],u); w.Dw=lerp(w.h0[1],w.h1[1],u);
+      if(u>=1){ w.hopA=0; w.hopT=0; if(Math.hypot(w.tX-w.Xw,(w.tD-w.Dw)*.25)<.02){ w.state="peck"; w.st=rnd(1,3); w.t2=0; } else { w.state="pause"; w.st=rnd(.08,.3); w.t2=0; } } }
+    else { w.t2+=dt; if(w.state==="peck"){ w.peck=Math.max(0,Math.sin(w.t2*9))*(Math.sin(w.t2*1.7)>-.3?1:0); } else w.peck*=.7;
+      if(w.t2>w.st){ w.peck=0; if(w.state==="peck"&&Math.random()<.8) wcTarget(w); w.state="hop"; w.hopT=0; } } }
   function stepRobin(w,dt){
     w.t+=dt; if(w.t<0) return; w.alpha= w.leaving? Math.max(0,w.alpha-dt*1.5) : Math.min(1,w.alpha+dt*1.5); if(w.leaving&&w.alpha<=0){ w.gone=true; return; }
     if(w.state==="wait"){ w.state="run"; w.t=0; wcTarget(w); }
     if(w.t>w.life&&!w.leaving){ w.leaving=true; }
-    if(w.state==="run"){ const sp=.55, dX=w.tX-w.Xw, dD=w.tD-w.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
+    if(w.state==="run"){ const sp=w.kind==="kill"? .95 : .55, dX=w.tX-w.Xw, dD=w.tD-w.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
       if(dist<=sp*dt){ w.Xw=w.tX; w.Dw=w.tD; } else { w.Xw+=dX/dist*sp*dt; w.Dw+=dD/dist*sp*dt*4*(Math.abs(dD)>1e-6?1:0); }
       const want=Math.atan2(trueZ(w.tD)-trueZ(w.Dw),w.tX-w.Xw); if(dist>.01) w.yaw=angTo(w.yaw,want,dt*9); w.ph+=dt*24; w.head+=(0-w.head)*Math.min(1,dt*8); w.worm=0; w.cock=0;
       if(dist<.01){ w.state="listen"; w.st=rnd(.8,1.8); w.t2=0; } }
     else { w.t2+=dt;
-      if(w.state==="listen"){ w.cock+=(.9-w.cock)*Math.min(1,dt*6); if(w.t2>w.st){ if(Math.random()<.55){ w.state="probe"; w.st=rnd(1.4,2.4); w.t2=0; } else { w.state="run"; wcTarget(w); } } }   /* head cocked: listening, or looking, for a worm */
+      if(w.state==="listen"){ w.cock+=(.9-w.cock)*Math.min(1,dt*6); if(w.kind==="kill"){ w.peck=Math.max(0,Math.sin(w.t2*7))*.25; } if(w.t2>w.st){ if(w.kind==="kill"){ w.peck=0; w.state="run"; wcTarget(w,true); } else if(Math.random()<.55){ w.state="probe"; w.st=rnd(1.4,2.4); w.t2=0; } else { w.state="run"; wcTarget(w); } } }   /* head cocked: listening, or looking, for a worm */
       else if(w.state==="probe"){ w.cock*=.8; const u=w.t2/w.st; w.head= u<.2? u/.2 : u<.75? 1-Math.max(0,Math.sin((u-.2)*14))*.15 : 1-(u-.75)/.25; w.worm= u>.3&&u<.95? Math.min(1,(u-.3)*3) : 0;   /* a stab, then braced back, tugging the worm out */
         if(w.t2>w.st){ w.state="run"; w.worm=0; wcTarget(w); } } } }
 
@@ -3136,6 +3240,133 @@ const ambient=(function(){
       if(b.kind==="darner") dragonfly3D(ctx,b.P,b.V,b.t,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz,cy+Y3*F/zz]; },.0074,dark);
       else bee2D(ctx,sx,sy+(b.st==="visit"? Math.sin(b.t*14)*.6 : 0),Math.max(2.5,.0074*3*F/b.P[2]),b.V[0],b.t,dark);
       ctx.restore(); }
+  }
+
+  /* ---- small wonders in the grass right in front of you: a spring peeper calling, a five-lined skink, a praying mantis, a katydid, an eastern garter snake ---- */
+  const smalls=[]; let nextSmall=rnd(60,120);
+  const SMALL={peeper:{f:2.3,h:10,w:18,name:"Spring peeper"},skink:{f:1.5,h:8,w:40,name:"Five-lined skink"},mantis:{f:2.1,h:16,w:26,name:"Praying mantis"},katydid:{f:2.0,h:14,w:34,name:"Katydid"},snake:{f:1.25,h:8,w:70,name:"Eastern garter snake"}};
+  function startSmall(kind){ for(let i=smalls.length-1;i>=0;i--) if(smalls[i].kind===kind) smalls.splice(i,1);
+    const sx=W*rnd(.18,.82), o={kind,sx,g:Math.min(foxBounds().gmax-20,H*rnd(.83,.89)-gnd().vy),yaw:rnd(0,6.28),t:0,st:0,state:"rest",dur:rnd(.5,1.5),alpha:0,life:rnd(30,42),ph:0,head:0,call:0,trail:[]};
+    if(kind==="snake"){ o.sx=Math.random()<.5? -W*.05 : W*1.05; o.head=o.sx<0? rnd(-.3,.3) : Math.PI+rnd(-.3,.3); o.state="go"; o.alpha=1; }
+    smalls.push(o); return o; }
+  function peeperParts(o,P){ const parts=[], far=z=>z*Math.cos(o.yaw)>0, hop=o.hopA||0, ext=hop*1.3, up=hop*3, cl=o.call||0;
+    parts.push({p:[[-2.3,1.7+up,0,1.5],[0,2.1+up,0,1.9],[1.8,2.1+up,0,1.6]],c:rgb(P.body),sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,226,180],.3))]});
+    parts.push({p:[[2.7,2.3+up,0,1.35],[3.8,1.9+up,0,1.0],[4.5,1.5+up,0,.55]],c:rgb(mulv(P.body,1.05)),sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,226,180],.3))],bias:-.05});   /* the blunt head, a little paler */
+    for(const sd of [-1,1]){ const fz=far(sd), c=rgb(fz?mulv(P.body,.78):P.body);
+      parts.push({p:[[-1.8,1.4+up,sd*1.5,.75],[.4-ext*3,.9+up*.5,sd*(2.6-ext),.55],[-2.4-ext*4,.5+up*.2,sd*(2.4),.42],[-.6-ext*5,.15,sd*(3.0),.3]],c,bias:.02});   /* the folded hind leg, flung back in a leap */
+      parts.push({p:[[2.0,1.3+up,sd*1.2,.4],[2.7+ext,.2+up*.3,sd*1.7,.3]],c,bias:.01});
+      parts.push({p:[[2.9,3.15+up,sd*1.05,.72]],c:rgb(P.eye),bias:-.2},{p:[[3.15,3.2+up,sd*1.32,.36]],c:"rgba(6,4,4,.95)",bias:-.3},{p:[[3.0,3.4+up,sd*1.3,.12]],c:"rgba(255,250,236,.8)",bias:-.35});   /* bulging bronze eyes with a glint */
+      parts.push({p:[[3.4,2.4+up,sd*1.3,.18],[1.4,2.5+up,sd*1.6,.14]],c:rgb(P.mark),bias:-.16});   /* the dark stripe through the eye */   /* the bulging bronze eyes */
+      parts.push({p:[[-1.5,3.25+up,-.95*sd,.24],[1.3,3.55+up,.9*sd,.24]],c:rgb(P.mark),bias:-.15}); }   /* the dark X on its back */
+    if(cl>.02) parts.push({p:[[3.1,.95+up-cl*.2,0,.35+cl*1.35]],c:rgb(P.sac,.92),bias:-.1});                         /* the throat puffing out to call */
+    return parts; }
+  function skinkParts(o,P){ const parts=[], far=z=>z*Math.cos(o.yaw)>0, q=o.ph, mv=o.state==="go", wig=mv? 1 : .2, sp=x0=>Math.sin(q*1.4-x0*.4)*.6*wig;
+    const pts=[]; for(let i=0;i<=16;i++){ const x0=5-i*1.35, r2=i<2? .9-i*.04 : i<6? .95-(i-2)*.02 : Math.max(.1,.86-(i-6)*.08); pts.push([x0,.85,sp(x0),r2]); }
+    parts.push({p:pts.slice(0,7),c:rgb(P.body),sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,226,190],.2))]},{p:pts.slice(6),c:rgb(P.tail),sh:[rgb(mulv(P.tail,.6)),rgb(mixv(P.tail,[220,236,255],.35))]});
+    parts.push({p:[[6.0,.85,sp(6),.7],[7.0,.7,sp(7),.4]],c:rgb(P.body)});
+    for(const [dz,dy] of [[0,.85],[-.5,.6],[.5,.6],[-.85,.25],[.85,.25]]){ const st=pts.slice(0,9).map(q2=>[q2[0],q2[1]+dy*(q2[3]),q2[2]+dz*q2[3],.13]); st.unshift([6.6,.85+dy*.55,sp(6.6)+dz*.4,.1]); parts.push({p:st,c:rgb(P.stripe),bias:-.08-(Math.abs(dz)<.1?.02:0)}); }   /* five pale stripes, running out into the blue of the tail */
+    for(const sd of [-1,1]){ for(const [lx,ph] of [[3.6,0],[-1.6,Math.PI]]){ const st=mv? Math.sin(q*1.4+ph+(sd>0?Math.PI:0))*.8 : 0, z0=sp(lx)+sd*.7; parts.push({p:[[lx,.7,z0,.28],[lx+.5+st*.7,.3,z0+sd*1.0,.22],[lx+.9+st,.08,z0+sd*1.3,.15]],c:rgb(far(sd)?mulv(P.body,.8):P.body),bias:.05}); }
+      parts.push({p:[[6.1,1.25,sp(6)+sd*.5,.2]],c:"rgba(6,4,4,.95)",bias:-.3}); }
+    return parts; }
+  function mantisParts(o,P){ const parts=[], far=z=>z*Math.cos(o.yaw)>0, sw=Math.sin(o.t*1.3)*.25, hy=o.head||0, g=rgb(P.body), gl=rgb(P.light), gd=rgb(mulv(P.body,.75));
+    const S=(x,y,z,r2)=>[x+sw*y*.12,y,z+sw*y*.1,r2];                                                                   /* it rocks gently, like a leaf in the breeze */
+    parts.push({p:[S(-5.4,2.4,0,.75),S(-3,2.7,0,1.05),S(-.6,2.9,0,.95),S(.6,3.0,0,.6)],c:g,sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,240,190],.3))]});
+    parts.push({poly:true,p:[[...S(.6,3.4,-.7,0).slice(0,3),0],[...S(-5.6,2.9,-.5,0).slice(0,3),-1],[...S(-6.2,3.0,0,0).slice(0,3),-1],[...S(-5.6,2.9,.5,0).slice(0,3),-1],[...S(.6,3.4,.7,0).slice(0,3),0]],c:gl,bias:-.1});   /* the folded wings over the abdomen */
+    parts.push({p:[S(.6,3.0,0,.5),S(2.4,4.2,0,.38),S(3.8,5.4,0,.34)],c:g});                                              /* the long neck-like prothorax, raised */
+    const hc=S(4.2,6.0,0,0), Hh=(u,v,w,r2)=>{ const t2=headPt([hc[0],hc[1],hc[2]],0,hy,u,v,w); return [t2[0],t2[1],t2[2],r2]; };
+    parts.push({p:[Hh(0,0,0,.62),Hh(.6,-.4,0,.32)],c:g},{p:[Hh(.1,.15,-.62,.4)],c:gl,bias:-.1},{p:[Hh(.1,.15,.62,.4)],c:gl,bias:-.1});   /* the triangular head that swivels to look at you */
+    for(const sd of [-1,1]) parts.push({p:[Hh(.2,.5,sd*.3,.06),Hh(1.6,2.4,sd*1.1,.05),Hh(2.6,3.4,sd*1.6,.04)],c:gd,bias:-.05});
+    for(const sd of [-1,1]){ const fz=far(sd), c=fz?gd:g;
+      parts.push({p:[S(3.2,4.7,sd*.35,.32),S(4.0,3.4,sd*.65,.3),S(4.6,4.9,sd*.6,.22),S(4.9,4.4,sd*.55,.14)],c,bias:-.05});   /* the folded raptorial forelegs, "praying" */
+      parts.push({p:[S(.7,2.8,sd*.3,.16),S(1.4,1.7,sd*2.2,.14),[1.9,0,sd*3.0,.11]],c,bias:.03},{p:[S(-.5,2.8,sd*.3,.16),S(-1.9,1.9,sd*2.6,.14),[-3.4,0,sd*3.3,.11]],c,bias:.03}); }
+    return parts; }
+  function katydidParts(o,P){ const parts=[], far=z=>z*Math.cos(o.yaw)>0, hop=o.hopA||0, up=hop*3, g=rgb(P.body), gl=rgb(P.light), gd=rgb(mulv(P.body,.72)), aw=Math.sin(o.t*2.3)*.4;
+    parts.push({p:[[-2.4,2.2+up,0,1.0],[0,2.4+up,0,1.15],[1.6,2.5+up,0,1.0]],c:g,sh:[rgb(mulv(P.body,.6)),rgb(mixv(P.body,[255,240,190],.3))]});
+    parts.push({p:[[2.4,2.5+up,0,1.0],[3.2,2.1+up,0,.7]],c:g});
+    for(const sd of [-1,1]) parts.push({poly:true,p:[[1.6,3.3+up,sd*.4,0],[-1,3.9+up,sd*.9,0],[-5,3.6+up,sd*.9,0],[-8.4,2.4+up,sd*.5,-1],[-6,1.6+up,sd*.8,0],[-1,1.9+up,sd*.9,0]],c:sd>0?gl:g,bias:sd*.1-.05});   /* the leaf-like wings, veined like a real leaf */
+    for(const sd of [-1,1]){ const fz=far(sd), c=fz?gd:g, ex=hop*2;
+      parts.push({p:[[-.6,2.2+up,sd*.9,.38],[-3.6-ex,5.2+up-ex,sd*1.3,.3],[-4.8-ex*2,.15+up*.3,sd*1.7,.16]],c,bias:.02});   /* the long jumping legs, knees high */
+      parts.push({p:[[1.2,2.0+up,sd*.7,.16],[1.8,.8+up*.4,sd*1.7,.12],[2.2,0,sd*2.0,.1]],c,bias:.02},{p:[[2.2,2.0+up,sd*.6,.16],[3.2,.9+up*.4,sd*1.5,.12],[3.6,0,sd*1.8,.1]],c,bias:.02});
+      parts.push({p:[[3.3,2.5+up,sd*.35,.07],[7,4.6+up+aw*sd,sd*(1.4+aw),.05],[11,4.2+up-aw*sd,sd*(2.6-aw),.04],[14,2.6+up,sd*3.2,.03]],c:gd,bias:-.05});   /* antennae longer than its body */
+      parts.push({p:[[3.0,2.8+up,sd*.62,.26]],c:"rgba(40,30,16,.9)",bias:-.25}); }
+    return parts; }
+  function snakeParts(o,P){ const parts=[], L=o.pts||[], n=L.length; if(n<3) return parts;
+    const body=L.map((q,i)=>[q[0],q[1],q[2],(i<2? .95 : i<n*.7? 1.05 : Math.max(.15,1.05-(i-n*.7)/(n*.3)*.95))]);
+    parts.push({p:body,c:rgb(P.body),sh:[rgb(mulv(P.body,.55)),rgb(mixv(P.body,[230,230,190],.2))]});
+    const off=(i,ny,nz,rr)=>{ const a=L[Math.max(0,i-1)], b2=L[Math.min(n-1,i+1)], dx=b2[0]-a[0], dz=b2[2]-a[2], l=Math.hypot(dx,dz)||1, px=-dz/l, pz=dx/l, R=body[i][3]; return [L[i][0]+px*nz*R,L[i][1]+ny*R,L[i][2]+pz*nz*R,rr*R]; };
+    parts.push({p:L.map((q,i)=>off(i,.85,0,.22)),c:rgb(P.stripe),bias:-.08});                                       /* the yellow stripe down the back */
+    for(const sd of [-1,1]) parts.push({p:L.map((q,i)=>off(i,.15,sd*.85,.2)),c:rgb(mulv(P.stripe,.92)),bias:-.07});   /* and one low on each side */
+    const h=L[0], h2=L[1], dx=h[0]-h2[0], dz=h[2]-h2[2], l=Math.hypot(dx,dz)||1, ux=dx/l, uz=dz/l;
+    parts.push({p:[[h[0]+ux*.5,h[1]+.1,h[2]+uz*.5,1.0],[h[0]+ux*1.6,h[1],h[2]+uz*1.6,.7]],c:rgb(P.head)});
+    for(const sd of [-1,1]) parts.push({p:[[h[0]+ux*.9-uz*sd*.65,h[1]+.45,h[2]+uz*.9+ux*sd*.65,.2]],c:"rgba(6,4,4,.95)",bias:-.3});
+    if(Math.sin(o.t*5)>.6){ const tq=[h[0]+ux*2.6,h[1]-.1,h[2]+uz*2.6]; parts.push({p:[[h[0]+ux*1.7,h[1]-.1,h[2]+uz*1.7,.07],[...tq,.06],[tq[0]+ux*.5-uz*.3,tq[1],tq[2]+uz*.5+ux*.3,.04]],c:"rgba(190,40,40,.95)",bias:-.3},{p:[[...tq,.06],[tq[0]+ux*.5+uz*.3,tq[1],tq[2]+uz*.5-ux*.3,.04]],c:"rgba(190,40,40,.95)",bias:-.3}); }   /* the forked tongue, tasting the air */
+    return parts; }
+  function drawSmalls(dt,dark,Lst){
+    nextSmall-=(lull>0?0:dt); if(nextSmall<=0){ nextSmall=rnd(90,180); if(smalls.length<2) startSmall(pick(dark? ["peeper","katydid","peeper"] : ["skink","mantis","snake","katydid","peeper"])); }
+    for(let i=smalls.length-1;i>=0;i--){ const o=smalls[i]; o.t+=dt; o.st+=dt; const D=SMALL[o.kind];
+      const out=o.t>o.life; o.alpha= out? Math.max(0,o.alpha-dt*.8) : Math.min(1,o.alpha+dt*.8); if(out&&o.alpha<=0&&o.kind!=="snake"){ smalls.splice(i,1); continue; }
+      const lo=lawnMinG(Math.max(0,Math.min(W,o.sx)))+50, hi=Math.min(foxBounds().gmax-14,H*.9-gnd().vy), mv=(spd,a)=>{ o.sx+=Math.cos(a)*spd*dt; o.g=Math.max(lo,Math.min(hi,o.g+Math.sin(a)*spd*.45*dt)); };
+      const before=toGround(o.sx,gnd().vy+o.g);
+      if(o.kind==="peeper"||o.kind==="katydid"){
+        if(o.state==="rest"&&o.st>o.dur){ const r0=Math.random(); if(r0<.45){ o.state="call"; o.st=0; o.dur=o.kind==="peeper"? 3.2 : 2.6; natureSfx.sing&&natureSfx.sing(o.kind,(o.sx/W*2-1)*.9); } else if(r0<.75){ o.state="hop"; o.st=0; o.dur=.42; o.ha=o.yaw+rnd(-.9,.9); } else { o.st=0; o.dur=rnd(1,2.5); } }
+        else if(o.state==="call"){ o.call= o.kind==="peeper"? Math.max(0,Math.sin(o.st*Math.PI*1.7))*(o.st<o.dur?1:0) : 0; if(o.st>o.dur){ o.state="rest"; o.st=0; o.dur=rnd(1.5,4); o.call=0; } }
+        else if(o.state==="hop"){ const u=Math.min(1,o.st/o.dur); o.hopA=Math.sin(u*Math.PI); mv(W*(o.kind==="peeper"? .1 : .14),Math.atan2(-Math.sin(o.ha)*.5,Math.cos(o.ha))); if(u>=1){ o.hopA=0; o.state="rest"; o.st=0; o.dur=rnd(1.5,4); } } }
+      else if(o.kind==="skink"){
+        if(o.state==="rest"&&o.st>o.dur){ o.state="go"; o.st=0; o.dur=rnd(.25,.6); o.ha=(o.ha??rnd(0,6.28))+rnd(-1.4,1.4); }
+        if(o.state==="go"){ o.ph+=dt*22; mv(W*.16,o.ha); if(o.st>o.dur){ o.state="rest"; o.st=0; o.dur=rnd(.8,2.6); } }
+        else o.ph+=dt*2; }
+      else if(o.kind==="mantis"){ const cy0=camYaw(o.yaw); o.head+=((Math.sin(o.t*.7)>-.2? cy0 : Math.sin(o.t*1.3)*.6)-o.head)*Math.min(1,dt*3);   /* that swivelling head, turning to look at you */
+        if(o.state==="rest"&&o.st>o.dur){ o.state="go"; o.st=0; o.dur=rnd(1,2); o.ha=(o.ha??rnd(0,6.28))+rnd(-.8,.8); } if(o.state==="go"){ mv(W*.008,o.ha); if(o.st>o.dur){ o.state="rest"; o.st=0; o.dur=rnd(3,6); } } }
+      else if(o.kind==="snake"){ o.state="go"; if(o.base==null) o.base=o.head; o.base+=Math.sin(o.t*.35)*.12*dt; const a=o.base+Math.sin(o.t*2.4)*.8;   /* S-curves as it glides */ o.head=a; o.sx+=Math.cos(a)*W*.028*dt; o.g=Math.max(lo,Math.min(hi,o.g+Math.sin(a)*W*.012*dt)); if((o.sx<-W*.12&&Math.cos(a)<0)||(o.sx>W*1.12&&Math.cos(a)>0)||(o.t>o.life+25)){ smalls.splice(i,1); continue; } if(o.t>o.life*.5&&o.turned!==true){ o.turned=true; } }
+      const p=toGround(o.sx,gnd().vy+o.g), dX=p.Xw-before.Xw, dZ=trueZ(p.Dw)-trueZ(before.Dw); if(Math.hypot(dX,dZ)>1e-7&&o.kind!=="snake") o.yaw=angTo(o.yaw,Math.atan2(dZ,dX),dt*6); o.Xw=p.Xw; o.Dw=p.Dw;
+      const sc=toScreen(o.Xw,o.Dw), k=.16*sc.g/26*D.f; o.scr=sc;
+      if(o.kind==="snake"){ if(Math.hypot(dX,dZ)>1e-7) o.yaw=angTo(o.yaw,Math.atan2(dZ,dX),dt*3);
+        const pts=[]; for(let i=0;i<36;i++){ const xx=-i*1.25, amp=Math.min(1,i/5)*2.4; pts.push([xx,.9,amp*Math.sin(i*.42-o.t*5.2)]); } o.pts=pts; }   /* the body throws travelling S-curves back along its length */
+      if(o.alpha<=0) continue;
+      Lst.push({y:sc.y,fn:()=>{ o.ct=(o.ct||0)-dt; if(o.ct<=0||!o.pal){ o.ct=1.5; const G=groundPal(sc,dark), lit=dark?.5:.74;
+          o.pal={...G, ...{peeper:{body:mulv([180,140,96],lit),eye:mulv([176,130,60],lit),mark:mulv([92,64,42],lit),sac:mulv([236,222,190],lit)},skink:{body:mulv([36,30,28],lit),tail:mulv([60,104,214],lit),stripe:mulv([232,214,150],lit)},mantis:{body:mulv([112,138,70],lit*.9),light:mulv([138,160,88],lit*.9)},katydid:{body:mulv([98,134,66],lit*.9),light:mulv([124,154,80],lit*.9)},snake:{body:mulv([46,52,36],lit),stripe:mulv([214,198,96],lit),head:mulv([60,62,42],lit)}}[o.kind]}; }
+        if(!o.blades) o.blades=Array.from({length:o.kind==="snake"?16:7},()=>({ox:rnd(-D.w*.5,D.w*.5),h:rnd(1.5,3.5),lean:rnd(-.5,.5),c:Math.random()}));
+        o.res=1.5; o.pitch={peeper:.62,skink:.85,mantis:.42,katydid:.5,snake:.9}[o.kind]; critterBlit(null,null,o,sc,k,o.pal,()=>({peeper:peeperParts,skink:skinkParts,mantis:mantisParts,katydid:katydidParts,snake:snakeParts})[o.kind](o,o.pal),o.yaw,D.h,D.w,o.kind==="snake"?14:4,o.blades,o.alpha,.2); }}); }
+  }
+
+  /* ---- a golden garden spider on her orb web, strung between two grass stems just in front of you: the spokes flash where they turn to the sun,
+     dew beads along the spiral, the white zigzag stitched above and below the hub, and the spider hanging head-down with her legs held in pairs ---- */
+  let web=null, nextWeb=rnd(150,280);
+  function startWeb(){ const left=Math.random()<.5; web={sx:W*(left? rnd(.07,.2) : rnd(.8,.93)),sy:H*rnd(.74,.8),R:Math.min(W,H)*rnd(.1,.13),a:(left?1:-1)*rnd(.35,.7),t:0,life:rnd(45,60),alpha:0,
+    rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:70},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)])}; }
+  function drawWeb(dt,dark){
+    if(!web){ nextWeb-=(lull>0?0:dt); if(nextWeb<=0){ nextWeb=rnd(240,420); startWeb(); } return; }
+    const w=web; w.t+=dt; const out=w.t>w.life; w.alpha= out? Math.max(0,w.alpha-dt*.5) : Math.min(1,w.alpha+dt*.5); if(out&&w.alpha<=0){ web=null; return; }
+    const sway=Math.sin(w.t*.9)*.05+Math.sin(w.t*2.3)*.015, a=w.a+sway, ca=Math.cos(a), sa=Math.sin(a), R=w.R;
+    const P=(u,v)=>{ const zz=u*sa*.45, f=1/(1+zz); return [w.sx+u*ca*R*f, w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01]; };   /* the web's plane, turned a little toward or away from you */
+    const sp=sun(), sunA=Math.atan2(-(sp.y-w.sy),(sp.x-w.sx)), lit=dark? .35 : 1, A=w.alpha;
+    const x=ctx; x.save(); x.globalAlpha=1; x.globalCompositeOperation="source-over"; x.filter="none"; x.lineCap="round";
+    /* the two grass stems it hangs between, and the guy lines */
+    const sL=P(-1.35,-1.6), sR=P(1.3,-1.6), tL=P(-1.25,1.25), tR=P(1.2,1.1);
+    x.strokeStyle=`rgba(${dark?50:120},${dark?60:130},${dark?30:60},${(.85*A).toFixed(3)})`; x.lineWidth=Math.max(1,R*.018); x.beginPath(); x.moveTo(sL[0],H*1.02); x.quadraticCurveTo(sL[0]+R*.05,(sL[1]+tL[1])/2,tL[0],tL[1]-R*.15); x.moveTo(sR[0],H*1.02); x.quadraticCurveTo(sR[0]-R*.06,(sR[1]+tR[1])/2,tR[0],tR[1]-R*.2); x.stroke();
+    const thread=(al)=>`rgba(${Math.round(255*lit)},${Math.round(242*lit)},${Math.round(214*lit)},${(al*A).toFixed(3)})`;
+    x.lineWidth=Math.max(.5,R*.004); x.strokeStyle=thread(.35); x.beginPath(); const rimPt=i=>{ const th=i/30*6.283; return P(Math.cos(th)*w.rim[i],Math.sin(th)*w.rim[i]); };
+    for(const [q,an] of [[tL,rimPt(11)],[tR,rimPt(3)],[sL,rimPt(19)],[sR,rimPt(25)]]){ x.moveTo(q[0],q[1]); x.lineTo(an[0],an[1]); } x.stroke();
+    /* the spokes, each catching the sun at its own angle */
+    for(let i=0;i<30;i++){ const th=i/30*6.283, g=Math.pow(Math.max(0,Math.cos(th-sunA)),6), q0=P(Math.cos(th)*.05,Math.sin(th)*.05), q1=rimPt(i); x.strokeStyle=thread(.09+.55*g); x.beginPath(); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); x.stroke(); }
+    /* the capture spiral: straight runs from spoke to spoke, sagging a hair */
+    x.strokeStyle=thread(.15); x.beginPath(); let first=true;
+    for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30; const r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); first? x.moveTo(q[0],q[1]) : x.lineTo(q[0],q[1]); first=false; } x.stroke();
+    /* the stabilimentum: a white zigzag band above and below the hub */
+    x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.55*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.008); x.beginPath();
+    for(const sg of [1,-1]){ for(let j=0;j<=22;j++){ const v=sg*(.1+j*.019), u=(j%2? .022 : -.022)*(1-j/30), q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke();
+    /* dew, sparkling now and then */
+    for(const [th,rr,ph] of w.dew){ const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),18); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
+    /* the spider: head down, the big yellow-and-black abdomen above, silver cephalothorax below, legs held in pairs like an X */
+    const c0=P(0,0), sc=R*.017, ang=Math.atan2(P(0,1)[1]-c0[1],P(0,1)[0]-c0[0])+Math.PI/2;
+    x.translate(c0[0],c0[1]); x.rotate(ang); x.scale(sc*Math.max(.55,Math.abs(ca)),sc);
+    x.strokeStyle=`rgba(${Math.round(40*lit)},${Math.round(30*lit)},${Math.round(20*lit)},${A.toFixed(3)})`; x.lineWidth=.9;
+    for(const sd of [-1,1]) for(const [a0,l1,l2] of [[-.5,6,7.6],[-.25,5,6.2],[.25,4.4,5.4],[.55,5.4,7]]){ const aa=(sd>0?0:Math.PI)+a0*sd, b1=[Math.cos(aa)*l1*sd*sd,Math.sin(aa)*l1+(a0<0?-1:1)*.6], b2=[b1[0]+Math.cos(aa+sd*(a0<0?.3:-.3))*l2,b1[1]+Math.sin(aa+sd*(a0<0?.3:-.3))*l2]; x.beginPath(); x.moveTo(0,a0<0?-1:1); x.lineTo(b1[0],b1[1]); x.lineTo(b2[0],b2[1]); x.stroke(); }
+    const ab=x.createRadialGradient(-1,-7,0,0,-6,5.5); ab.addColorStop(0,`rgba(${Math.round(250*lit)},${Math.round(214*lit)},${Math.round(70*lit)},${A})`); ab.addColorStop(1,`rgba(${Math.round(200*lit)},${Math.round(150*lit)},${Math.round(30*lit)},${A})`);
+    x.fillStyle=ab; x.beginPath(); x.ellipse(0,-6,3.6,5.4,0,0,6.283); x.fill();
+    x.fillStyle=`rgba(${Math.round(24*lit)},${Math.round(20*lit)},${Math.round(16*lit)},${(.95*A).toFixed(3)})`; x.beginPath(); x.ellipse(0,-6.2,1.1,4.6,0,0,6.283); x.fill(); for(const yy of [-9,-6.5,-4]){ x.beginPath(); x.ellipse(0,yy,3.2,.55,0,0,6.283); x.fill(); }   /* the black saddle and bands */
+    x.fillStyle=`rgba(${Math.round(214*lit)},${Math.round(210*lit)},${Math.round(200*lit)},${A})`; x.beginPath(); x.ellipse(0,1.4,2,2.4,0,0,6.283); x.fill();   /* the silvery front body */
+    x.restore(); web.sx2=c0[0]; web.sy2=c0[1];
   }
   /* ---- an eastern box turtle plods across the grass close to you: high domed shell, dark with yellow-orange blotches; it stops now and then, and pulls in when a dog comes near ---- */
   let turtle=null, nextTurtle=75;
@@ -3954,13 +4185,13 @@ const ambient=(function(){
     T(fox,"Red fox",30); T(skunk,"Striped skunk",24); T(cub,"Black bear cub",34); T(mom,"Black bear",60); T(bobcat,"Bobcat",30); T(coyote,"Gray fox",30); T(coy2,"Coyote",40); T(turtle,"Box turtle",16);
     T(dog,"Willow",34); T(lab,"Tulip",36); if(doe){ T(doe,"White-tailed doe",60); T(doe.fawn,"Fawn",34); }
     if(buck){ const p=buckPose(); tag(p.x,p.y-40,60,"White-tailed buck"); } if(buck2){ const p=buck2Pose(); tag(p.x,p.y-14,24,"White-tailed buck"); }
-    for(const w of wcs) T(w,w.kind==="robin"?"American robin":"American woodcock",18); T(racc,"Raccoon",34); T(beaver,"American beaver",34); T(eft,"Red eft (eastern newt)",12); for(const q of sqs) T(q,q.kind==="gray"?"Eastern gray squirrel":q.kind==="red"?"Red squirrel":"Eastern chipmunk",18);
+    for(const w of wcs) T(w,{robin:"American robin",card:w.male?"Northern cardinal":"Northern cardinal (female)",kill:"Killdeer"}[w.kind]||"American woodcock",18); T(racc,"Raccoon",34); T(hog,"Groundhog",30); T(possum,"Virginia opossum",30); T(beaver,"American beaver",34); T(eft,"Red eft (eastern newt)",12); if(web&&web.sx2!=null&&web.alpha>.3) tag(web.sx2,web.sy2,30,"Golden garden spider"); for(const o of smalls) if(o.scr&&o.alpha>.3) tag(o.scr.x,o.scr.y-8,18,SMALL[o.kind].name); for(const q of sqs) T(q,q.kind==="gray"?"Eastern gray squirrel":q.kind==="red"?"Red squirrel":"Eastern chipmunk",18);
     if(hen){ T(hen,"Wild turkey hen",26); for(const c of hen.chicks) T(c,"Turkey poult",14); }
     if(turks) for(const b of turks.birds) T(b,"Wild turkey",26);
     for(const bn of buns) tag(bn.x,bn.y-8,16,"Eastern cottontail");
     if(hawkG) tag(hawkG.x,hawkG.y-10,g(30*hawkG.m),"Red-tailed hawk"); if(eag){ const Pe=eagleAt(eag,eag.t/eag.dur); tag(W/2+Pe[0]*H*.5/Pe[2],H*.52+Pe[1]*H*.5/Pe[2],30,eag.golden?"Golden eagle":"Bald eagle"); } if(pecker) tag(pecker.x,pecker.y,g(16*pecker.m),"Pileated woodpecker");
     if(hero&&hero.sx!=null) tag(hero.sx,hero.sy,hero.tr||40,"Luna moth"); if(cmon&&cmon.sx!=null) tag(cmon.sx,cmon.sy,cmon.tr||40,(BFLY[cmon.kind]||BFLY.monarch).name); for(const m of mons) tag(m.sx,m.sy,Math.max(24,70/Math.max(1,m.z||3)),(BFLY[m.kind]||BFLY.monarch).name);
-    if(bbFlock) for(const b of bbFlock.birds) if(b.sx!=null) tag(b.sx,b.sy,24,bbFlock.kind==="finch"?"American goldfinch":"Eastern bluebird");
+    if(bbFlock) for(const b of bbFlock.birds) if(b.sx!=null) tag(b.sx,b.sy,24,{finch:"American goldfinch",bunting:"Indigo bunting",tanager:"Scarlet tanager",wpw:"Eastern whip-poor-will"}[bbFlock.kind]||"Eastern bluebird");
     if(hum&&hum.sx!=null) tag(hum.sx,hum.sy,40,"Ruby-throated hummingbird"); for(const b of bats) tag(b.x,b.y,16,"Little brown bat");
     for(const c of cards) tag(c.x,gnd().vy+lawnMinG(c.x)-16,14,c.male?"Northern cardinal":"Northern cardinal (female)");
     { const LEAFN={maple:"Sugar maple leaf",oak:"Red oak leaf",birch:"Yellow birch leaf",milkweed:"Milkweed seed"};
@@ -5094,10 +5325,12 @@ const ambient=(function(){
       for(const d of deerL) L.push(d);
       if(lab) L.push({y:toScreen(lab.Xw,lab.Dw).y,fn:()=>drawLab(dt,dark)}); else drawLab(dt,dark);
       for(const bn of buns) L.push({y:bn.y||0,fn:()=>drawRabbit(bn,dt,dark)});
-      nextWc-=(lull>0?0:dt); if(nextWc<=0&&!wcs.length){ if(Math.random()<.5) startRobins(); else startWoodcocks(); nextWc=rnd(70,140); }
+      nextWc-=(lull>0?0:dt); if(nextWc<=0&&!wcs.length){ const r0=Math.random(); if(r0<.35) startRobins(); else if(r0<.55) startSongbirds("card"); else if(r0<.7) startSongbirds("kill"); else startWoodcocks(); nextWc=rnd(70,140); }
       if(racc) L.push({y:toScreen(racc.Xw,racc.Dw).y,fn:()=>drawWaddler(dt,dark,"racc")}); else drawWaddler(dt,dark,"racc");
       if(beaver) L.push({y:toScreen(beaver.Xw,beaver.Dw).y,fn:()=>drawWaddler(dt,dark,"beaver")}); else drawWaddler(dt,dark,"beaver");
+      for(const kd of ["hog","possum"]){ const o=WAD[kd].get(); if(o) L.push({y:toScreen(o.Xw,o.Dw).y,fn:()=>drawWaddler(dt,dark,kd)}); else drawWaddler(dt,dark,kd); }
       if(eft) L.push({y:toScreen(eft.Xw,eft.Dw).y,fn:()=>drawEft(dt,dark)}); else drawEft(dt,dark);
+      drawSmalls(dt,dark,L);
       for(let i=wcs.length-1;i>=0;i--) if(wcs[i].gone) wcs.splice(i,1);
       for(const w of wcs) L.push({y:toScreen(w.Xw,w.Dw).y,fn:()=>drawWoodcock(w,dt,dark)});
       nextSq-=(lull>0?0:dt); if(nextSq<=0){ nextSq=rnd(30,60); if(sqs.length<(MOBILE()?2:4)) startSquirrels(); }
@@ -5111,6 +5344,7 @@ const ambient=(function(){
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     for(const m of motes) if(m.L===2) drawMote(m);
+    if(img) drawWeb(dt,dark);
     if(img) drawBig(dt,dark);
     ctx.globalAlpha=1; if(img){ dogScare(dt); drawGreet(dt,dark); drawTrail(dt,dark); drawMoths(dt,dark,"near"); drawFlock(dt,dark); drawJays(dt,dark); drawJM(dt,dark); drawCmon(dt,dark); drawBanner(dt,dark); drawHawkG(dt,dark,"near"); drawPheasFront(dt,dark); drawHum(dt,dark); } ctx.globalAlpha=1;
     ctx.setTransform(1,0,0,1,0,0); if(img) filmPass();
@@ -5125,12 +5359,12 @@ const ambient=(function(){
   return { hawkDbg(){ return hawkG&&{st:hawkG.state,t:+hawkG.st.toFixed(2),x:Math.round(hawkG.x),y:Math.round(hawkG.y),tx:Math.round(hawkG.tx),ty:Math.round(hawkG.ty)}; }, rigShot(kind,yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=700; c.height=420; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,700,420);
       const f={kind,ph:.4,head:0,turn:0,state:'run',yaw,sniff:0,cock:.5,worm:0}, lit=.68, P={fur:mulv(kind==='racc'?[128,120,108]:[110,70,42],lit),dark:mulv([30,27,26],lit),pale:mulv([226,220,206],lit),tail:mulv([44,40,38],lit),teeth:mulv([226,128,40],lit),stick:mulv([150,120,84],lit),leaf:mulv([92,110,52],lit),body:mulv([238,112,32],.8),spot:mulv([214,42,26],.8),back:mulv([92,82,72],lit),breast:mulv([196,86,40],lit),belly:mulv([226,214,196],lit),head:mulv([42,38,36],lit),ring:mulv([236,232,222],lit),bill:mulv([232,184,60],lit),leg:mulv([110,92,76],lit),worm:mulv([190,120,110],lit)};
       const parts=kind==='racc'? raccoonParts(f,P,true) : kind==='beaver'? beaverParts(f,P,true) : kind==='eft'? eftParts(Object.assign(f,{state:'walk'}),P) : robinParts(Object.assign(f,{state:'listen'}),P);
-      x.translate(350,340); x.scale(sc,sc); rigDraw(x,parts,rigView(yaw,pitch),1); return c.toDataURL(); }, newDbg(){ const P=o=>o&&{x:Math.round(toScreen(o.Xw,o.Dw).x),y:Math.round(toScreen(o.Xw,o.Dw).y),g:Math.round(toScreen(o.Xw,o.Dw).g),st:o.state}; return {racc:P(racc),beaver:P(beaver),eft:P(eft),robin:P(wcs.find(w=>w.kind==="robin")),chip:P(sqs.find(q=>q.kind==="chip"))}; }, bfSheet(){ const ks=Object.keys(BFLY), c=document.createElement('canvas'); c.width=ks.length*2*26*5; c.height=34*5+20; const x=c.getContext('2d'); x.fillStyle='#6b6248'; x.fillRect(0,0,c.width,c.height);
+      x.translate(350,340); x.scale(sc,sc); rigDraw(x,parts,rigView(yaw,pitch),1); return c.toDataURL(); }, newDbg(){ const P=o=>o&&{x:Math.round(toScreen(o.Xw,o.Dw).x),y:Math.round(toScreen(o.Xw,o.Dw).y),g:Math.round(toScreen(o.Xw,o.Dw).g),st:o.state}; const o={racc:P(racc),beaver:P(beaver),eft:P(eft),robin:P(wcs.find(w=>w.kind==="robin")),hog:P(hog),possum:P(possum),card:P(wcs.find(w=>w.kind==="card")),kill:P(wcs.find(w=>w.kind==="kill"))}; for(const q of smalls) o[q.kind]=P(q); if(web) o.web={x:Math.round(web.sx),y:Math.round(web.sy),g:300}; if(bbFlock){ const b=bbFlock.birds[0]; o.flock={x:Math.round(b.sx||0),y:Math.round(b.sy||0),g:200,st:bbFlock.kind}; } return o; }, bfSheet(){ const ks=Object.keys(BFLY), c=document.createElement('canvas'); c.width=ks.length*2*26*5; c.height=34*5+20; const x=c.getContext('2d'); x.fillStyle='#6b6248'; x.fillRect(0,0,c.width,c.height);
       ks.forEach((k,i)=>{ const sp=butterflySprite(k)[0]; const ox=i*2*26*5+26*5; x.save(); x.translate(ox,0); x.drawImage(sp,0,0,sp.width/2,sp.height/2); x.scale(-1,1); x.drawImage(sp,0,0,sp.width/2,sp.height/2); x.restore(); }); return c.toDataURL(); }, clDbg(){ return {c:clods.length,h:holes.map(h=>[Math.round(h.x),Math.round(h.y),+h.w.toFixed(1),+h.a.toFixed(2)]),c0:clods[0]&&[Math.round(clods[0].x),Math.round(clods[0].y),+clods[0].r.toFixed(1)],lab:lab&&[lab.state,Math.round(toScreen(lab.Xw,lab.Dw).x),Math.round(toScreen(lab.Xw,lab.Dw).y)]}; }, pfShot(views){ const c=document.createElement('canvas'); c.width=1200; c.height=800; const x=c.getContext('2d'); x.fillStyle='#8a7a66'; x.fillRect(0,0,1200,800); const sunL=[.3,-.2,.93];
       views.forEach((v,i)=>{ const cx=200+(i%3)*400, cy=200+Math.floor(i/3)*400, F=900; const P=[0,0,3]; (v.fn==='jay'?blueJay3D:v.fn==='bb'?blueBird3D:pileatedFly3D)(x,P,v.f,v.flap,v.glide,(X,Y,Z)=>[cx+X*F/Z,cy+Y*F/Z],.045,sunL); }); return c.toDataURL(); },
     tuShot(yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=900; c.height=560; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,900,560);
       const tu={ph:1,hide:0,hd:0,state:'walk',yaw,spots:[]}, lit=.62, P={shell:mulv([66,44,22],lit*1.15), spot:mulv([226,158,46],lit*1.1), rim:mulv([92,70,34],lit), skin:mulv([74,54,36],lit), head:mulv([82,58,36],lit), beak:mulv([150,128,92],lit), claw:mulv([58,46,34],lit)};
-      const M=turtleShell(); x.translate(450,400); x.scale(sc,sc); const V=rigView(yaw,pitch); rigDraw(x,turtleParts(tu,P),V,1); drawTurtleShell(x,V,M,P,1); return c.toDataURL(); }, tuDbg(){ return turtle&&{x:Math.round(turtle.sx),y:Math.round(toScreen(turtle.Xw,turtle.Dw).y),st:turtle.state}; }, pkDbg(){ return pecker&&{st:pecker.state,x:Math.round(pecker.x),y:Math.round(pecker.y),m:+(pecker.m||1).toFixed(2)}; }, jmDbg(){ return jm&&{t:+jm.t.toFixed(2),x:Math.round(jm.sx||0),y:Math.round(jm.sy||0)}; }, critDbg(){ const o={}; for(const [k,v] of [["fox",fox],["gray",coyote],["cub",cub],["mom",mom]]) if(v){ const q=toScreen(v.Xw,v.Dw); o[k]=[Math.round(q.x),Math.round(q.y),+q.g.toFixed(1),v.state]; } return o; }, jayDbg(){ return jays&&{t:+jays.t.toFixed(1),x:Math.round(jays.ax||0),y:Math.round(jays.ay||0),z:+(jays.zs||0).toFixed(2)}; }, metDbg(){ return {m:meteors.map(m=>[Math.round(m.x0),Math.round(m.y0),+(t-m.t0).toFixed(2),m.big]),comet:[Math.round(W*.34),Math.round(Math.max(H*.075,scr(.335,.058)[1]))],d:+duskV.toFixed(3)}; }, hazeDbg(){ return plumes.map(q=>[q.kind,q.spot,+q.t.toFixed(1),q.parts.length]); }, dogDbg(){ return [dog,lab].map(d=>d&&{...(({x,y})=>({x:Math.round(x),y:Math.round(y)}))(toScreen(d.Xw,d.Dw)),st:d.state,ch:!!d.chase,led:!!d.led}); }, scrDbg(x,y){ return scr(x,y).map(Math.round); }, chDbg(){ return {mons:mons.map(m=>[Math.round(m.sx),Math.round(m.sy),+m.t.toFixed(1)]),ch:bbChase&&[Math.round(bbChase.sx||0),Math.round(bbChase.sy||0),+bbChase.t.toFixed(1)],nc:+nextChase.toFixed(1),life:mons.map(m=>+m.life.toFixed(1))}; }, utvPts(){ return UTV_PATH.map(([ix,iy])=>{ const s0=scr(ix,iy), g=toGround(s0[0],s0[1]); return [Math.round(s0[0]),Math.round(s0[1]),+g.Xw.toFixed(2),+trueZ(g.Dw).toFixed(2)]; }).concat([[gnd().vy,FOC(),GF]]); }, utvDbg(){ if(!utv) return null; const q=utvAt(utv,utv.d); return {d:+utv.d.toFixed(2),len:+utv.len.toFixed(1),X:+q[0].toFixed(2),Z:+q[1].toFixed(2),sx:Math.round(utv.sx||0),sy:Math.round(utv.sy||0),r:Math.round(utv.sr||0),hv:+(utv.hv||0).toFixed(4),pi:+(utv.pitch||0).toFixed(3),ro:+(utv.roll||0).toFixed(3),v:+utv.v.toFixed(3),yaw:+(utv.yaw||0).toFixed(2),dm:+utv.cum[utv.iM].toFixed(2),aw:utv.away}; }, soarDbg(k){ return soarers.filter(b=>b.kind===k).map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,b.st||'',+b.Y.toFixed(2),+b.Z.toFixed(1)]; }); }, ravDbg(){ return soarers.filter(b=>b.kind==="raven").map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,!!b.roll]; }); }, bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; callT=t+4; if(n!=="lull") lull=0; if(n==="skunk"){ skunk=null; nextSkunk=0; } else if(n==="bobcat"){ bobcat=null; nextBobcat=0; } else if(n==="turkeys"){ turks=null; nextTurks=0; } else if(n==="pheasw"){ pheasW=null; nextPheasW=0; } else if(n==="grouse"){ grouse=null; pheas=null; flushGrouse(); } else if(n==="pheasant"){ grouse=null; pheas=null; flushPheasant(); } else if(n==="owl"){ soarers=soarers.filter(b=>b.kind!=="owl"); startOwl(); } else if(n==="vultures"){ soarers=soarers.filter(b=>b.kind!=="vult"); startVultures(); } else if(n==="geese"){ if(flocks.length>=2) flocks.shift(); flocks.push(newFlock()); } else if(n==="deer"){ herd=[]; nextDeer=0; } else if(n==="bats"){ duskV=Math.max(duskV,.5); } else if(n==="dig"&&lab){ startDig(lab); } else if(n==="roll"&&lab){ startRoll(lab); } else if(n==="bfjump"&&dog){ const s0=toScreen(dog.Xw,dog.Dw); mons.push({t:0,life:30,sx:s0.x+s0.g*.3,sy:s0.y-s0.g*.2,z:3,dir:-1,ph:0,flapT:0,glide:0,ang:.4,tz:3,wy:0}); dog.bfT=0; } else if(n.startsWith("bfly:")){ cmon=null; startCmon(n.split(":")[1]); } else if(n==="raccoon"){ racc=startWaddler("racc"); } else if(n==="beaver"){ beaver=startWaddler("beaver"); } else if(n==="eft"){ eft=null; startEft(); } else if(n==="robin"){ wcs.length=0; startRobins(); } else if(n==="chipmunk"){ startSquirrels("chip"); } else if(n==="darner"){ startBug("darner"); } else if(n==="bee"){ startBug("bee"); } else if(n==="fireflies"){ for(let i=0;i<28;i++){ const x0=rnd(W*.05,W*.95); flies.push({ax:x0,ay:gnd().vy+lawnMinG(x0)+rnd(0,H*.32),x:x0,y:0,per:rnd(2.4,5),ph:rnd(0,6),wan:rnd(0,6),r:rnd(1.4,2.4),life:t+rnd(30,45)}); } }   /* a summer night's worth, rising over the lawn */ else if(n==="fox"){ nextFox=0; dog=lab=null; rompAt=null; } else if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; startJays(); } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="quail"){ quails=[]; startQuail(); } else if(n==="chase"){ bbChase=null; nextChase=0; } else if(n==="utv"){ utv=null; startUtv(); } else if(n==="utv2"){ utv=null; utvRoute=1; startUtv(); } else if(n==="utv1"){ utv=null; utvRoute=0; startUtv(); } else if(n==="falcon"){ soarers=soarers.filter(b=>b.kind!=="falcon"); startFalcon(); } else if(n==="heron"){ soarers=soarers.filter(b=>b.kind!=="heron"); startHeron(); } else if(n==="hawkv"){ soarers=soarers.filter(b=>b.kind!=="hawk"); startHawk(); } else if(n==="ravens"){ soarers=soarers.filter(b=>b.kind!=="raven"); startRavens(); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(false); } else if(n==="goldeneagle"){ eag=null; startEagle(true); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; startFlock("blue"); } else if(n==="finch"){ bbFlock=null; startFlock("finch"); } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="lull"){ lull=60; } else if(n==="jaymon"){ jm=null; startJM(); } else if(n==="smoke"){ nextSmoke=0; } else if(n==="mistcol"){ nextMistC=0; } else if(n==="meteor"){ duskV=Math.max(duskV,.62); metNext=t; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; startPecker(); } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
+      const M=turtleShell(); x.translate(450,400); x.scale(sc,sc); const V=rigView(yaw,pitch); rigDraw(x,turtleParts(tu,P),V,1); drawTurtleShell(x,V,M,P,1); return c.toDataURL(); }, tuDbg(){ return turtle&&{x:Math.round(turtle.sx),y:Math.round(toScreen(turtle.Xw,turtle.Dw).y),st:turtle.state}; }, pkDbg(){ return pecker&&{st:pecker.state,x:Math.round(pecker.x),y:Math.round(pecker.y),m:+(pecker.m||1).toFixed(2)}; }, jmDbg(){ return jm&&{t:+jm.t.toFixed(2),x:Math.round(jm.sx||0),y:Math.round(jm.sy||0)}; }, critDbg(){ const o={}; for(const [k,v] of [["fox",fox],["gray",coyote],["cub",cub],["mom",mom]]) if(v){ const q=toScreen(v.Xw,v.Dw); o[k]=[Math.round(q.x),Math.round(q.y),+q.g.toFixed(1),v.state]; } return o; }, jayDbg(){ return jays&&{t:+jays.t.toFixed(1),x:Math.round(jays.ax||0),y:Math.round(jays.ay||0),z:+(jays.zs||0).toFixed(2)}; }, metDbg(){ return {m:meteors.map(m=>[Math.round(m.x0),Math.round(m.y0),+(t-m.t0).toFixed(2),m.big]),comet:[Math.round(W*.34),Math.round(Math.max(H*.075,scr(.335,.058)[1]))],d:+duskV.toFixed(3)}; }, hazeDbg(){ return plumes.map(q=>[q.kind,q.spot,+q.t.toFixed(1),q.parts.length]); }, dogDbg(){ return [dog,lab].map(d=>d&&{...(({x,y})=>({x:Math.round(x),y:Math.round(y)}))(toScreen(d.Xw,d.Dw)),st:d.state,ch:!!d.chase,led:!!d.led}); }, scrDbg(x,y){ return scr(x,y).map(Math.round); }, chDbg(){ return {mons:mons.map(m=>[Math.round(m.sx),Math.round(m.sy),+m.t.toFixed(1)]),ch:bbChase&&[Math.round(bbChase.sx||0),Math.round(bbChase.sy||0),+bbChase.t.toFixed(1)],nc:+nextChase.toFixed(1),life:mons.map(m=>+m.life.toFixed(1))}; }, utvPts(){ return UTV_PATH.map(([ix,iy])=>{ const s0=scr(ix,iy), g=toGround(s0[0],s0[1]); return [Math.round(s0[0]),Math.round(s0[1]),+g.Xw.toFixed(2),+trueZ(g.Dw).toFixed(2)]; }).concat([[gnd().vy,FOC(),GF]]); }, utvDbg(){ if(!utv) return null; const q=utvAt(utv,utv.d); return {d:+utv.d.toFixed(2),len:+utv.len.toFixed(1),X:+q[0].toFixed(2),Z:+q[1].toFixed(2),sx:Math.round(utv.sx||0),sy:Math.round(utv.sy||0),r:Math.round(utv.sr||0),hv:+(utv.hv||0).toFixed(4),pi:+(utv.pitch||0).toFixed(3),ro:+(utv.roll||0).toFixed(3),v:+utv.v.toFixed(3),yaw:+(utv.yaw||0).toFixed(2),dm:+utv.cum[utv.iM].toFixed(2),aw:utv.away}; }, soarDbg(k){ return soarers.filter(b=>b.kind===k).map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,b.st||'',+b.Y.toFixed(2),+b.Z.toFixed(1)]; }); }, ravDbg(){ return soarers.filter(b=>b.kind==="raven").map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,!!b.roll]; }); }, bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; callT=t+4; if(n!=="lull") lull=0; if(n==="skunk"){ skunk=null; nextSkunk=0; } else if(n==="bobcat"){ bobcat=null; nextBobcat=0; } else if(n==="turkeys"){ turks=null; nextTurks=0; } else if(n==="pheasw"){ pheasW=null; nextPheasW=0; } else if(n==="grouse"){ grouse=null; pheas=null; flushGrouse(); } else if(n==="pheasant"){ grouse=null; pheas=null; flushPheasant(); } else if(n==="owl"){ soarers=soarers.filter(b=>b.kind!=="owl"); startOwl(); } else if(n==="vultures"){ soarers=soarers.filter(b=>b.kind!=="vult"); startVultures(); } else if(n==="geese"){ if(flocks.length>=2) flocks.shift(); flocks.push(newFlock()); } else if(n==="deer"){ herd=[]; nextDeer=0; } else if(n==="bats"){ duskV=Math.max(duskV,.5); } else if(n==="dig"&&lab){ startDig(lab); } else if(n==="roll"&&lab){ startRoll(lab); } else if(n==="bfjump"&&dog){ const s0=toScreen(dog.Xw,dog.Dw); mons.push({t:0,life:30,sx:s0.x+s0.g*.3,sy:s0.y-s0.g*.2,z:3,dir:-1,ph:0,flapT:0,glide:0,ang:.4,tz:3,wy:0}); dog.bfT=0; } else if(n.startsWith("bfly:")){ cmon=null; startCmon(n.split(":")[1]); } else if(n==="cardinal"){ startSongbirds("card"); } else if(n==="killdeer"){ startSongbirds("kill"); } else if(n==="bunting"){ bbFlock=null; startFlock("bunting"); } else if(n==="tanager"){ bbFlock=null; startFlock("tanager"); } else if(n==="whippoorwill"){ duskV=Math.max(duskV,.5); bbFlock=null; startFlock("wpw"); } else if(SMALL[n]){ startSmall(n); } else if(n==="spider"){ web=null; startWeb(); } else if(n==="raccoon"){ racc=startWaddler("racc"); } else if(n==="groundhog"){ hog=startWaddler("hog"); } else if(n==="opossum"){ possum=startWaddler("possum"); } else if(n==="cottontail"){ for(const bn of buns){ bn.state="hop"; bn.hops=3+Math.floor(Math.random()*3); bn.hx=bn.x; bn.tx=Math.max(W*.06,Math.min(W*.94,bn.x+bn.face*rnd(30,60))); bn.hop=0; } } else if(n==="beaver"){ beaver=startWaddler("beaver"); } else if(n==="eft"){ eft=null; startEft(); } else if(n==="robin"){ wcs.length=0; startRobins(); } else if(n==="chipmunk"){ startSquirrels("chip"); } else if(n==="darner"){ startBug("darner"); } else if(n==="bee"){ startBug("bee"); } else if(n==="fireflies"){ for(let i=0;i<28;i++){ const x0=rnd(W*.05,W*.95); flies.push({ax:x0,ay:gnd().vy+lawnMinG(x0)+rnd(0,H*.32),x:x0,y:0,per:rnd(2.4,5),ph:rnd(0,6),wan:rnd(0,6),r:rnd(1.4,2.4),life:t+rnd(30,45)}); } }   /* a summer night's worth, rising over the lawn */ else if(n==="fox"){ nextFox=0; dog=lab=null; rompAt=null; } else if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; startJays(); } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="quail"){ quails=[]; startQuail(); } else if(n==="chase"){ bbChase=null; nextChase=0; } else if(n==="utv"){ utv=null; startUtv(); } else if(n==="utv2"){ utv=null; utvRoute=1; startUtv(); } else if(n==="utv1"){ utv=null; utvRoute=0; startUtv(); } else if(n==="falcon"){ soarers=soarers.filter(b=>b.kind!=="falcon"); startFalcon(); } else if(n==="heron"){ soarers=soarers.filter(b=>b.kind!=="heron"); startHeron(); } else if(n==="hawkv"){ soarers=soarers.filter(b=>b.kind!=="hawk"); startHawk(); } else if(n==="ravens"){ soarers=soarers.filter(b=>b.kind!=="raven"); startRavens(); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(false); } else if(n==="goldeneagle"){ eag=null; startEagle(true); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; startFlock("blue"); } else if(n==="finch"){ bbFlock=null; startFlock("finch"); } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="lull"){ lull=60; } else if(n==="jaymon"){ jm=null; startJM(); } else if(n==="smoke"){ nextSmoke=0; } else if(n==="mistcol"){ nextMistC=0; } else if(n==="meteor"){ duskV=Math.max(duskV,.62); metNext=t; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; startPecker(); } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
 })();
 
 /* ---- Call a Critter: any button with data-call-critter opens a field-guide menu of everything that lives in the scene; pick one and it comes ---- */
@@ -5138,27 +5372,29 @@ const critterMenu=(function(){
   /* field-guide silhouettes, 64x64. Each shape is a closed outline of points smoothed with Catmull-Rom; a point written "!x,y" is a sharp corner.
      o: opacity for the far legs / second animal; h:1 cuts the shape out of what came before (a stripe, an eye). */
   const CRITTER_ICONS={
-  fox:[ /* red fox, trotting right, brush out behind with its white tip */
-   {o:.5,p:"!24,37 26,44 !25,51 !28,51 29,44 29,37"},{o:.5,p:"!43,37 44,44 !44,51 !47,51 47,44 47,37"},
-   {p:"!60,29 56,26 52,24.5 !50.5,18 !48.5,12.5 !46,19 43,22 38,24 30,24.5 22,25 17,27 12,27 6,29 !2,34 7,35 13,33 17,32 19,35 !19.5,44 !18,51 !22,51 !23,44 24,37 30,38 36,38 38,40 !39,51 !42.5,51 !42.5,40 45,34 49,31 54,30.5"},
-   {h:1,p:"!2,34 4,32 6.5,31.5 6,34 4.5,35"}],
-  grayfox:[ /* gray fox, sitting, brush curled round its feet */
-   {p:"!51,17.5 47,15.5 44,12.5 !42.5,9.5 !40.5,3.5 !38,10 35.5,13 33.5,18 31,25 27,32 24,40 24.5,47 !27,51 !43,51 !42.5,48 40.5,44 39.5,36 !40,28 !41.5,22.5 44.5,20.5 !51.5,19.5"},
-   {p:"27,45 20,47.5 13,49.5 !8,48.5 11,52 20,53 29,52.5 33,51"},
-   {o:.5,p:"!37,40 38,46 !38,51 !40,51 40,45 40,40"}],
-  coyote:[ /* coyote, sitting with its head thrown back, howling */
-   {p:"!47,4 44,10 !42.5,9 !40,13 37,16 33,21 31,28 27,34 24,41 24,48 !20,51 !37,51 39,47 38,39 40,31 42,24 44,19 !48,15 !51,12 !54.5,7.5 50,9"},
-   {p:"!26,46 18,47 11,49 !6,50 10,51 21,51"},
-   {o:.5,p:"36,40 40,44 !41,51 !37,51"}],
-  bear:[ /* black bear, walking, humped shoulders, head low */
-   {o:.5,p:"!17,38 17,45 !16,51 !21,51 21,44 22,38"},{o:.5,p:"!42,39 43,45 !43,51 !47.5,51 46.5,44 46,38"},
-   {p:"!61,35 58,32 55,30 !53.5,26.5 !51,26.5 48,24 42,21 34,20 25,21 17,23 11,28 9,34 10,40 !11,51 !16,51 16,44 18,40 25,41 33,41 37,41 !38,51 !43,51 43,43 46,39 50,37 55,37 !60,37.5"}],
-  bobcat:[ /* bobcat, stalking: tufted ears, ruff, stub tail, long legs */
-   {o:.5,p:"!21,36 23,44 !22,51 !25,51 26,43 26,36"},{o:.5,p:"!40,36 41,44 !40,51 !43,51 44,43 44,36"},
-   {p:"!59,30 56.5,27.5 !55,23.5 !54.5,16.5 !52,22 48,22 !47,15 !45.5,21 42,25 35,26 26,26 19,26 !15,22.5 !13.5,25.5 16,30 17,35 !17.5,44 !16,51 !19.5,51 !21,44 22,37 28,37.5 34,37.5 37,38 !37.5,51 !41,51 !41,43 44,35 49,33 53,34 56,33"}],
-  skunk:[ /* striped skunk, tail plumed up over its back */
-   {p:"!60,44 57,41 53,39 49,37 44,36 36,36 29,37 24,37 21,32 22,24 26,16 27,10 22,7 15,9 11,15 11,23 14,32 16,38 17,43 !17.5,51 !21.5,51 22,46 26,47 32,47 37,47 !37.5,51 !41.5,51 42,46 48,46 54,46"},
-   {h:1,p:"!55,40 49,38.6 41,38 32,38.5 25,38.8 22.5,33 24,26 26.5,19.5 25.3,18.8 21.5,25 20.5,33 23,40.2 31,40.4 41,40.2 49,41"}],
+  fox:[ /* red fox trotting: slim legs, big ears, the long brush carried level with a pale tip */
+   {o:.5,p:"!25,37 26.2,44 !25.8,52.4 !28.6,52.4 29,44 28.6,37"},{o:.5,p:"!37,38 38,44 !37.4,52.4 !40,52.4 40.6,44 40.4,38"},
+   {p:"!60.4,27.6 57.6,26.2 54.2,24.8 51.8,23 !50.6,19 !48.6,13 !46.2,19.4 45,21 42,23.4 36,24.4 28,24.6 21,25 17.6,26.6 16.6,29.6 17.2,33 19.4,37 20.4,42 !19.6,52.4 !23,52.4 23.6,44 23.8,38 26,36.6 32,37 38,37 41,38.6 !41.6,52.4 !45,52.4 44.6,40 46.4,34 49,31.4 53.4,30.2 57.2,29.2"},
+   {p:"!18.6,26.2 13,24.8 7.4,25.6 3.4,28.4 !1.4,32.6 4.4,35.8 9.6,36.4 14.4,34.6 18.2,31.8"},
+   {h:1,p:"!6.2,26.2 !7.2,25.8 !8.6,36 !7.6,36.2"},{h:1,ci:[53,25.8,0.95]}],
+  grayfox:[ /* gray fox sitting up, brush curled round its feet */
+   {o:.5,p:"!41,40 41.6,47 !41,52.4 !43.6,52.4 44,46 44,40"},
+   {p:"!55.4,21.2 51.6,19.2 48.8,17 !47.8,13.2 !45.6,6.8 !42.6,12.6 40.4,14.6 38.6,18 35.4,24 32,31 28.6,38 27.8,45 29.6,50.6 !33,52.4 !47.6,52.4 47.4,49 45.6,46 44.4,38 44.8,31 46.2,27 48.6,24.6 51.6,23.4 54.2,22.6"},
+   {p:"!31,46.4 25,47.8 18.6,49.6 12.6,51 !8.6,52.2 13.4,53.6 22,53.6 30,53.2 37,53.2 !42.6,52.6 36,51.6"},{h:1,ci:[48.4,18.8,0.95]}],
+  coyote:[ /* coyote sitting back to howl, muzzle to the sky */
+   {o:.5,p:"!41.4,40 42,47 !41.4,52.4 !44,52.4 44.2,46 44,40"},
+   {p:"!52.4,4.6 48.8,8.2 46.6,11.2 !45.4,9.4 !41.4,6.6 !40.2,12.4 39.6,15 37.6,20 34,28 30.6,35 27.8,42 27.6,48 !29.2,52.4 !46.4,52.4 46,49 44.2,45 43.6,37 44.4,29 46.2,22.6 48.6,17.2 51.2,12.6 !54.2,9.4 !49.8,9.4"},
+   {p:"!28.4,46 21.4,47.6 14.4,49.6 !8.4,52.2 14.4,53.4 22,53.4 !29.4,52.8"},{h:1,ci:[45.8,12.6,0.9]}],
+  bear:[ /* black bear walking: the shoulder hump, the low head, short legs */
+   {o:.5,p:"!18,40 18.6,46 !18,52.4 !22.4,52.4 22.6,46 23,41"},{o:.5,p:"!41,40 42,46 !41.6,52.4 !46,52.4 46,45 45.6,40"},
+   {p:"!61.4,36.8 59.6,34.4 57.2,33 54.8,32.6 !54.6,29.4 !52.2,27.6 !50.8,30.8 48,29.4 43,25.6 36,23.6 29,23.6 22,24.6 16,27.4 11.6,31.6 9.6,37 10.4,42 !11.6,52.4 !17.4,52.4 17,46 19,42.6 24,43.4 31,43.6 37,43 !38.6,52.4 !44.4,52.4 44,45 46.6,41.4 50.6,39.2 55,38.6 59.2,38.4"},{h:1,ci:[56.4,34.6,0.95]}],
+  bobcat:[ /* bobcat stalking: long legs, ear tufts, the facial ruff, a bobbed tail */
+   {o:.5,p:"!22,37 24,44 !23,52.4 !26.2,52.4 27,44 27,37"},{o:.5,p:"!40.6,37 41.4,44 !40.8,52.4 !44,52.4 44.4,43.6 44,37"},
+   {p:"!59,30.6 56.8,28.4 55.4,26.4 !55.2,22.2 !54.4,16 !52.2,21.4 49.6,21.8 !48.8,16 !46.8,21.4 44,24.2 38,25.6 30,26 22,26.2 !17.4,23.4 !15.4,25 16.8,29.6 17.6,35 !18.2,44 !16.8,52.4 !20.6,52.4 22,44 23,38 28,38.6 34,38.6 37.6,38.4 !38.4,52.4 !42,52.4 42.2,43 44.6,36 !47.4,33.6 !48.6,35.4 51.6,34.4 54.6,33.4 57.2,32.4"},{h:1,ci:[52.8,26.4,0.9]}],
+  skunk:[ /* striped skunk, its great plume of a tail raised and curling forward */
+   {p:"!23,43 17.6,37 14,29 14.4,20 18.4,12.4 25,7.6 32.6,6.8 38.4,9.6 40.4,14.6 38.4,19.4 33.6,20.6 29.4,19.8 27,23.4 27,30 28.6,37.4"},
+   {p:"!58.4,45 55.4,42.4 51.6,40.6 48,39.6 44,38.6 38,38 31,38.6 26,39.6 22,41.4 19.6,44.6 !20.4,52.4 !24,52.4 24.6,48 30,48.6 37,48.6 !38.4,52.4 !41.8,52.4 42.6,48 48,47.4 53,47 56.8,46.4"},
+   {h:1,p:"!52,41.8 46,40.4 38,40 31,40.8 26.4,42.4 !26,43.6 31,42 38,41.2 46,41.6 !52,43"},{h:1,ci:[53.4,43,0.8]}],
   buck:[ /* white-tailed buck, standing, head up, a full rack */
    {o:.5,p:"!19,38 20,45 !19,52 !21.5,52 22.5,44 22.5,38"},{o:.5,p:"!38,38 39,45 !38.5,52 !41,52 41,44 41,38"},
    {p:"!55,26 53,24 !51.5,21 50,19 !47,20 46,23 44,28 40,31 32,31 23,31 17,32 !13,30 !14,34 15,38 !16,45 !15.5,52 !18,52 18.5,45 19,40 25,41 31,41 34,41 !35,52 !37.5,52 37.5,41 42,37 46,32 49,28 52,28.5"},
@@ -5168,25 +5404,28 @@ const critterMenu=(function(){
    {o:.5,p:"!21,35 22,43 !21,51 !23.5,51 24,43 24,35"},{o:.5,p:"!36,35 37,43 !36.5,51 !39,51 39,42 39,35"},
    {p:"!51,23 49,20 !48.5,15 !47,19 !45,13.5 !44.5,19 43,23 40,27 33,28 24,28 18,29 !15.5,28 !16.5,32 17,35 !18,43 !17.5,51 !20,51 20.5,43 21,38 27,38 31,38 33,38 !33.5,51 !36,51 36,38 39,34 43,29 47,25.5 51,25.5"},
    {o:.78,p:"!58,40 56.5,38 !56,35 !54.5,37.5 !53,34.5 !52.5,38 50,40.5 46,41.5 41,42 !39.5,41.5 40.5,44 !41.5,51 !43,51 43,46 47,46 !48,51 !49.5,51 49.5,45 52,42 55,41.5"}],
-  squirrel:[ /* eastern gray squirrel, sitting up nibbling, tail in a question mark */
-   {p:"!46,17 !45,12 !43,16 40,16 36,19 35,24 37,29 36,34 33,39 32,45 30,49 !28,51 !41,51 !42,48 40,44 42,40 42,35 !45,30 !44,28 41,29 42,24 45,22 48,21.5"},
-   {p:"33,44 26,46 20,44 15,38 14,30 16,22 20,15 26,11 31,12 30,16 25,19 22,26 22,33 25,39 30,41"}],
-  bats:[ /* little brown bat, wings spread */
-   {p:"!32,28 !30.5,24.5 !29.5,27 26,27 20,25 13,23 !6,22 9,25 !10,30 13,30 !15,35 18,34 !21,39 24,37 28,38 30,42 32,44 34,42 36,38 40,37 43,39 !46,34 49,35 !51,30 54,30 !55,25 !58,22 51,23 44,25 38,27 !34.5,27 !33.5,24.5"}],
+  squirrel:[ /* eastern gray squirrel sitting up with a nut, its tail a great S curling up behind */
+   {p:"!43,46.6 37,48.2 30.6,46.6 25.6,41.6 23,34.4 23.6,25.6 27,17.6 32.6,11.6 38.6,9 43.4,10.4 44,14.6 41,17 38.8,21.6 38,27 38.6,33 40.6,38.6 !43.4,42"},
+   {p:"!53.6,22.6 50.4,18 !49,15.2 !47.6,12.4 !45.8,16.6 43.8,19.6 42.2,23.6 40.6,29.6 39.6,35.4 39.6,42 40.8,48 !39.6,52.4 !52.4,52.4 52.2,50 49.8,48.6 48.8,42 49.2,36 !52.8,32.4 !53.8,30.2 !51.4,29.6 50.2,27.6 52,25.4"},
+   {p:"!52.4,29.2 54.8,28.6 56,30.6 54.6,32.6 52.2,32.2"},{h:1,ci:[48.8,19.8,0.8]}],
+  bats:[ /* little brown bat, wings spread, fingers fanning the membrane */
+   {m:1,p:"!32,25.4 33.6,24 !34.6,20.8 !35.8,24.6 37.8,26 42,25.2 47.6,22.8 !53.6,19.4 !60.6,22.8 57.4,24.8 !58.4,28.6 54.4,28 !53.4,32.8 49.4,31.4 !46.2,36.2 42.4,33.4 38.4,34.8 35.8,38.6 !32,41.4"},
+   {h:1,m:1,p:"!38.6,27 !48,24.2 !48.2,24.8 !38.8,27.8"},{h:1,m:1,p:"!38.6,28.6 !47,30.8 !46.8,31.4 !38.4,29.4"}],
   turtle:[ /* eastern box turtle, high domed shell */
    {o:.5,p:"!20,44 19,49 !21.5,50 24,48 24,44"},{o:.5,p:"!42,44 43,49 !45.5,50 47,48 46,44"},
    {p:"!8,44 12,32 20,24 30,21 40,22 48,27 53,34 55,40 !56,44 58,41 62,40 !63.5,42 61,45 56,46.5 52,47 49,52 !45.5,52 44,47 30,47 25,47 23,52 !19,52 17,46 12,46 !6,47 !8,46"},
    {h:1,p:"!11,39.5 20,38 31,37.5 42,38 !53,39.5 !53,41 42,39.5 31,39 20,39.5 !11,41"},
    {h:1,p:"!21,25.5 !22.5,25 19,31.5 !18.5,38.5 !17.3,38.5 17.7,31"},{h:1,p:"!32,22 !33.3,22 32.5,30 !33,37.5 !31.7,37.5 31.3,30"},{h:1,p:"!42.5,23.5 !43.8,24 46,31 !47,38.5 !45.8,38.5 44.7,31"},
-   {h:1,p:"!18.5,31 25,30 32,30 39,30.5 !45,31 !45,32.3 39,31.8 32,31.3 25,31.3 !18.5,32.3"}],
-  dogs:[ /* a Brittany on point: foreleg up, nose and tail level */
-   {o:.5,p:"!22,36 24,43 !24,51 !26.5,51 27,43 27,36"},
-   {p:"!61,24 57,22 !54,20 !51,21 49,21 !46,22.5 45,26 43,29 36,31 27,31 20,31 !15,28.5 !15,30.5 18,33 19,37 !19,43 !17.5,51 !20,51 21.5,44 23,39 29,40 34,40 !39,40 40,44 !41.5,51 !44,51 43,44 !43,39 45,36 47,33 48,36 !52,37 !52,35 49,33 49,29 52,26.5 !56,26.5 !60.5,26"}],
+   {h:1,p:"!18.5,31 25,30 32,30 39,30.5 !45,31 !45,32.3 39,31.8 32,31.3 25,31.3 !18.5,32.3"},{h:1,ci:[60,41.4,0.55]}],
+  dogs:[ /* a Brittany on point: head level, docked tail up, one forepaw lifted */
+   {o:.5,p:"!25,38 26.4,44 !26,52.4 !29,52.4 29.4,44 28.6,38"},
+   {p:"!60.6,25.8 58.6,24 55,23.4 52.6,22 49.6,20.6 46.6,21.2 44.6,24 40,27 32,28 24,28.4 !19,24 !17.2,25 18.4,29.4 18.6,34 !19.8,42 !18.6,52.4 !22,52.4 23.6,43 24.6,38 30,39.4 36,39.4 !39.4,39.4 40.4,44 !41.6,52.4 !45,52.4 44.4,44 !44.6,39 46.4,35.4 48,34 !51,36.8 !51.8,35 49.2,32.4 49.6,29.6 52.6,28 55.6,27.6 58.8,27.4"},
+   {h:1,p:"!46.8,22.6 !47.8,22.4 48.4,27.4 47.6,28"},{h:1,ci:[53,23,0.8]}],
   eagle:[ /* bald eagle soaring overhead, primaries spread like fingers */
    {p:"!32,23 !29.5,26 27,27.5 20,28 !13,27 !10,29.5 !6.5,29 !5,31.5 !2,31.5 6,34 12,35 19,34.5 25,34 28.5,35 29,40 !27,46 !32,44 !37,46 35,40 35.5,35 39,34 45,34.5 52,35 58,34 !62,31.5 !59,31.5 !57.5,29 !54,29.5 !51,27 44,28 37,27.5 34.5,26"},
    {h:1,p:"!29,40.5 32,39.5 35,40.5 !36,45 !32,43.5 !28,45"}],
   redtail:[ /* red-tailed hawk perched on a post: broad shoulders, hooked beak, tail hanging behind */
-   {o:.45,p:"!26,51 !44,51 !44,64 !26,64"},
+   {o:.38,p:"!29,51 !41,51 !41,60 !29,60"},
    {o:.85,p:"!28,43 !25,58 !31.5,58.5 !33,45"},
    {p:"!49.5,19.2 47,16.6 44,13.4 40,11.6 36,12.4 33.4,15.6 28.5,19.5 25,26 24.6,33 26,40 28.5,45 !32.5,46.5 !31.5,51 !35,51 !36,47.4 !38,51 !41.4,51 40.5,46 42.6,40 43.4,33 43.2,27 44.4,23.2 !46.5,21.6 !48.4,21.8"},
    {h:1,p:"!40.6,15.4 42.4,15.2 42.4,16.8 40.6,16.9"}],
@@ -5194,7 +5433,8 @@ const critterMenu=(function(){
    {p:"!33,24 !31,25 29,28 23,26 15,26 !4,29 14,31 22,31 28,33 30,37 30,43 !29,50 !32,48.5 !35,50 34,43 34,37 36,33 42,31 50,31 !60,29 49,26 41,26 35,28"}],
   heron:[ /* great blue heron standing, neck in an S, dagger bill */
    {o:.5,p:"!26,43 !26,61 !27.5,61 !27.5,43"},
-   {p:"!57,14 49,12.5 46,11 !39,9 !43,12.5 41.5,15 39,19 37,24 38,29 40,32 36,34 29,35 22,39 !14,46 21,45 28,45 !30.5,45 !30.5,61 !32,61 !32,45 35,43 40,40 43,34 42,28 40,23 42,18 45,16 !48,15.2"}],
+   {p:"!57,14 49,12.5 46,11 !39,9 !43,12.5 41.5,15 39,19 37,24 38,29 40,32 36,34 29,35 22,39 !14,46 21,45 28,45 !30.5,45 !30.5,61 !32,61 !32,45 35,43 40,40 43,34 42,28 40,23 42,18 45,16 !48,15.2"},
+   {h:1,ci:[47.4,12.4,0.7]}],
   ravens:[ /* common raven in flight, wedge tail, heavy bill */
    {p:"!32,22 !30.5,24 29,27 22,27 14,24 !5,22 !7,25 !5,27 !8,28 !6,30 12,31 20,32.5 28,34 29,40 !26,47 !32,45 !38,47 35,40 36,34 44,32.5 52,31 !58,30 !56,28 !59,27 !57,25 !59,22 50,24 42,27 35,27 33.5,24"}],
   vultures:[ /* turkey vultures kettling: wings held up in a shallow V */
@@ -5208,40 +5448,50 @@ const critterMenu=(function(){
    {o:.5,p:"!30,31 30,24 31,15 !34,7 !36,12 37,20 !38,29"},
    {p:"!5,35 10,32.5 18,31 26,30 33,30 38,29 43,26 48,22.5 52,20.5 55.5,20 58.5,21.2 !62.5,23.4 !58.5,24.6 55,24.6 51.5,26 47,29.5 42,33.5 36,37 28,39 20,39.2 12,38"},
    {p:"!25,31 21,22 17,12 !11,3 !15.5,5 !19,4 !22,7.5 !25.5,8 28.5,15 33,24 !36,30"},
-   {h:1,p:"!52.8,21.6 !55.4,21.4 !55.2,24.4 !52.2,24.8"}],
-  turkeys:[ /* wild turkey tom in full strut: fan raised, wings dragging */
-   {p:"30,10 21,11 13,15 8,21 6,28 7,35 10,40 15,43 21,45 26,44 30,45 33,48 !32,51 !36,52 37,49 !39,51 !42,52 40,48 43,44 47,41 !50,39 !51,33.5 !52.5,30 !55,30 !57,33 !58,36 !56.5,37 !55,35 !53.5,38 53,42 49,45 46,45 44,46 42,47 40,41 38,32 36,22 34,14"},
-   {h:1,p:"!14,20 !28,40 !26.5,40.5"},{h:1,p:"!21,13.5 !30,39 !28.5,39.5"},{h:1,p:"!9,30 !27,41.5 !26,42.5"}],
+   {h:1,p:"!52.8,21.6 !55.4,21.4 !55.2,24.4 !52.2,24.8"},
+   {h:1,ci:[57.6,22,0.6]}],
+  turkeys:[ /* wild turkey tom in full strut: the fan raised behind, breast puffed, wings dragging, the beard and snood */
+   {p:"!3.33,42.52 3.92,39.59 2.11,37.21 3.41,34.52 2.24,31.76 4.16,29.47 3.70,26.51 6.13,24.76 6.41,21.78 9.19,20.68 10.20,17.87 13.17,17.48 14.84,15.00 17.81,15.35 20.03,13.36 22.83,14.43 25.48,13.05 27.92,14.78 30.83,14.09 32.77,16.36 35.76,16.41 37.08,19.09 39.97,19.87 40.59,22.79 43.20,24.26 43.08,27.24 !45.25,29.31 24.00,41.00"},
+   {h:1,p:"7.00,39.56 6.58,37.53 6.41,35.47 6.47,33.41 6.78,31.36 7.32,29.37 8.10,27.46 9.09,25.64 10.29,23.96 11.68,22.43 13.24,21.07 14.95,19.91 16.78,18.95 18.71,18.21 20.71,17.71 22.76,17.44 24.83,17.42 26.88,17.64 28.90,18.09 30.84,18.79 32.70,19.70 34.43,20.82 36.02,22.14 37.44,23.64 38.68,25.30 39.72,27.08 40.54,28.98 39.41,29.39 38.65,27.62 37.68,25.96 36.53,24.42 35.20,23.02 33.72,21.79 32.10,20.74 30.38,19.89 28.56,19.25 26.69,18.82 24.77,18.62 22.85,18.64 20.94,18.89 19.07,19.36 17.27,20.04 15.56,20.94 13.97,22.02 12.52,23.29 11.23,24.71 10.11,26.28 9.18,27.97 8.46,29.75 7.95,31.61 7.67,33.52 7.61,35.44 7.77,37.36 8.16,39.24"},
+   {p:"!31,44 30,37 33,31 38,27 43,26.4 46.6,27.6 47.4,24.4 47,20.4 48.6,17.6 51.4,16.8 53.4,18.4 !55.8,19.8 !53.6,20.6 !54,23.6 51.8,24.6 50.8,27.6 50.6,31.6 49,37 45.6,41.6 41.4,44.6 !40,46.2 !40.8,52.4 !43,52.4 !42.8,46.6 38.4,47.6 !37.2,52.4 !35,52.4 !35.8,47.2 32.4,46.6 !27,49.4 !30.4,45.4"},
+   {p:"!47,34 !47.8,34 46.4,42 !45.6,42"},{h:1,ci:[50.6,19.4,0.6]}],
   hen:[ /* hen turkey leading her poults */
    {p:"!58,20 55,19 !53.5,16 50,15 47,18 46,23 45,28 40,30 32,30 24,32 18,35 !12,39 !12,40.5 20,41 26,42 30,44 !29.5,51 !32,51 33,45 36,45 !36.5,51 !39,51 39,44 43,42 47,38 49,33 49,26 50,21 !53,20.5 !58,21.5"},
    {o:.75,p:"!61,45 60,44.5 !59.5,43 58,42.5 56.5,43.5 56.5,45.5 55,46.5 52,47 51,49 !52,51 !53,51 53.5,49.5 !54.5,51 !55.5,51 55.5,49 57.5,47.5 58,45.5"},
-   {o:.6,p:"!15,48 14,47.5 !13.5,46.2 12.2,45.8 11,46.6 11,48 9.7,49 7.5,49.3 7,50.5 !8,52 !8.8,52 9.2,51 !10,52 !10.8,52 10.8,50.5 12.4,49.6 12.5,48.2"}],
+   {o:.6,p:"!15,48 14,47.5 !13.5,46.2 12.2,45.8 11,46.6 11,48 9.7,49 7.5,49.3 7,50.5 !8,52 !8.8,52 9.2,51 !10,52 !10.8,52 10.8,50.5 12.4,49.6 12.5,48.2"},
+   {h:1,ci:[52.6,17.6,0.7]}],
   pheasant:[ /* ring-necked pheasant rooster, long barred tail */
    {p:"!58,22 55,20 !53.5,17 !52,15.5 !51.5,18 49,19 47,24 45,30 41,33 34,34 26,35 16,35 !2,34 16,37.5 24,39 30,40 35,43 !34,51 !36.5,51 38,44 !39,51 !41.5,51 40.5,43 44,40 49,35 51,29 51,24 !54,23 !58,23.5"},
-   {h:1,p:"!46.4,27 49,25.5 51.5,26 51.4,27.3 49,27 !46.4,28.6"}],
+   {h:1,p:"!46.4,27 49,25.5 51.5,26 51.4,27.3 49,27 !46.4,28.6"},
+   {h:1,ci:[52,19.6,0.65]}],
   grouse:[ /* ruffed grouse on a log, fan half-open, ruff up */
    {p:"!56,22 54,20 !53,16.5 !51,18 48,18 45,22 43,27 38,29 30,31 22,33 !10,32 !6,35 !8,37 !6,39 !10,40 22,41 29,43 32,46 !31,51 !33.5,51 35,46 !36.5,51 !39,51 38,45 43,42 46,37 47,30 49,25 !52,23 !56,23.5"},
    {h:1,p:"!44,27 46,26 46.5,30 44,32 !42.5,29"},
-   {o:.5,p:"!22,51 !52,51 !52,56 !22,56"}],
+   {o:.5,p:"!22,51 !52,51 !52,56 !22,56"},
+   {h:1,ci:[52.6,19.4,0.7]}],
   quail:[ /* bobwhite: plump, short-tailed, the bold face pattern */
    {p:"!53,26 50,22 46,20 42,21 39,25 36,28 28,29 20,31 !12,33 !13,35 18,37 21,41 28,45 !30,47 !29,51 !31.5,51 32,47 !34,51 !36.5,51 35,47 41,45 46,42 48,37 48,32 49,29 !52,28.5 !56,28"},
    {h:1,p:"!42,24.5 47,23 51,24.5 51,25.5 47,24.5 !42,26"},{h:1,p:"!44,29 47,28.5 48.5,30 46,32 !43.5,31"}],
   woodcock:[ /* American woodcock: plump, short legs, the long probing bill */
-   {p:"!62,37 !50,33.5 48,30 45,28 41,29 38,32 32,33 24,34 !14,35 !14,37 20,39 26,41 30,43 !30,50 !32.5,50 33,44 !35.5,50 !38,50 36,44 42,42 46,40 48,37 !50,36"}],
+   {p:"!62,37 !50,33.5 48,30 45,28 41,29 38,32 32,33 24,34 !14,35 !14,37 20,39 26,41 30,43 !30,50 !32.5,50 33,44 !35.5,50 !38,50 36,44 42,42 46,40 48,37 !50,36"},
+   {h:1,ci:[45.4,30.2,0.7]}],
   bluebirds:[ /* eastern bluebird perched on a twig */
    {p:"!50,23 47.5,20 44,18 40,19 37,22 35,26 30,29 24,33 16,40 !11,45 !13.5,46 20,42 27,40 31,40 !33,42 !32,45.5 !35,45.5 !36,42 !38,45.5 !40,45.5 39,41 42,38 44,34 44,29 45,26 !47.5,25 !51.5,24.5"},
-   {o:.6,p:"!20,45.5 !56,45.5 !56,47.5 !20,47.5"}],
+   {o:.6,p:"!20,45.5 !56,45.5 !56,47.5 !20,47.5"},
+   {h:1,ci:[46,21.8,0.7]}],
   jays:[ /* blue jay with its crest raised */
    {p:"!54,24 50.5,22 !48.5,20 47,15 !43,9 !44.5,15 !40,10.5 !41.5,17 38,21 36,25 32,28 25,31 17,35 !5,41 !7,43.5 18,40 26,39 31,40 !33,42 !32,46 !35,46 !36,42 !38,46 !40.5,46 39,41 42,38 44,34 45,29 47,25.5 !50,25 !55,25.5"},
-   {o:.6,p:"!22,46 !58,46 !58,48 !22,48"}],
+   {o:.6,p:"!22,46 !58,46 !58,48 !22,48"},
+   {h:1,ci:[46.6,21.8,0.7]}],
   pecker:[ /* pileated woodpecker clinging to a trunk: the swept-back crest, the long bill, tail braced against the bark */
-   {o:.45,p:"!44,0 !58,0 !58,64 !44,64"},
+   {o:.38,p:"!44,2 !53,2 !53,62 !44,62"},
    {p:"!44,14 37.5,12.4 35.5,10.8 !33.5,6.5 !29,2.5 !21,9.5 26,12.5 26,17 25,23 25,31 27,38 30.5,44 !35,59 !40,58 40,48 40.5,40 41.5,31 41,24 40.5,19 38.5,15.6 !37.5,14.6"},
    {p:"!40.5,23 !45,22 !45,23.6 !41,25"},{p:"!40.5,36 !45,35 !45,36.6 !41,38"},
    {h:1,p:"!37.5,14.2 33.5,15.6 30.6,19 29.6,23 30.8,23 32,19.6 34.4,16.8 !38,15.2"},{h:1,p:"!33.2,10.6 34.6,10.4 34.6,11.8 33.2,11.9"}],
   hum:[ /* ruby-throated hummingbird hovering, wings a blur, long needle bill */
    {p:"!60,26 !47,28.5 45,26 42,25.5 39,27 37,31 33,36 28,42 !24,47 !27,47 !26,51 !30,47 !32,48 !31,44 35,41 39,39 42,35 43,32 44,30"},
-   {o:.6,p:"!40,29 37,22 32,13 !25,4 !27,13 30,21 !35,30"},{o:.45,p:"!38,31 30,27 20,23 !9,22 !18,27 27,31 !35,34"}],
+   {o:.6,p:"!40,29 37,22 32,13 !25,4 !27,13 30,21 !35,30"},{o:.45,p:"!38,31 30,27 20,23 !9,22 !18,27 27,31 !35,34"},
+   {h:1,ci:[42.6,27.4,0.6]}],
   monarch:[ /* monarch, seen from above, wings open */
    {p:"!31,22 26,15 19,11 11,10 6,12 6,17 9,23 14,27 20,29 !28,30 21,32 15,36 13,42 15,47 19,48 24,45 28,40 !31,35 !32,44 !33,35 36,40 40,45 45,48 49,47 51,42 49,36 43,32 !36,30 44,29 50,27 55,23 58,17 58,12 53,10 45,11 38,15 !33,22 !32,18"},
    {h:1,p:"!29,24 23,17 16,14 11,15 13,20 19,25"},{h:1,p:"!35,24 41,17 48,14 53,15 51,20 45,25"},
@@ -5251,24 +5501,26 @@ const critterMenu=(function(){
    {p:"!31,20 25,14 18,11 11,12 8,17 10,23 16,28 !26,30 18,34 15,41 16,46 !16,55 !19,60 !20,55 23,46 28,39 !31,34 !32,40 !33,34 36,39 41,46 44,55 !45,60 !48,55 !48,46 49,41 46,34 38,30 !38,30 48,28 54,23 56,17 53,12 46,11 39,14 !33,20 !32,17"},
    {h:1,p:"18,18 16,20 18,22 20,20"},{h:1,p:"46,18 44,20 46,22 48,20"},
    {p:"!30.5,17 !26,10 !27,9.5 !31.5,16"},{p:"!33.5,17 !38,10 !37,9.5 !32.5,16"}],
-  chipmunk:[ /* eastern chipmunk, tail straight up, the stripes down its back */
+  chipmunk_old:[ /* eastern chipmunk, tail straight up, the stripes down its back */
    {o:.5,p:"!25,44 24,51 !27,51 28,44"},
    {p:"!57,41 54,37 50,35 47,34.4 !46,30.4 !44.4,33.6 40.5,34 31,35 23.5,37 19,41 18,46 !19,51 !22.5,51 23,47 27,46.5 33,46.5 38.5,45.5 !40,51 !43.5,51 44.5,45.5 48.5,43.6 53.5,43.4"},
    {p:"!19.6,40 16.4,31 14.8,21 14.2,11 !15.4,7 17.2,11 18.8,21 21.4,33 23.8,38.5"},
    {h:1,p:"!25,37.8 !40.5,36 !40.6,37.1 !25.2,39"},{h:1,p:"!23.6,40.8 !40.6,39 !40.6,40.1 !23.8,42"},{h:1,p:"!46,37.4 !52.5,38.2 !52.4,39 !46,38.4"}],
-  raccoon:[ /* raccoon, hunched, ringed tail held low, the bandit mask */
-   {o:.5,p:"!20,44 19,51 !22.5,51 23.5,44"},{o:.5,p:"!40,43 41,51 !43.5,51 43,43"},
-   {p:"!58.5,38.5 55.5,35.5 52.5,33.6 !51.6,29.4 !49.4,32 46,31 40,29 34,26 27,25 20,27 15,31 13,37 14,43 !14.5,51 !18.5,51 19.5,45 24,44 32,44 37,44 !39,51 !43,51 43.5,44 47,41.5 52,40.6 !57.5,40.4"},
+  raccoon:[ /* raccoon, hunched, the ringed tail held low, the bandit mask */
+   {o:.5,p:"!20,44 19,52.4 !22.5,52.4 23.5,44"},{o:.5,p:"!40,43 41,52.4 !43.5,52.4 43,43"},
+   {p:"!59,39 56,35.6 53,33.6 !52.2,29.4 !49.6,32 46,31 40,29 34,26 27,25 20,27 15,31 13,37 14,43 !14.5,52.4 !18.5,52.4 19.5,45 24,44 32,44 37,44 !39,52.4 !43,52.4 43.5,44 47,41.5 52,40.6 !57.5,40.6"},
    {p:"!15,33.5 10,35.5 5.5,39.5 !2.5,45 7,44.4 11.5,41.4 15.6,39"},
-   {h:1,p:"!6.4,38 !8.6,36.8 !10.8,41.6 !8.6,42.6"},{h:1,p:"!10.6,35.6 !12.6,35 !14.4,39.6 !12.4,40.4"},{h:1,p:"!46,34.4 !53.2,35.2 !53,36.4 !46,35.8"}],
-  beaver:[ /* American beaver, rotund, the flat paddle tail on the grass, a leafy stick in its jaws */
-   {p:"!60,40 57,36 53,33.4 !51.4,30.6 !49.4,32.2 45,30 38,27 30,26 22,28 16,33 14,40 15,46 !18,49.5 24,49.5 30,48.5 36,48.5 !37,51 !41.5,51 43,47.5 48,46.5 53,45 57,43"},
-   {p:"!16,44 9,45.4 !2,48 !3,51.4 9.4,50.6 16.6,48.4"},
-   {p:"!36,42 !62,32.2 !62.6,33.8 !36.8,43.8"},{p:"!57,32.4 59.4,28.4 !62.6,27.4 61.2,31.2"},{p:"!49,35.6 50.6,31.6 !53.6,30.6 52.6,34.4"}],
+   {h:1,p:"!6.4,38 !8.6,36.8 !10.8,41.6 !8.6,42.6"},{h:1,p:"!10.6,35.6 !12.6,35 !14.4,39.6 !12.4,40.4"},{h:1,p:"!46,34.2 !53.6,35.2 !53.4,36.6 !46,35.8"},{h:1,ci:[51.6,34.2,0.75]}],
+  beaver:[ /* American beaver: rotund, a blunt head, the flat scaly paddle on the grass */
+   {p:"!61,44 59.8,41 57.6,38.8 !57,36.4 !55.2,36.2 54.4,37.4 50,35 44,32 37,31 30,31.6 23.6,34 18.6,38 16.4,43 17,48 !19.6,51.6 25,52 31,51.8 !33,51.8 !33.6,52.6 !39,52.6 39.6,50.4 45,50 !47,52.6 !52,52.6 52,49.6 56,48 59.8,46.6"},
+   {p:"!18.4,45 13,44 6.4,44.2 2.6,46.2 3,49 7,50.4 13,50.2 !18.4,48.6"},
+   {h:1,p:"!7,45 !7.8,45 !7.8,49.8 !7,49.8"},{h:1,p:"!11,44.6 !11.8,44.6 !11.8,50 !11,50"},{h:1,p:"!15,44.8 !15.8,44.8 !15.8,49.6 !15,49.6"},
+   {p:"!59.2,45.8 !60.6,45.8 !60.6,48 !59.2,48"},{h:1,ci:[56.2,40.4,0.8]}],
   finch:[ /* American goldfinch on a twig: little conical bill, notched tail, white wing bars */
    {o:.6,p:"!20,46.5 !56,46.5 !56,48.5 !20,48.5"},
    {p:"!52.5,25.6 49.6,23.4 46,21.2 42,21.2 39,23.2 37,27 33,30 26,34 19,39 !12.6,44.2 !15.4,45.4 !12,47.4 !16.6,47.2 21,44 27,41.6 31,41 !33,43.6 !32,46.5 !35,46.5 !35.6,43.6 !37.6,46.5 !40.2,46.5 38.6,42.6 41.6,39.6 43,35 43,30 44.6,27 !47.6,26.6 !52.6,26.8"},
-   {h:1,p:"!26.4,36.4 !34,33.2 !34.5,34.3 !27,37.4"},{h:1,p:"!25,39 !31.4,36.4 !31.9,37.4 !25.6,40"}],
+   {h:1,p:"!26.4,36.4 !34,33.2 !34.5,34.3 !27,37.4"},{h:1,p:"!25,39 !31.4,36.4 !31.9,37.4 !25.6,40"},
+   {h:1,ci:[47.4,23.6,0.65]}],
   robin:[ /* American robin standing tall on the lawn */
    {p:"!50.6,20.4 47.6,18.6 44,16.6 40,17 37,20 36,24 32,27 27,31 21,38 !14,46 !17,47.6 22,43.4 28,40 31,41 !32.4,45 !31,51.6 !33.6,51.6 34.2,46 !35.6,51.6 !38.2,51.6 36.8,45 40,42 43,37 44,31 43.6,26 44,22.6 !47,21.6 !51,21.4"},
    {h:1,p:"!41.4,19.4 43.2,19.4 43.2,21 41.4,21"},{h:1,p:"!42.4,27 43.2,33 42.4,38 41.6,38 42.2,33 41.6,27"}],
@@ -5340,7 +5592,83 @@ const critterMenu=(function(){
    {p:"33.70,20.40 33.43,21.57 32.68,22.51 31.60,23.03 30.40,23.03 29.32,22.51 28.57,21.57 28.30,20.40 28.57,19.23 29.32,18.29 30.40,17.77 31.60,17.77 32.68,18.29 33.43,19.23"},{p:"43.30,20.40 43.03,21.57 42.28,22.51 41.20,23.03 40.00,23.03 38.92,22.51 38.17,21.57 37.90,20.40 38.17,19.23 38.92,18.29 40.00,17.77 41.20,17.77 42.28,18.29 43.03,19.23"},
    {p:"!27.4,29.6 27.8,25.6 31,23.8 34.2,25.6 34.6,29.6"},{p:"!37,29.6 37.4,25.6 40.6,23.8 43.8,25.6 44.2,29.6"},
    {p:"22.60,46.00 22.17,48.46 20.92,50.63 19.00,52.24 16.65,53.09 14.15,53.09 11.80,52.24 9.88,50.63 8.63,48.46 8.20,46.00 8.63,43.54 9.88,41.37 11.80,39.76 14.15,38.91 16.65,38.91 19.00,39.76 20.92,41.37 22.17,43.54"},{p:"56.00,46.00 55.57,48.46 54.32,50.63 52.40,52.24 50.05,53.09 47.55,53.09 45.20,52.24 43.28,50.63 42.03,48.46 41.60,46.00 42.03,43.54 43.28,41.37 45.20,39.76 47.55,38.91 50.05,38.91 52.40,39.76 54.32,41.37 55.57,43.54"},
-   {h:1,p:"18.00,46.00 17.65,47.30 16.70,48.25 15.40,48.60 14.10,48.25 13.15,47.30 12.80,46.00 13.15,44.70 14.10,43.75 15.40,43.40 16.70,43.75 17.65,44.70"},{h:1,p:"51.40,46.00 51.05,47.30 50.10,48.25 48.80,48.60 47.50,48.25 46.55,47.30 46.20,46.00 46.55,44.70 47.50,43.75 48.80,43.40 50.10,43.75 51.05,44.70"},{h:1,p:"!9,36.6 !21,35 !21,36.2 !9,37.8"}]
+   {h:1,p:"18.00,46.00 17.65,47.30 16.70,48.25 15.40,48.60 14.10,48.25 13.15,47.30 12.80,46.00 13.15,44.70 14.10,43.75 15.40,43.40 16.70,43.75 17.65,44.70"},{h:1,p:"51.40,46.00 51.05,47.30 50.10,48.25 48.80,48.60 47.50,48.25 46.55,47.30 46.20,46.00 46.55,44.70 47.50,43.75 48.80,43.40 50.10,43.75 51.05,44.70"},{h:1,p:"!9,36.6 !21,35 !21,36.2 !9,37.8"}],
+  groundhog:[ /* groundhog sitting bolt upright, paws to its chest, looking out */
+   {o:.5,p:"!47,29.4 !50.2,28.6 !50.4,30.4 !47.2,31.4"},
+   {p:"!50.4,17.6 49.2,14.4 46.4,11.4 !43.8,9.8 !41.6,8.6 !40.4,11.2 37.6,13.4 35.6,17.6 32.4,24 29.6,31 28.4,38 28.8,44 28.2,47.6 !25.2,48.4 !22.6,51 !26,52.8 !28.8,52.4 !46.6,52.4 46,49.6 46.8,44 47.6,37 47.4,31.4 47.6,26.6 !50,25.6 !50.4,27.8 !47.8,28.4 !48,22.6 49.4,20"},{h:1,ci:[45.4,14,0.9]}],
+  opossum:[ /* Virginia opossum: pointed white face, round ears, the long bare tail */
+   {o:.5,p:"!26,45 26.4,52.4 !29.4,52.4 29.6,45"},{o:.5,p:"!42,44 42.6,52.4 !45.6,52.4 45.6,44"},
+   {p:"!61.4,40.6 58.6,39.2 55.4,37.4 52.6,36 !52,32.4 !49.4,31.4 !48.4,34 45,33.4 40,32 33,31.6 26,32.8 20.4,35.6 17,39.6 16.4,44 !17.6,52.4 !21.2,52.4 21.8,47.6 26,46.6 33,46.8 !34.4,52.4 !37.8,52.4 38.2,47 44,46.2 !45.8,52.4 !49.2,52.4 49.4,45 53,43.4 57.8,42.2"},
+   {p:"!17.4,41 11,42.6 6,46 3.4,50.6 4.4,53.4 6.4,52 6.8,49.6 9.8,46.6 14.6,44.6 !17.8,44.2"},{h:1,ci:[55.4,38.4,0.8]}],
+  cottontail:[ /* eastern cottontail sitting, ears up, the white cotton tail */
+   {o:.5,p:"!40.4,24 !37.6,13 36.2,11.8 35,13.4 !37.8,24.8"},
+   {p:"!50.6,30.4 49.4,28.2 46.8,26.4 !45.8,24.4 !44.4,12 43.2,10.4 41.6,11.6 !41.2,24.2 39.4,26.6 36,29 30,30.4 24,32.6 19.4,36.6 17,41.6 17.6,46.6 20.8,50.6 !25,52.6 !40.6,52.6 !43.2,52.4 43.2,50.4 !40.2,50 41.8,46.4 44.4,40.6 45.6,36.6 47.6,34.4 49.8,32.6"},
+   {p:"!19.2,40 15.8,39.6 13.6,42 14.6,45.2 18,45.4"},{h:1,ci:[45.2,27.8,0.95]}],
+  cardinal:[ /* northern cardinal on a twig: the tall pointed crest, the heavy cone of a bill, a long tail */
+   {o:.5,p:"!18,46.6 !58,46.6 !58,48.4 !18,48.4"},
+   {p:"!55.6,26.6 52,24.2 49.8,22.4 47.8,18.6 !44.2,10.2 !42.6,15.8 41.4,19.8 38.6,24.2 34,28.8 28,33.8 20,39.2 !12.4,45.6 !15.4,46.8 22,42.6 30,41 !32.4,43.8 !31.6,46.6 !34.6,46.6 !35.6,43.4 !37.6,46.6 !40.4,46.6 39.2,42.4 42.4,39.4 45,35 46.2,30.6 48.6,28.6 52,28.4"},
+   {h:1,p:"!50.6,24.8 53.4,25.8 53.4,27.6 50.4,28.2 48.6,26.6"},{h:1,ci:[49.2,24.8,0.55]}],
+  bunting:[ /* indigo bunting singing from the top of a weed stem */
+   {o:.5,p:"!37.4,40.6 !39,40.6 !36.4,64 !34.8,64"},{o:.5,p:"!37.6,52 31,47.6 !28.6,48.6 32.4,51.2 !37.2,54"},
+   {p:"!52.4,19.4 48.8,19.2 46.2,18 43.6,18.2 41.2,20.8 39,25.4 35.6,30 30.6,34.6 !24,41 !26.4,42.4 32,38.6 35.8,37.6 !36.8,40.6 !39.8,40.6 41.4,35.8 44,31.2 46,26.4 48.6,22.6 !52.4,21.2 !49.6,20.4"},{h:1,ci:[46.4,20.8,0.65]}],
+  tanager:[ /* scarlet tanager on an oak twig: stout bill, black wings on a scarlet body */
+   {o:.5,p:"!18,46.6 !58,46.6 !58,48.4 !18,48.4"},
+   {p:"!54.6,25.6 51,23.6 48.4,21.6 45.4,20.8 42.4,22.6 40.2,26.6 36,31 28.6,36.6 !19.6,43.4 !22.4,45 30,41.6 33,41.2 !34.4,43.6 !33.6,46.6 !36.8,46.6 !37.4,43.6 !39.6,46.6 !42.4,46.6 41.2,42.2 44.4,38.6 46.6,33.6 47.6,29.6 51,27.4"},
+   {h:1,p:"!41,27.4 36.6,32 30.2,36.6 !24,41.4 !24.6,42.4 31,37.8 37.4,33.2 !41.8,28.4"},{h:1,ci:[48,23.6,0.65]}],
+  whippoorwill:[ /* eastern whip-poor-will hawking low at dusk: long rounded wings, a long tail, the moon behind */
+   {o:.4,p:"!52,6 47.6,7.4 45.2,11 45.6,15.4 48.6,18.6 52.8,19.4 50,17 48.6,13.6 49.2,9.8"},
+   {p:"!34.2,30 !33,32 30.6,33.6 22,31.4 14,27.6 !6.6,24.4 !5.2,26.4 !8,27.2 !6.4,29.4 12,32.4 21,36.4 28,38 29.6,40.8 27.6,47.6 !26,52.4 !31.6,51 !34.8,52.6 34.6,47.6 34.6,40.8 37.4,38 46,36.4 55,32.4 !59.6,29.4 !58,27.2 !60.8,26.4 !59.4,24.4 !52,27.6 44,31.4 36.4,33.6"},
+   {h:1,p:"!27.2,48.6 !28.6,48.2 !28,51.4 !26.8,51.6"},{h:1,p:"!32.6,48.4 !34,48.6 !34.2,51.8 !32.8,51.6"}],
+  killdeer:[ /* killdeer standing tall on the lawn: round head, two black bands across the white breast */
+   {p:"!55.6,25.8 52,25 49.6,22.8 46.4,22 43,23.2 41.2,26.2 39.6,30.6 34,33.6 26,37.6 !15.6,42.4 !17.4,44.2 26.6,42 33.6,40.6 !37.2,42 !36,52.6 !37.8,52.6 !39.2,43 !41.2,52.6 !43,52.6 !42.4,42.4 45.4,39.6 46.8,35.6 47.2,31.4 48.4,28.8 51.4,27.4"},
+   {h:1,p:"!47.4,30.2 44.6,30.6 42.2,30.4 !42,31.6 44.6,31.8 !47.2,31.4"},{h:1,p:"!46.8,34.4 43.8,35 41.4,34.8 !41.4,36 43.8,36.2 !46.6,35.6"},{h:1,p:"!51,24 !52.8,24.6 !52.6,25.4 !50.8,25"},{h:1,ci:[48.4,24.6,0.65]}],
+  diana:[ /* Diana fritillary: velvet-dark wings with a broad blazing border */
+   {m:1,p:"!33,23 39,15.4 48,11 !56,11 !57.6,14 55,20.6 49,25.6 !41,28.4 !35,28.6"},
+   {m:1,p:"!33,28.6 42,28.6 50,32 53,38 50,45 44,48 38,47 34.6,42 !33,36"},
+   {p:"!31,19.5 !33,19.5 !33.4,41 !32,43.4 !30.6,41"},
+   {m:1,h:1,p:"!40,15.6 47.4,12.6 !53.6,12.8 !52.6,14.6 47.6,14.4 41.2,17.2"},{m:1,h:1,p:"!53.2,16.2 !55.2,15.8 52.6,21.2 47.6,25.4 !41.2,27.4 !41,26 46.8,24 51.2,20.4"},
+   {m:1,h:1,p:"!49.6,33.6 51.4,38.2 49.4,43.4 44,46.2 !38.8,45.6 !39.2,44.4 43.4,44.8 48,42.4 49.6,38.2 !48.4,34"},
+   {m:1,p:"!32.6,19.6 35,13 !37.6,10.4 !37.9,10.9 35.6,13.4 !33,20"}],
+  rosy:[ /* rosy maple moth: a fuzzy, rounded little moth, a soft band across each forewing, feathery antennae */
+   {m:1,p:"!33.6,22.6 38,17.6 45,14.6 !53.4,14.4 !55.6,17.4 53,23.4 47.6,27.6 !39.4,30 !34.6,29.4"},
+   {m:1,p:"!33.6,29.6 40.6,30.6 46,33.6 47.6,38.4 45,42.6 39.6,44 35.6,41.6 !33.6,36"},
+   {p:"!30,19 32,17.6 34,19 35,25 34.6,36 33.4,43.6 32,45 30.6,43.6 29.4,36 29,25"},
+   {m:1,h:1,p:"!40.4,18.4 !44,16.4 !47.6,26.4 !44.2,28.2"},
+   {m:1,p:"!32.8,18 34.6,13.4 !37,9.6 !38.6,10.4 36.2,13.2 34,18.4"},{m:1,o:.6,p:"!35,13.6 !37.4,13 !36.8,14.4 !35.6,15.6"},{m:1,o:.6,p:"!35.8,11.6 !38.4,11.4 !37.4,12.6"}],
+  peeper:[ /* spring peeper from above: the dark X on its back, the big eyes, legs folded with sticky toe pads */
+   {p:"!32,14.6 36,15.6 38.4,18.6 39.4,23 39.6,29 38.6,35.6 35.6,40.6 32,42 28.4,40.6 25.4,35.6 24.4,29 24.6,23 25.6,18.6 28,15.6"},
+   {p:"!36.6,17.6 39.2,16.4 40.4,18.6 38.8,20.6"},{p:"!27.4,17.6 24.8,16.4 23.6,18.6 25.2,20.6"},
+   {m:1,p:"!34.94,37.80 !45.06,40.39 !46.14,36.81 !36.26,33.40"},{m:1,p:"!44.18,37.39 !38.71,44.47 !40.89,46.33 !47.02,39.81"},{m:1,p:"!38.90,46.51 !45.57,51.38 !46.83,49.82 !40.70,44.29"},{m:1,p:"!36.77,24.69 !42.74,23.64 !42.46,21.56 !36.43,22.11"},{m:1,p:"!43.58,22.98 !45.35,17.69 !43.85,17.11 !41.62,22.22"},{m:1,p:"48.70,51.40 48.26,52.46 47.20,52.90 46.14,52.46 45.70,51.40 46.14,50.34 47.20,49.90 48.26,50.34"},{m:1,p:"46.10,16.60 45.72,17.52 44.80,17.90 43.88,17.52 43.50,16.60 43.88,15.68 44.80,15.30 45.72,15.68"},{m:1,p:"49.70,49.40 49.38,50.18 48.60,50.50 47.82,50.18 47.50,49.40 47.82,48.62 48.60,48.30 49.38,48.62"},{m:1,p:"46.10,53.20 45.78,53.98 45.00,54.30 44.22,53.98 43.90,53.20 44.22,52.42 45.00,52.10 45.78,52.42"},
+   {h:1,p:"!27.84,22.33 !35.04,34.33 !36.16,33.67 !28.96,21.67"},{h:1,p:"!35.04,21.67 !27.84,33.67 !28.96,34.33 !36.16,22.33"}],
+  skink:[ /* five-lined skink from above: sleek and glossy, stripes running down into the long tail */
+   {p:"!62,30.6 59,28.2 55,27.6 50,28.4 44,29 37,29.6 30,30.2 23,31.2 16,32.6 9,34 !2,35 9,36.2 16,36.2 23,35.4 30,34.8 37,34.6 44,34.8 50,35.4 55,36.2 59,35.6"},
+   {p:"!49.54,29.25 !47.30,23.94 !45.90,24.46 !47.66,29.95"},{p:"!47.00,24.83 !51.27,21.82 !50.73,20.98 !46.20,23.57"},{p:"!47.67,34.43 !45.90,39.52 !47.30,40.08 !49.53,35.17"},{p:"!46.20,40.43 !50.73,43.02 !51.27,42.18 !47.00,39.17"},{p:"!32.49,29.15 !30.07,24.86 !28.73,25.54 !30.71,30.05"},{p:"!29.88,25.78 !33.12,22.79 !32.48,22.01 !28.92,24.62"},{p:"!30.72,34.32 !28.74,38.44 !30.06,39.16 !32.48,35.28"},{p:"!28.92,39.38 !32.48,41.99 !33.12,41.21 !29.88,38.22"},
+   {h:1,p:"!56,31.8 44,32 30,32.4 16,34.1 !10,34.8 !10,35.3 16,34.7 30,33.2 44,32.7 !56,32.5"},
+   {h:1,p:"!54,29.8 44,30.3 32,30.9 !22,32 !22,32.6 32,31.5 44,30.9 !54,30.4"},{h:1,p:"!54,34.4 44,34.1 32,33.7 !22,34.1 !22,34.7 32,34.3 44,34.7 !54,35"}],
+  mantis:[ /* praying mantis on a grass stem: the raised forelegs folded as if in prayer, the triangular head turned to you */
+   {o:.5,p:"!14,64 !15.6,64 !21,44 !19.6,44"},
+   {p:"!6,45.6 10,42.6 16,40.6 22,39.4 27,38.8 30,38.2 !32.4,36.6 !36.6,28.6 !38.4,22.6 !39.8,22.8 !38.6,29 !34.6,38 !33,40.8 28,42.2 22,43.6 15,45 !8.6,46.6"},
+   {p:"!40.6,18.4 44.6,17.4 !46.6,19.6 43.4,22.6 !40.4,23.2 !38.6,20.4"},
+   {p:"!36.03,28.57 !41.43,33.97 !42.57,32.83 !37.17,27.43"},{p:"!42.64,33.48 !43.64,25.48 !42.36,25.32 !41.36,33.32"},{p:"!42.73,25.69 !45.13,27.89 !45.67,27.31 !43.27,25.11"},
+   {p:"!26.65,40.59 !30.25,47.19 !30.95,46.81 !27.35,40.21"},{p:"!30.29,47.16 !33.29,53.16 !33.91,52.84 !30.91,46.84"},{p:"!17.69,42.35 !13.29,47.75 !13.91,48.25 !18.31,42.85"},{p:"!13.28,47.85 !10.28,54.25 !10.92,54.55 !13.92,48.15"},
+   {p:"!41.78,18.74 !48.78,9.74 !48.42,9.46 !41.42,18.46"},{p:"!43.73,18.79 !52.73,12.59 !52.47,12.21 !43.47,18.41"},
+   {h:1,p:"!9,44.6 16,42.2 24,40.6 !29.4,39.8 !29.6,40.6 24,41.6 16,43.4 !9.4,45.6"},{h:1,ci:[44,19.6,0.6]}],
+  katydid:[ /* katydid: leaf-green wings veined like a leaf, long jumping legs, antennae longer than its body */
+   {p:"!8,40.6 14,36.6 22,34.4 31,33.6 38,34.4 43,36.6 44.6,39.6 41,42.6 32,43.4 22,43.6 14,43 !9,42.4"},
+   {p:"!43,36.4 47,34.6 50.6,35.6 51.6,38.4 49.6,41 45.6,41.6 !43.2,40.6"},
+   {p:"!30.57,39.99 !21.17,26.99 !20.03,27.81 !29.43,40.81"},{p:"!20.21,27.33 !15.61,52.33 !16.39,52.47 !20.99,27.47"},
+   {p:"!40.25,41.41 !40.65,52.41 !41.35,52.39 !40.95,41.39"},{p:"!45.26,41.09 !48.26,52.49 !48.94,52.31 !45.94,40.91"},
+   {p:"!50.58,35.49 !57.78,22.09 !57.42,21.91 !50.22,35.31"},{p:"!57.77,22.06 !61.77,10.66 !61.43,10.54 !57.43,21.94"},{p:"!51.14,36.34 !59.74,28.14 !59.46,27.86 !50.86,36.06"},{p:"!59.76,28.07 !63.56,19.07 !63.24,18.93 !59.44,27.93"},
+   {h:1,p:"!12,40 22,38.6 32,38.2 !41,38.6 !41,39.4 32,39 22,39.4 !12,40.8"},{h:1,p:"!18,38.8 !19,38.8 !22.4,35.6 !21.6,35.4"},{h:1,p:"!26,38.6 !27,38.6 !30.4,35 !29.6,34.8"},{h:1,p:"!34,38.6 !35,38.6 !37.8,35.4 !37,35.2"},{h:1,ci:[48.6,37.4,0.7]}],
+  spider:[ /* golden garden spider at the hub of her orb web, legs held in pairs like an X */
+   {o:.42,p:"!32.00,30.27 !58.00,30.27 !58.00,29.73 !32.00,29.73"},{o:.42,p:"!31.90,30.26 !55.92,39.44 !56.12,38.93 !32.10,29.74"},{o:.42,p:"!31.81,30.20 !50.20,47.17 !50.57,46.77 !32.19,29.80"},{o:.42,p:"!31.75,30.11 !41.70,52.29 !42.20,52.06 !32.25,29.89"},{o:.42,p:"!31.73,30.00 !31.73,54.00 !32.27,54.00 !32.27,30.00"},{o:.42,p:"!31.75,29.89 !21.80,52.06 !22.30,52.29 !32.25,30.11"},{o:.42,p:"!31.81,29.80 !13.43,46.77 !13.80,47.17 !32.19,30.20"},{o:.42,p:"!31.90,29.74 !7.88,38.93 !8.08,39.44 !32.10,30.26"},{o:.42,p:"!32.00,29.73 !6.00,29.73 !6.00,30.28 !32.00,30.27"},{o:.42,p:"!32.10,29.74 !8.08,20.56 !7.88,21.07 !31.90,30.26"},{o:.42,p:"!32.19,29.80 !13.80,12.83 !13.43,13.23 !31.81,30.20"},{o:.42,p:"!32.25,29.89 !22.30,7.71 !21.80,7.94 !31.75,30.11"},{o:.42,p:"!32.27,30.00 !32.27,6.00 !31.72,6.00 !31.73,30.00"},{o:.42,p:"!32.25,30.11 !42.20,7.94 !41.70,7.71 !31.75,29.89"},{o:.42,p:"!32.19,30.20 !50.57,13.23 !50.20,12.83 !31.81,29.80"},{o:.42,p:"!32.10,30.26 !56.12,21.07 !55.92,20.56 !31.90,29.74"},{o:.42,p:"!39.76,29.95 !39.15,32.79 !39.64,32.90 !40.24,30.05"},{o:.42,p:"!39.19,32.70 !37.45,35.12 !37.86,35.41 !39.59,32.99"},{o:.42,p:"!37.52,35.05 !34.93,36.66 !35.19,37.09 !37.79,35.47"},{o:.42,p:"!35.02,36.63 !31.95,37.19 !32.05,37.69 !35.11,37.12"},{o:.42,p:"!32.05,37.19 !28.98,36.63 !28.89,37.12 !31.95,37.69"},{o:.42,p:"!29.07,36.66 !26.48,35.05 !26.21,35.47 !28.81,37.09"},{o:.42,p:"!26.55,35.12 !24.81,32.70 !24.41,32.99 !26.14,35.41"},{o:.42,p:"!24.85,32.79 !24.24,29.95 !23.76,30.05 !24.36,32.90"},{o:.42,p:"!24.24,30.05 !24.85,27.21 !24.36,27.10 !23.76,29.95"},{o:.42,p:"!24.81,27.30 !26.55,24.88 !26.14,24.59 !24.41,27.01"},{o:.42,p:"!26.48,24.95 !29.07,23.34 !28.81,22.91 !26.21,24.53"},{o:.42,p:"!28.98,23.37 !32.05,22.81 !31.95,22.31 !28.89,22.88"},{o:.42,p:"!31.95,22.81 !35.02,23.37 !35.11,22.88 !32.05,22.31"},{o:.42,p:"!34.93,23.34 !37.52,24.95 !37.79,24.53 !35.19,22.91"},{o:.42,p:"!37.45,24.88 !39.19,27.30 !39.59,27.01 !37.86,24.59"},{o:.42,p:"!39.15,27.21 !39.76,30.05 !40.24,29.95 !39.64,27.10"},{o:.42,p:"!45.76,29.95 !44.69,34.93 !45.18,35.03 !46.24,30.05"},{o:.42,p:"!44.73,34.84 !41.70,39.06 !42.10,39.35 !45.14,35.13"},{o:.42,p:"!41.77,38.99 !37.23,41.82 !37.49,42.24 !42.03,39.42"},{o:.42,p:"!37.31,41.78 !31.95,42.77 !32.05,43.27 !37.40,42.27"},{o:.42,p:"!32.05,42.77 !26.69,41.78 !26.60,42.27 !31.95,43.27"},{o:.42,p:"!26.77,41.82 !22.23,38.99 !21.97,39.42 !26.51,42.24"},{o:.42,p:"!22.30,39.06 !19.27,34.84 !18.86,35.13 !21.90,39.35"},{o:.42,p:"!19.31,34.93 !18.24,29.95 !17.76,30.05 !18.82,35.03"},{o:.42,p:"!18.24,30.05 !19.31,25.07 !18.82,24.97 !17.76,29.95"},{o:.42,p:"!19.27,25.16 !22.30,20.94 !21.90,20.65 !18.86,24.87"},{o:.42,p:"!22.23,21.01 !26.77,18.18 !26.51,17.76 !21.97,20.58"},{o:.42,p:"!26.69,18.22 !32.05,17.23 !31.95,16.73 !26.60,17.73"},{o:.42,p:"!31.95,17.23 !37.31,18.22 !37.40,17.73 !32.05,16.73"},{o:.42,p:"!37.23,18.18 !41.77,21.01 !42.03,20.58 !37.49,17.76"},{o:.42,p:"!41.70,20.94 !44.73,25.16 !45.14,24.87 !42.10,20.65"},{o:.42,p:"!44.69,25.07 !45.76,30.05 !46.24,29.95 !45.18,24.97"},{o:.42,p:"!51.76,29.95 !50.23,37.07 !50.72,37.17 !52.24,30.05"},{o:.42,p:"!50.27,36.97 !45.94,43.01 !46.35,43.30 !50.68,37.26"},{o:.42,p:"!46.01,42.94 !39.52,46.97 !39.79,47.40 !46.27,43.36"},{o:.42,p:"!39.61,46.94 !31.95,48.35 !32.05,48.85 !39.70,47.43"},{o:.42,p:"!32.05,48.35 !24.39,46.94 !24.30,47.43 !31.95,48.85"},{o:.42,p:"!24.48,46.97 !17.99,42.94 !17.73,43.36 !24.21,47.40"},{o:.42,p:"!18.06,43.01 !13.73,36.97 !13.32,37.26 !17.65,43.30"},{o:.42,p:"!13.77,37.07 !12.24,29.95 !11.76,30.05 !13.28,37.17"},{o:.42,p:"!12.24,30.05 !13.77,22.93 !13.28,22.83 !11.76,29.95"},{o:.42,p:"!13.73,23.03 !18.06,16.99 !17.65,16.70 !13.32,22.74"},{o:.42,p:"!17.99,17.06 !24.48,13.03 !24.21,12.60 !17.73,16.64"},{o:.42,p:"!24.39,13.06 !32.05,11.65 !31.95,11.15 !24.30,12.57"},{o:.42,p:"!31.95,11.65 !39.61,13.06 !39.70,12.57 !32.05,11.15"},{o:.42,p:"!39.52,13.03 !46.01,17.06 !46.27,16.64 !39.79,12.60"},{o:.42,p:"!45.94,16.99 !50.27,23.03 !50.68,22.74 !46.35,16.70"},{o:.42,p:"!50.23,22.93 !51.76,30.05 !52.24,29.95 !50.72,22.83"},{o:.42,p:"!56.76,29.95 !54.85,38.85 !55.34,38.95 !57.24,30.05"},{o:.42,p:"!54.89,38.75 !49.47,46.29 !49.88,46.59 !55.30,39.04"},{o:.42,p:"!49.55,46.23 !41.44,51.27 !41.70,51.69 !49.81,46.65"},{o:.42,p:"!41.52,51.23 !31.95,53.00 !32.05,53.50 !41.61,51.73"},{o:.42,p:"!32.05,53.00 !22.48,51.23 !22.39,51.73 !31.95,53.50"},{o:.42,p:"!22.56,51.27 !14.45,46.23 !14.19,46.65 !22.30,51.69"},{o:.42,p:"!14.53,46.29 !9.11,38.75 !8.70,39.04 !14.12,46.59"},{o:.42,p:"!9.15,38.85 !7.24,29.95 !6.76,30.05 !8.66,38.95"},{o:.42,p:"!7.24,30.05 !9.15,21.15 !8.66,21.05 !6.76,29.95"},{o:.42,p:"!9.11,21.25 !14.53,13.71 !14.12,13.41 !8.70,20.96"},{o:.42,p:"!14.45,13.77 !22.56,8.73 !22.30,8.31 !14.19,13.35"},{o:.42,p:"!22.48,8.77 !32.05,7.00 !31.95,6.50 !22.39,8.27"},{o:.42,p:"!31.95,7.00 !41.52,8.77 !41.61,8.27 !32.05,6.50"},{o:.42,p:"!41.44,8.73 !49.55,13.77 !49.81,13.35 !41.70,8.31"},{o:.42,p:"!49.47,13.71 !54.89,21.25 !55.30,20.96 !49.88,13.41"},{o:.42,p:"!54.85,21.15 !56.76,30.05 !57.24,29.95 !55.34,21.05"},
+   {p:"!32.41,29.82 !29.55,23.43 !28.73,23.79 !31.59,30.18"},{p:"!29.37,23.31 !23.00,18.47 !22.54,19.07 !28.91,23.91"},{p:"!32.25,29.63 !27.30,26.24 !26.79,26.98 !31.75,30.37"},{p:"!27.12,26.24 !20.26,24.85 !20.11,25.59 !26.97,26.98"},{p:"!31.80,29.59 !26.76,32.03 !27.15,32.84 !32.20,30.41"},{p:"!26.92,32.06 !20.35,32.72 !20.43,33.47 !26.99,32.81"},{p:"!31.62,29.76 !28.06,35.31 !28.81,35.80 !32.38,30.24"},{p:"!28.25,35.22 !21.23,39.06 !21.59,39.72 !28.61,35.88"},{p:"!32.41,30.18 !35.27,23.79 !34.45,23.43 !31.59,29.82"},{p:"!35.09,23.91 !41.46,19.07 !41.00,18.47 !34.63,23.31"},{p:"!32.25,30.37 !37.21,26.98 !36.70,26.24 !31.75,29.63"},{p:"!37.03,26.98 !43.89,25.59 !43.74,24.85 !36.88,26.24"},{p:"!31.80,30.41 !36.85,32.84 !37.24,32.03 !32.20,29.59"},{p:"!37.01,32.81 !43.57,33.47 !43.65,32.72 !37.08,32.06"},{p:"!31.62,30.24 !35.19,35.80 !35.94,35.31 !32.38,29.76"},{p:"!35.39,35.88 !42.41,39.72 !42.77,39.06 !35.75,35.22"},
+   {p:"!32,20.6 35.4,22.4 36.6,26 35.4,29.6 32,31 28.6,29.6 27.4,26 28.6,22.4"},{p:"!32,30.4 34,31.6 34.4,34 32,35.6 29.6,34 30,31.6"},
+   {h:1,p:"!29,23.6 !35,23.6 !35,24.6 !29,24.6"},{h:1,p:"!28.4,26.6 !35.6,26.6 !35.6,27.6 !28.4,27.6"}],
+  snake:[ /* eastern garter snake gliding in S-curves, the pale stripe down its back */
+   {p:"!5.43,36.60 6.18,37.32 6.94,38.04 7.72,38.77 8.54,39.49 9.42,40.16 10.37,40.77 11.43,41.28 12.61,41.63 13.90,41.77 15.26,41.65 16.60,41.27 17.90,40.66 19.13,39.87 20.29,38.91 21.38,37.81 22.33,36.53 23.24,35.19 24.13,33.81 24.97,32.45 25.74,31.26 26.45,30.32 27.13,29.53 27.72,28.95 28.18,28.59 28.47,28.43 28.57,28.40 28.57,28.40 28.63,28.42 28.86,28.53 29.28,28.83 29.84,29.35 30.50,30.09 31.23,31.03 31.99,32.12 32.79,33.35 33.61,34.67 34.46,36.05 35.32,37.45 36.20,38.84 37.11,40.20 38.05,41.50 39.04,42.72 40.11,43.83 41.29,44.82 42.64,45.64 44.17,46.20 45.85,46.40 47.52,46.18 49.05,45.60 50.39,44.78 51.45,43.67 52.36,42.43 53.19,41.11 53.96,39.73 54.69,38.28 55.40,36.80 56.10,35.30 56.78,33.82 58.21,32.84 58.60,31.46 !60.60,31.86 58.60,32.66 53.84,30.11 53.56,31.84 52.55,33.13 51.55,34.40 50.57,35.61 49.61,36.72 48.69,37.68 47.82,38.46 47.03,39.02 46.40,39.35 46.03,39.59 45.85,39.66 45.81,39.67 45.78,39.66 45.60,39.59 45.24,39.37 44.72,38.93 44.09,38.27 43.39,37.40 42.63,36.36 41.85,35.18 41.03,33.89 40.20,32.53 39.34,31.14 38.47,29.74 37.58,28.36 36.65,27.04 35.68,25.79 34.65,24.64 33.52,23.60 32.26,22.72 30.81,22.05 29.19,21.70 27.51,21.75 25.93,22.20 24.53,22.93 23.31,23.86 22.21,24.93 21.20,26.11 20.21,27.42 19.29,28.85 18.44,30.22 17.63,31.48 16.84,32.63 16.09,33.64 15.48,34.56 14.95,35.33 14.48,35.92 14.07,36.37 13.71,36.69 13.35,36.92 12.94,37.09 12.42,37.16 11.78,37.12 11.04,36.96 10.22,36.68 9.35,36.32 8.43,35.89 7.50,35.42 6.56,34.97"},
+   {h:1,p:"10.94,39.30 11.84,39.59 12.75,39.74 13.67,39.72 14.59,39.53 15.51,39.15 16.40,38.59 17.29,37.87 18.16,36.98 19.03,35.95 19.89,34.79 20.74,33.54 21.59,32.21 22.44,30.85 23.28,29.55 24.11,28.44 24.94,27.48 25.75,26.68 26.56,26.07 27.34,25.65 28.10,25.44 28.84,25.41 29.60,25.58 30.37,25.94 31.17,26.50 31.99,27.25 32.81,28.17 33.64,29.25 34.48,30.45 35.32,31.74 36.17,33.10 37.01,34.48 37.86,35.86 38.72,37.21 39.57,38.49 40.43,39.68 41.29,40.74 42.17,41.65 43.05,42.39 43.96,42.94 44.89,43.29 45.83,43.40 46.78,43.28 47.70,42.92 48.61,42.36 49.50,41.61 50.37,40.69 51.23,39.62 52.09,38.43 52.95,37.15 53.80,35.80 53.12,35.38 52.27,36.71 51.43,37.98 50.60,39.14 49.77,40.16 48.94,41.03 48.14,41.71 47.35,42.21 46.58,42.50 45.83,42.60 45.08,42.51 44.31,42.22 43.52,41.74 42.71,41.06 41.89,40.21 41.06,39.19 40.23,38.04 39.39,36.78 38.54,35.44 37.70,34.06 36.85,32.68 36.00,31.31 35.15,30.00 34.29,28.78 33.43,27.66 32.56,26.69 31.68,25.88 30.78,25.25 29.86,24.82 28.92,24.62 27.97,24.65 27.04,24.91 26.12,25.40 25.23,26.08 24.35,26.93 23.48,27.94 22.62,29.09 21.76,30.42 20.92,31.78 20.07,33.09 19.23,34.33 18.40,35.45 17.57,36.44 16.75,37.28 15.94,37.95 15.14,38.44 14.36,38.76 13.58,38.93 12.81,38.94 12.03,38.81 11.23,38.56"},{h:1,ci:[57.60,30.26,.55]},
+   {p:"!60.40,31.86 !63.40,31.26 !64.60,30.06 !63.60,31.86 !64.60,33.26 !63.20,32.36 !60.40,32.46"}]
   };
   /* the outline to a smooth closed path */
   function critterPath(spec){ const P=spec.trim().split(/\s+/).map(s=>{ const sh=s[0]==="!"; const [x,y]=(sh?s.slice(1):s).split(",").map(Number); return {x,y,sh}; });
@@ -5350,14 +5678,18 @@ const critterMenu=(function(){
       d+=`C${f(c1.x)},${f(c1.y)} ${f(c2.x)},${f(c2.y)} ${f(p2.x)},${f(p2.y)}`; }
     return d+"Z"; }
   function critterMirror(sp){ return sp.trim().split(/\s+/).map(t=>{ const sh=t[0]==="!", [x,y]=(sh?t.slice(1):t).split(","); return (sh?"!":"")+(+(64-x).toFixed(2))+","+y; }).reverse().join(" "); }
-  function critterSVG(key){ let S=CRITTER_ICONS[key]; if(!S) return ""; S=S.flatMap(x=>x.m? [x,Object.assign({},x,{p:critterMirror(x.p)})] : [x]); const last=S.map(s=>!!s.h).lastIndexOf(true), id="cm-"+key;
+  function critterSVG(key){ let S=CRITTER_ICONS[key]; if(!S) return ""; S=S.map(x=>x.ci? Object.assign({},x,{p:Array.from({length:12},(_,i)=>{ const a=i/12*6.2832; return (+(x.ci[0]+Math.cos(a)*x.ci[2]).toFixed(2))+","+(+(x.ci[1]+Math.sin(a)*x.ci[2]).toFixed(2)); }).join(" ")}) : x).flatMap(x=>x.m? [x,Object.assign({},x,{p:critterMirror(x.p)})] : [x]);
+    /* every icon scaled to the same frame, so all of them carry the same weight in the grid */
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const sh of S){ if(sh.h) continue; for(const t of sh.p.trim().split(/\s+/)){ const [a,b]=(t[0]==="!"?t.slice(1):t).split(",").map(Number); if(a<x0)x0=a; if(a>x1)x1=a; if(b<y0)y0=b; if(b>y1)y1=b; } }
+    const sc=Math.min(54/Math.max(1,x1-x0),54/Math.max(1,y1-y0),1.6), tx=32-(x0+x1)/2*sc, ty=32-(y0+y1)/2*sc, T=`translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(${sc.toFixed(4)})`;
+    const last=S.map(s=>!!s.h).lastIndexOf(true), id="cm-"+key;
     const sh=s=>`<path d="${critterPath(s.p)}"${s.o?` opacity="${s.o}"`:""}/>`;
     const mask=S.filter(s=>s.h).map(s=>`<path d="${critterPath(s.p)}" fill="#000"/>`).join(""), under=S.filter((s,i)=>!s.h&&i<last).map(sh).join(""), over=S.filter((s,i)=>!s.h&&i>last).map(sh).join("");
-    return `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g fill="currentColor">${last<0? over : `<defs><mask id="${id}"><rect width="64" height="64" fill="#fff"/>${mask}</mask></defs><g mask="url(#${id})">${under}</g>${over}`}</g></svg>`; }
-  const LIST=[["Mammals",[["fox","fox","Red fox"],["grayfox","grayfox","Gray fox"],["coyote","coyote","Coyote"],["cub","bear","Black bears"],["bobcat","bobcat","Bobcat"],["raccoon","raccoon","Raccoon"],["skunk","skunk","Striped skunk"],["beaver","beaver","Beaver"],["buckLawn","buck","White-tailed buck"],["doe","doe","Doe & fawn"],["squirrels","squirrel","Squirrels"],["bats","bats","Little brown bats"],["romp","dogs","Willow & Tulip"],["utv","utv","Jim & Christy"]]],
-    ["Birds",[["eagle","eagle","Bald eagle"],["goldeneagle","goldeneagle","Golden eagle"],["hawkg","redtail","Red-tailed hawk"],["falcon","falcon","Peregrine falcon"],["heron","heron","Great blue heron"],["ravens","ravens","Common ravens"],["vultures","vultures","Turkey vultures"],["owl","owl","Barred owl"],["geese","geese","Canada geese"],["turkeys","turkeys","Wild turkeys"],["hen","hen","Hen & poults"],["pheasfront","pheasant","Ring-necked pheasant"],["grouse","grouse","Ruffed grouse"],["quail","quail","Bobwhite quail"],["woodcock","woodcock","Woodcocks"],["robin","robin","American robin"],["flock","bluebirds","Eastern bluebirds"],["finch","finch","Goldfinches"],["jays","jays","Blue jays"],["pecker","pecker","Pileated woodpecker"],["hum","hum","Hummingbird"]]],
-    ["Butterflies & Moths",[["cmon","monarch","Monarch"],["bfly:tiger","tiger","Tiger swallowtail"],["bfly:spice","spice","Spicebush swallowtail"],["bfly:frit","frit","Great spangled fritillary"],["bfly:admiral","admiral","Red admiral"],["bfly:cloak","cloak","Mourning cloak"],["bfly:sulphur","sulphur","Clouded sulphur"],["moth","moth","Luna moth"]]],
-    ["Small Wonders",[["turtle","turtle","Box turtle"],["eft","eft","Red eft"],["fireflies","fireflies","Fireflies"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]]];
+    return `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g fill="currentColor" transform="${T}">${last<0? over : `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-200" y="-200" width="600" height="600"><rect x="-200" y="-200" width="600" height="600" fill="#fff"/>${mask}</mask></defs><g mask="url(#${id})">${under}</g>${over}`}</g></svg>`; }
+  const LIST=[["Mammals",[["fox","fox","Red fox"],["grayfox","grayfox","Gray fox"],["coyote","coyote","Coyote"],["cub","bear","Black bears"],["bobcat","bobcat","Bobcat"],["raccoon","raccoon","Raccoon"],["skunk","skunk","Striped skunk"],["opossum","opossum","Opossum"],["groundhog","groundhog","Groundhog"],["beaver","beaver","Beaver"],["cottontail","cottontail","Cottontails"],["buckLawn","buck","White-tailed buck"],["doe","doe","Doe & fawn"],["squirrels","squirrel","Squirrels"],["bats","bats","Little brown bats"],["romp","dogs","Willow & Tulip"],["utv","utv","Jim & Christy"]]],
+    ["Birds",[["eagle","eagle","Bald eagle"],["goldeneagle","goldeneagle","Golden eagle"],["hawkg","redtail","Red-tailed hawk"],["falcon","falcon","Peregrine falcon"],["heron","heron","Great blue heron"],["ravens","ravens","Common ravens"],["vultures","vultures","Turkey vultures"],["owl","owl","Barred owl"],["whippoorwill","whippoorwill","Whip-poor-will"],["geese","geese","Canada geese"],["turkeys","turkeys","Wild turkeys"],["hen","hen","Hen & poults"],["pheasfront","pheasant","Ring-necked pheasant"],["grouse","grouse","Ruffed grouse"],["quail","quail","Bobwhite quail"],["woodcock","woodcock","Woodcocks"],["killdeer","killdeer","Killdeer"],["robin","robin","American robin"],["cardinal","cardinal","Cardinals"],["flock","bluebirds","Eastern bluebirds"],["bunting","bunting","Indigo bunting"],["tanager","tanager","Scarlet tanager"],["finch","finch","Goldfinches"],["jays","jays","Blue jays"],["pecker","pecker","Pileated woodpecker"],["hum","hum","Hummingbird"]]],
+    ["Butterflies & Moths",[["cmon","monarch","Monarch"],["bfly:tiger","tiger","Tiger swallowtail"],["bfly:spice","spice","Spicebush swallowtail"],["bfly:frit","frit","Great spangled fritillary"],["bfly:diana","diana","Diana fritillary"],["bfly:admiral","admiral","Red admiral"],["bfly:cloak","cloak","Mourning cloak"],["bfly:sulphur","sulphur","Clouded sulphur"],["moth","moth","Luna moth"],["bfly:rosy","rosy","Rosy maple moth"]]],
+    ["Small Wonders",[["turtle","turtle","Box turtle"],["eft","eft","Red eft"],["peeper","peeper","Spring peeper"],["skink","skink","Five-lined skink"],["snake","snake","Garter snake"],["mantis","mantis","Praying mantis"],["katydid","katydid","Katydid"],["spider","spider","Garden spider"],["fireflies","fireflies","Fireflies"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]]];
   const F='"Cormorant Garamond",Georgia,"Times New Roman",serif';
   const CSS=`.cc-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(10px,2.4vh,24px) 16px;background:rgba(12,8,4,.46);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
 .cc-back[hidden]{display:none}.cc-back.on{opacity:1}
@@ -5370,17 +5702,19 @@ const critterMenu=(function(){
 .cc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:2px}
 .cc-two .cc-sec{grid-column:1/-1}
 .cc-tile{appearance:none;-webkit-appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:clamp(3px,.8vh,8px);margin:0;padding:clamp(5px,1vh,12px) 3px clamp(5px,.9vh,10px);background:transparent;border:1px solid transparent;border-radius:2px;color:inherit;cursor:pointer;font:600 11.5px/1.18 ${F};letter-spacing:.1em;text-transform:uppercase;text-align:center;transition:background .2s,border-color .2s}
-.cc-tile svg{width:clamp(38px,min(4vw,6.2vh),64px);height:clamp(38px,min(4vw,6.2vh),64px);flex:none;display:block;color:#f6efe2;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35));transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+.cc-tile svg{width:clamp(34px,min(3.4vw,5.4vh),60px);height:clamp(34px,min(3.4vw,5.4vh),60px);flex:none;display:block;color:#f6efe2;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35));transition:transform .3s cubic-bezier(.2,.7,.2,1)}
 .cc-tile:hover,.cc-tile:focus-visible{background:rgba(255,250,242,.07);border-color:rgba(255,250,242,.28);outline:none}
 .cc-tile:hover svg,.cc-tile:focus-visible svg{transform:translateY(-3px) scale(1.05)}
 .cc-tile:active svg{transform:scale(.96)}
-@media (min-width:1100px){.cc-grid{grid-template-columns:repeat(14,minmax(0,1fr))}.cc-two .cc-sec.a{grid-column:1/span 8;grid-row:1}.cc-two .cc-sec.b{grid-column:10/span 5;grid-row:1}.cc-two .ta,.cc-two .tb{grid-row:2}.cc-two .tb0{grid-column:10}.cc-two .tb1{grid-column:11}.cc-two .tb2{grid-column:12}.cc-two .tb3{grid-column:13}.cc-two .tb4{grid-column:14}}
+@media (min-width:1100px){.cc-grid{grid-template-columns:repeat(17,minmax(0,1fr))}.cc-tile{font-size:10px;letter-spacing:.045em;padding-left:0;padding-right:0}.cc-two .cc-sec.a{grid-column:1/span 8;grid-row:1}.cc-two .cc-sec.b{grid-column:10/span 8;grid-row:1}.cc-two .tw{grid-column:var(--c);grid-row:var(--r)}}
 .cc-x{position:absolute;right:10px;top:10px;width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid transparent;border-radius:2px;color:#f6efe2;cursor:pointer;transition:background .2s,border-color .2s}
 .cc-x:hover,.cc-x:focus-visible{background:rgba(255,250,242,.08);border-color:rgba(255,250,242,.3);outline:none}
 .cc-x svg{width:18px;height:18px}
 .cc-toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));z-index:61;transform:translate(-50%,8px);padding:10px 18px 9px calc(18px + .24em);color:#f6efe2;background:rgba(24,16,8,.66);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:3px;border-radius:2px;font:600 12.5px/1 ${F};letter-spacing:.24em;text-transform:uppercase;white-space:nowrap;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
 .cc-toast.on{opacity:1;transform:translate(-50%,0)}
 @media (max-width:600px){.cc-back{padding:12px}.cc-panel{background:rgba(24,16,8,.86);padding:26px 10px 18px}.cc-sub{font-size:10.5px;letter-spacing:.2em;padding:0 30px}.cc-sec{margin:20px 4px 6px;font-size:11px}.cc-grid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}.cc-tile{font-size:10.5px;letter-spacing:.08em;padding:9px 2px}.cc-tile svg{width:46px;height:46px}}
+.cc-tile span{hyphens:manual;max-width:100%}
+@media (max-height:690px) and (min-width:1100px){.cc-sub{display:none}.cc-sec{margin:7px 0 3px}.cc-title{font-size:28px}.cc-tile{padding-top:3px;padding-bottom:3px}}
 @media (prefers-reduced-motion:reduce){.cc-back,.cc-panel,.cc-tile svg,.cc-toast{transition:none}}`;
   let back=null, last=null, toastEl=null, toastT=null;
   function build(){
@@ -5388,9 +5722,9 @@ const critterMenu=(function(){
     back=document.createElement("div"); back.className="cc-back"; back.hidden=true; back.setAttribute("data-no-scenery","");
     back.innerHTML=`<div class="cc-panel" role="dialog" aria-modal="true" aria-labelledby="cc-title"><button type="button" class="cc-x" aria-label="Close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
       <h2 class="cc-title" id="cc-title">Call a Critter</h2><p class="cc-sub">Choose one, then watch the field</p>
-      ${(()=>{ const tile=([k,ic,name],cls)=>`<button type="button" class="cc-tile${cls||""}" data-k="${k}" data-n="${name}">${critterSVG(ic)}<span>${name.replace("&","&amp;")}</span></button>`;
+      ${(()=>{ const tile=([k,ic,name],cls,c,rw)=>`<button type="button" class="cc-tile${cls||""}"${c? ` style="--c:${c};--r:${rw}"` : ""} data-k="${k}" data-n="${name}">${critterSVG(ic)}<span>${name.replace("&","&amp;").replace("swallowtail","swallow&shy;tail").replace("fritillary","fritil&shy;lary").replace("Woodpecker","Wood&shy;pecker").replace("woodpecker","wood&shy;pecker")}</span></button>`;
         const [m,b,bf,sw]=LIST; return [m,b].map(([sec,items])=>`<div class="cc-sec">${sec}</div><div class="cc-grid">${items.map(it=>tile(it)).join("")}</div>`).join("")
-          +`<div class="cc-grid cc-two"><div class="cc-sec a">${bf[0].replace("&","&amp;")}</div>${bf[1].map(it=>tile(it," ta")).join("")}<div class="cc-sec b">${sw[0]}</div>${sw[1].map((it,i)=>tile(it," tb tb"+i)).join("")}</div>`; })()}</div>`;
+          +`<div class="cc-grid cc-two"><div class="cc-sec a">${bf[0].replace("&","&amp;")}</div>${bf[1].map((it,i)=>tile(it," tw",1+i%8,2+Math.floor(i/8))).join("")}<div class="cc-sec b">${sw[0]}</div>${sw[1].map((it,i)=>tile(it," tw",10+i%8,2+Math.floor(i/8))).join("")}</div>`; })()}</div>`;
     document.body.append(back);
     back.addEventListener("click",e=>{ const tl=e.target.closest(".cc-tile"); if(tl){ call(tl.dataset.k,tl.dataset.n); return; } if(e.target===back||e.target.closest(".cc-x")) close(); });
     back.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); close(); }
