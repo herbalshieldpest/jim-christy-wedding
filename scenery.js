@@ -404,11 +404,11 @@ const ambient=(function(){
     if(l.kind==="milkweed"){
       /* seed with a fan of silky filaments */
       const s=l.s*pk; ctx.globalAlpha=l.a*dim*inten;
-      ctx.strokeStyle="rgba(255,252,244,.9)"; ctx.lineWidth=.55*Math.max(1,s/20);
-      for(let i=0;i<22;i++){ const a=-Math.PI/2+(i/21-.5)*2.3, len=s*(1.15+.25*Math.sin(i*1.7)); const bx=Math.cos(a)*len, by=Math.sin(a)*len;
+      ctx.strokeStyle="rgba(255,252,244,.62)"; ctx.lineWidth=.32*Math.max(1,s/34);
+      for(let i=0;i<34;i++){ const a=-Math.PI/2+(i/33-.5)*2.5, len=s*(1.05+.3*Math.sin(i*1.7)); const bx=Math.cos(a)*len, by=Math.sin(a)*len;
         ctx.beginPath(); ctx.moveTo(0,-s*.1); ctx.quadraticCurveTo(bx*.5,by*.5-s*.15,bx,by); ctx.stroke(); }
-      ctx.globalAlpha=l.a*dim*inten*.1; ctx.fillStyle="#fffaf0"; ctx.beginPath(); ctx.arc(0,-s*.7,s*.85,0,6.283); ctx.fill();
-      ctx.globalAlpha=l.a*dim*inten; ctx.fillStyle="#7a5530"; ctx.beginPath(); ctx.ellipse(0,s*.12,s*.13,s*.24,0,0,6.283); ctx.fill();
+      ctx.globalAlpha=l.a*dim*inten*.04; ctx.fillStyle="#fffaf0"; ctx.beginPath(); ctx.arc(0,-s*.6,s*.75,0,6.283); ctx.fill();
+      ctx.globalAlpha=l.a*dim*inten; ctx.fillStyle="#7a5530"; ctx.beginPath(); ctx.ellipse(0,s*.1,s*.075,s*.15,0,0,6.283); ctx.fill();
       ctx.restore(); return;
     }
     const sx=Math.cos(l.flip), back=sx<0;
@@ -443,7 +443,7 @@ const ambient=(function(){
     l.D+=l.vD*dt; const wk=Math.min(1,l.D); l.X+=(l.vX+Math.cos(l.ph)*.03)*wk*dt; l.Y+=(l.vY+Math.sin(l.ph*.8)*.02)*wk*dt; l.rot+=l.vr*dt*(l.kind==="milkweed"?.3:1); l.flip+=l.vf*dt; l.tilt+=l.vt*dt;
     const D=Math.max(.04,l.D), x=vp[0]+l.X*f/D, y=vp[1]+l.Y*f/D, S=l.base*f/D;
     l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>7||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
-    const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,(5.5-l.D)/2)), A=fadeIn*fadeFar*(dark?.8:1);
+    const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,(5.5-l.D)/2)), A=fadeIn*fadeFar*nearFade(S*2.2)*(dark?.8:1);
     const blur= l.D<.5? (.5-l.D)*26 : l.D>2.2? Math.min(2,(l.D-2.2)*.7) : 0;                         /* too close for the lens to focus, or soft with distance */
     const mist=Math.max(0,Math.min(.45,(l.D-1.2)/8)), sp=sun(), toSun=Math.atan2(sp.y-y,sp.x-x);
     ctx.save(); ctx.globalAlpha=A*.94; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`;
@@ -1671,9 +1671,9 @@ const ambient=(function(){
     return toGround(tx,ty); }
   function dogScare(dt){                                                                          /* some animals bolt the moment a dog comes near, some let it get close, a few hardly care */
     scareT-=dt; if(scareT>0) return; scareT=.3;
-    const dogs=[dog,lab].filter(d=>d&&!d.gone&&!d.hidden&&(d.state==="run"||d.chase)); if(!dogs.length) return;
+    const dogs=[dog,lab].filter(d=>d&&!d.gone&&!d.hidden&&(d.state==="run"||d.chase)); if(utv&&utv.sx!=null&&utv.gsy!=null) dogs.push({scr:{x:utv.sx,y:utv.gsy},reach:1.4}); if(!dogs.length) return;   /* the side-by-side clears the animals out of its way too */
     const nerve=o=>o.bird? 2.6 : o.nerve??(o.nerve=Math.random()<.15? 0 : rnd(.4,1.6));   /* birds are always terrified of the dogs */
-    const near=(sx,sy,o)=>{ for(const d of dogs){ const s=toScreen(d.Xw,d.Dw); if(Math.hypot(s.x-sx,(s.y-sy)*1.6)<W*.2*nerve(o)) return s; } return null; };
+    const near=(sx,sy,o)=>{ for(const d of dogs){ const s=d.scr||toScreen(d.Xw,d.Dw); if(Math.hypot(s.x-sx,(s.y-sy)*1.6)<W*.2*nerve(o)*(d.reach||1)) return s; } return null; };
     for(const f of [fox,skunk,cub,mom,bobcat,coyote,coy2,pheasW]){ if(!f||f.gone||f.state==="leave") continue; if(f===pheasW) f.bird=true; const s=toScreen(f.Xw,f.Dw), d=near(s.x,s.y,f); if(!d) continue;
       const p=awayFrom(s,d); f.state="leave"; f.tX=p.Xw; f.tD=p.Dw; f.ang=null; f.spd=Math.max(f.spd||1,1.3); f.cad=Math.max(f.cad||1,1); f.head=0; }
     for(const q of sqs){ if(q.leaving) continue; const s=toScreen(q.Xw,q.Dw), d=near(s.x,s.y,q); if(d){ q.leaving=true; q.state="run"; q.yawT=null; const p=toGround(s.x+(s.x<d.x?-200:200),gnd().vy+lawnMinG(s.x)+4); q.tX=p.Xw; q.tD=p.Dw; q.lastD=1e9; } }
@@ -2320,12 +2320,12 @@ const ambient=(function(){
       tx.strokeStyle="rgba(122,35,24,.6)"; tx.lineWidth=Math.max(1,texH*.025); for(const yy of [texH*.13,texH*.87]){ tx.beginPath(); tx.moveTo(texW*.03,yy); tx.lineTo(texW*.97,yy); tx.stroke(); }   /* a fine woven border */
       tx.setLineDash([Math.max(2,texH*.05),Math.max(2,texH*.04)]); tx.strokeStyle="rgba(150,120,80,.45)"; tx.lineWidth=Math.max(.6,texH*.012); for(const yy of [texH*.05,texH*.95]){ tx.beginPath(); tx.moveTo(0,yy); tx.lineTo(texW,yy); tx.stroke(); } tx.setLineDash([]);   /* the stitched hem */
       const caps=(getComputedStyle(document.documentElement).getPropertyValue("--caps")||"").trim()||'"Cormorant Garamond",Georgia,serif';
-      let fs=texH*.5; tx.font=`600 ${fs}px ${caps}`; const sp2=.22, wid=()=>tx.measureText(text.toUpperCase()).width+text.length*fs*sp2; while(wid()>texW*.84&&fs>8){ fs*=.94; tx.font=`600 ${fs}px ${caps}`; }
-      tx.textBaseline="alphabetic"; const capM=tx.measureText("H"), capH=capM.actualBoundingBoxAscent, mid=texH*.5;
+      let fs=texH*.66; tx.font=`600 ${fs}px ${caps}`; const sp2=.07, wid=()=>tx.measureText(text.toLowerCase()).width+text.length*fs*sp2; while(wid()>texW*.84&&fs>8){ fs*=.94; tx.font=`600 ${fs}px ${caps}`; }
+      tx.textBaseline="alphabetic"; const capM=tx.measureText("H"), capH=capM.actualBoundingBoxAscent, xH=tx.measureText("x").actualBoundingBoxAscent||capH*.6, mid=texH*.5;
       const capsFont=tx.font, digFont=`500 ${fs}px "Times New Roman","Noto Serif","Liberation Serif",serif`;   /* this face only has old-style figures (some sit below the line), so the numbers come from a classic serif with lining figures, matched to the capitals' height */
       tx.font=digFont; const dH=tx.measureText("0").actualBoundingBoxAscent||capH, dk=capH/dH; tx.font=capsFont;
-      const glyphs=[]; { let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toUpperCase()){ const dig=/[0-9]/.test(ch); tx.font=dig? digFont : capsFont; const m=tx.measureText(ch), ww=m.width*(dig? dk : 1);
-          glyphs.push({ch,x:xx,dig,y:mid+capH/2}); xx+=ww+fs*sp2; } tx.font=capsFont; }
+      const glyphs=[]; { let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toLowerCase()){ const dig=/[0-9]/.test(ch); tx.font=dig? digFont : capsFont; const m=tx.measureText(ch), ww=m.width*(dig? dk : 1);
+          glyphs.push({ch,x:xx,dig,y:mid+(capH+xH)/4}); xx+=ww+fs*sp2; } tx.font=capsFont; }
       const put=(col,dy)=>{ tx.fillStyle=col; for(const g of glyphs){ if(!g.dig) tx.fillText(g.ch,g.x,g.y+dy); else { tx.save(); tx.font=digFont; tx.translate(g.x,g.y+dy); tx.scale(dk,dk); tx.fillText(g.ch,0,0); tx.restore(); } } };   /* figures sit on the line with the capitals, everything centred top to bottom */
       put("rgba(255,255,255,.55)",Math.max(.6,fs*.03)); put("#6a1f14",0); tx.globalAlpha=.25; put("#2a0a04",-Math.max(.4,fs*.015)); tx.globalAlpha=1; }   /* the lettering, pressed into the silk */
     { const th=Math.max(1.2,hgt*F/z*.05); x.fillStyle="#a8916c"; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].bot[0],pts[i].bot[1]+th) : x.moveTo(pts[i].bot[0],pts[i].bot[1]+th); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]-.5); x.closePath(); x.fill(); }   /* the cloth has a thickness: its rolled lower hem */
@@ -2579,7 +2579,7 @@ const ambient=(function(){
     mx.globalCompositeOperation="source-over";
     const bl=z<.75? (.75-z)*22 : z>4? Math.min(1.2,(z-4)*.3) : 0;                                                                 /* too close for the lens to hold focus */
     const a=Math.min(1,(m.inn? u : 1-u)*6+(m.inn? 0 : 0), z>5.5? (zf-z)/1.5 : 1);
-    ctx.save(); ctx.globalAlpha=Math.max(0,Math.min(1,a)); if(bl>.3) ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(cmcv,0,0,sz,sz,m.sx-sz/2,m.sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=Math.max(0,Math.min(1,a))*nearFade(sz*.45); if(bl>.3) ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(cmcv,0,0,sz,sz,m.sx-sz/2,m.sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
     m.tr=Math.max(30,Math.min(300,sz*.35));
   }
   /* ---- a covey of northern bobwhite quail working along the edge of the brush: little round birds trotting in short bursts, pecking,
@@ -2884,7 +2884,8 @@ const ambient=(function(){
   function featherTex(x,RX,RY,RW,RH,cell,ang,alpha){ const pat=x.createPattern(featherPat,"repeat"); if(!pat) return; const k=Math.max(.08,cell/12);
     try{ pat.setTransform(new DOMMatrix().translateSelf(RX,RY).rotateSelf(ang*57.3).scaleSelf(k,k)); }catch(e){}
     x.save(); x.globalCompositeOperation="source-atop"; x.globalAlpha=alpha; x.fillStyle=pat; x.fillRect(RX,RY,RW,RH); x.restore(); }
-  function blitRegion(cv,cxp,cyp,rad,blur,alpha){                       /* only the patch around the bird, so the blur doesn't run over the whole frame */
+  const nearFade=sz=>Math.max(0,Math.min(1,1-(sz/Math.min(W,H)-.2)/.26));   /* the closer and bigger, the fainter: out of focus and gone before it reaches you */
+  function blitRegion(cv,cxp,cyp,rad,blur,alpha){ alpha*=nearFade(Math.max(0,rad-30)*1.1);                       /* only the patch around the bird, so the blur doesn't run over the whole frame */
     const k=.6, x0=Math.max(0,Math.floor((cxp-rad)*k)), y0=Math.max(0,Math.floor((cyp-rad)*k)), x1=Math.min(cv.width,Math.ceil((cxp+rad)*k)), y1=Math.min(cv.height,Math.ceil((cyp+rad)*k));
     if(x1<=x0||y1<=y0) return; ctx.save(); ctx.globalAlpha=alpha; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`; ctx.drawImage(cv,x0,y0,x1-x0,y1-y0,x0/k,y0/k,(x1-x0)/k,(y1-y0)/k); ctx.restore(); ctx.filter="none"; }
   let pf=null, nextPF=80, pfBits=[]; const pfcv=document.createElement("canvas"), pfcx=pfcv.getContext("2d");
@@ -2893,7 +2894,7 @@ const ambient=(function(){
   function startPF(){ const sd=Math.random()<.5?-1:1;
     pf={t:0,sd,P:[sd*rnd(.05,.16),.36,.78],h0:sd>0? Math.PI-.75 : .75,h1:sd>0? .5 : Math.PI-.5,fl:0,beatAmp:1,turned:false,cyc:0};
     const sx=W/2+pf.P[0]*H*.5/pf.P[2];
-    for(let i=0;i<40;i++) pfBits.push({x:sx+rnd(-80,80),y:H+rnd(-10,30),vx:rnd(-180,180),vy:-rnd(280,620),r:rnd(3,10),rot:rnd(0,6),vr:rnd(-9,9),c:pick(["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#6b7a34","#8a9a46","#a8884a"]),life:rnd(1,1.9)});   /* grass and seed heads thrown up at the lens */
+    for(let i=0;i<40;i++) pfBits.push({x:sx+rnd(-80,80),y:H+rnd(-10,30),vx:rnd(-180,180),vy:-rnd(280,620),r:rnd(1.2,3.6),rot:rnd(0,6),vr:rnd(-9,9),c:pick(["#7a5a2e","#9c7a3c","#5e4a26","#b08a48","#c9a24e","#6b7a34","#8a9a46","#a8884a"]),life:rnd(1,1.9)});   /* grass and seed heads thrown up at the lens */
     natureSfx.flush&&natureSfx.flush("pheas",sx/W); setTimeout(()=>natureSfx.crow&&natureSfx.crow((sx/W*2-1)*.8),150); }
   function pheas3D(x,P,f,flap,amp,glide,proj,Kw,sunL){
     const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
@@ -2991,7 +2992,7 @@ const ambient=(function(){
   }
   function drawPheasFront(dt,dark){
     for(let i=pfBits.length-1;i>=0;i--){ const b=pfBits[i]; b.vy+=430*dt; b.vx*=.99; b.x+=b.vx*dt; b.y+=b.vy*dt; b.rot+=b.vr*dt; b.life-=dt; if(b.life<=0){ pfBits.splice(i,1); continue; }
-      ctx.save(); ctx.globalAlpha=Math.min(1,b.life*2)*.8; ctx.translate(b.x,b.y); ctx.rotate(b.rot); ctx.fillStyle=b.c; ctx.fillRect(-b.r,-b.r*.3,b.r*2,b.r*.6); ctx.restore(); }
+      ctx.save(); ctx.globalAlpha=Math.min(1,b.life*2)*.6; ctx.translate(b.x,b.y); ctx.rotate(b.rot); ctx.fillStyle=b.c; ctx.beginPath(); ctx.moveTo(-b.r*1.4,0); ctx.quadraticCurveTo(0,-b.r*.22,b.r*1.4,0); ctx.quadraticCurveTo(0,b.r*.12,-b.r*1.4,0); ctx.fill(); ctx.restore(); }
     nextPF-=dt; if(!pf&&nextPF<=0){ if(stageBusy()) nextPF=rnd(12,25); else startPF(); } if(!pf) return;
     const p=pf; p.t+=dt; const T=p.t, F=H*.5, cx=W/2, cy=H*.52;
     let h, pitch, spd, amp, glide=false, hz;
@@ -3189,9 +3190,9 @@ const ambient=(function(){
   /* ---- a slow dusk: over the first several minutes the sky deepens, Venus comes out, then a few stars ---- */
   let duskV=0; const stars=[]; let starNext=0, venNext=12, venB=null; const meteors=[]; let metNext=rnd(6,14);
   function starBurst(x,y,e,L){ if(e<=.01) return; const l=L*(.5+.5*e);                                                   /* a "+" of light: four fine spikes and a soft glow, like a lens catching a star */
-    const g=ctx.createRadialGradient(x,y,0,x,y,l*.45); g.addColorStop(0,`rgba(255,252,240,${(.75*e).toFixed(3)})`); g.addColorStop(1,"rgba(240,236,255,0)"); ctx.fillStyle=g; ctx.fillRect(x-l*.5,y-l*.5,l,l);
-    for(const [dx,dy,k] of [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[.7,.7,.38],[-.7,.7,.38],[.7,-.7,.38],[-.7,-.7,.38]]){ const ll=l*k, sg=ctx.createLinearGradient(x,y,x+dx*ll,y+dy*ll);
-      sg.addColorStop(0,`rgba(255,250,236,${(.9*e*(k<1?.5:1)).toFixed(3)})`); sg.addColorStop(1,"rgba(240,236,255,0)"); ctx.strokeStyle=sg; ctx.lineWidth=k<1?.7:1.2; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx*ll,y+dy*ll); ctx.stroke(); } }
+    const g=ctx.createRadialGradient(x,y,0,x,y,l*.22); g.addColorStop(0,`rgba(255,252,240,${(.55*e).toFixed(3)})`); g.addColorStop(1,"rgba(240,236,255,0)"); ctx.fillStyle=g; ctx.fillRect(x-l*.5,y-l*.5,l,l);
+    for(const [dx,dy,k] of [[1,0,.32],[-1,0,.32],[0,1,.32],[0,-1,.32]]){ const ll=l*k, sg=ctx.createLinearGradient(x,y,x+dx*ll,y+dy*ll);
+      sg.addColorStop(0,`rgba(255,250,236,${(.35*e).toFixed(3)})`); sg.addColorStop(1,"rgba(240,236,255,0)"); ctx.strokeStyle=sg; ctx.lineWidth=.5; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx*ll,y+dy*ll); ctx.stroke(); } }
   function stepDusk(dt){ duskV=Math.min(.62,duskV+dt/420); natureSfx.setDusk&&natureSfx.setDusk(Math.min(1,duskV/.62)); }
   function drawDusk(dark){
     const d=duskV; if(d<=.01) return; const hz=gnd().vy;
@@ -3209,15 +3210,6 @@ const ambient=(function(){
       if(s.burst!=null){ const u=(t-s.burst)/1.1; if(u>=1) s.burst=null; else starBurst(x,y,b0*Math.sin(Math.PI*u)**1.5,12+s.r*14); } }
     if(d>.18&&t>venNext){ venNext=t+rnd(9,20); venB=t; }
     if(venB!=null){ const u=(t-venB)/1.4; if(u>=1) venB=null; else starBurst(ve[0],ve[1],Math.min(1,(d-.18)/.15)*Math.sin(Math.PI*u)**1.5,16); }
-    /* a comet low in the clear sky to the upper left: a fuzzy bright head, a broad curving dust tail and a fainter, straighter blue ion tail, both streaming
-       away from the sun. It creeps along so slowly you'd never see it move, and grows plainer as the sky darkens */
-    { const ca=Math.max(dark? .85 : 0,Math.min(1,.35+(d-.02)/.2)); if(ca>.01){ const hc=[W*(.34+t*.000004),Math.max(H*.075,scr(.335,.058)[1])], sn=scr(.711,.344), ux0=hc[0]-sn[0], uy0=hc[1]-sn[1], ul=Math.hypot(ux0,uy0)||1, ux=ux0/ul, uy=uy0/ul, px=-uy, py=ux, L=Math.min(W,H)*.2;
-        if(!(moonAt&&Math.hypot(hc[0]-moonAt[0],hc[1]-moonAt[1])<moonAt[2]*1.5)){
-        for(let i=0;i<40;i++){ const k=i/39, bend=k*k*L*.22, x1=hc[0]+ux*L*k+px*bend, y1=hc[1]+uy*L*k+py*bend, w=2+k*L*.16, a=ca*.3*Math.pow(1-k,1.6)*(k<.08? k/.08 : 1);   /* the dust tail, fanning and curving */
-          const g=ctx.createRadialGradient(x1,y1,0,x1,y1,w); g.addColorStop(0,`rgba(255,246,226,${a.toFixed(3)})`); g.addColorStop(1,"rgba(255,246,226,0)"); ctx.fillStyle=g; ctx.fillRect(x1-w,y1-w,w*2,w*2); }
-        { const ex=hc[0]+(ux*.97-px*.08)*L*1.15, ey=hc[1]+(uy*.97-py*.08)*L*1.15, g=ctx.createLinearGradient(hc[0],hc[1],ex,ey); g.addColorStop(0,`rgba(170,210,255,${(ca*.22).toFixed(3)})`); g.addColorStop(1,"rgba(170,210,255,0)");
-          ctx.strokeStyle=g; ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(hc[0],hc[1]); ctx.lineTo(ex,ey); ctx.stroke(); ctx.lineWidth=.6; ctx.beginPath(); ctx.moveTo(hc[0],hc[1]); ctx.lineTo(hc[0]+(ux*.99-px*.03)*L*.9,hc[1]+(uy*.99-py*.03)*L*.9); ctx.stroke(); }   /* the ion tail, thin and straight */
-        { const r=9+Math.sin(t*1.3)*.4, g=ctx.createRadialGradient(hc[0],hc[1],0,hc[0],hc[1],r); g.addColorStop(0,`rgba(255,255,250,${(ca*.95).toFixed(3)})`); g.addColorStop(.18,`rgba(236,250,255,${(ca*.6).toFixed(3)})`); g.addColorStop(1,"rgba(200,230,255,0)"); ctx.fillStyle=g; ctx.fillRect(hc[0]-r,hc[1]-r,r*2,r*2); } } } }   /* its head, a small bright coma */
     /* shooting stars: once the stars are out, every so often a meteor scratches a fine, fast line across the sky, brightest at its head, and fades;
        now and then a brighter one that leaves a lingering, flickering train. They all fall from the same part of the sky, like a shower */
     { const vis=Math.max(dark? .9 : 0,Math.min(1,.5+(d-.03)/.12));   /* from the first few seconds of the dusk, and strongly once it deepens */
@@ -3229,9 +3221,8 @@ const ambient=(function(){
         const tl=m.L*(.18+.3*Math.min(1,u*2))*(u<1? 1 : Math.max(0,1-(u-1)/.18)), tx=hx-m.vx*tl, ty=hy-m.vy*tl;
         const fade=u<1? Math.min(1,u*6)*(1-.35*u) : Math.max(0,1-(u-1)/.18), A=vis*fade*(m.big?1:.85); if(A<=.01&&!m.big) continue;
         if(hy>hz*.48) continue; { const sp2=sun(); if(Math.hypot(hx-sp2.x,hy-sp2.y)<W*.16) continue; } if(moonAt&&Math.hypot(hx-moonAt[0],hy-moonAt[1])<moonAt[2]) continue;
-        const c=m.tint, g=ctx.createLinearGradient(tx,ty,hx,hy); g.addColorStop(0,`rgba(${c},0)`); g.addColorStop(.6,`rgba(${c},${(A*.5).toFixed(3)})`); g.addColorStop(1,`rgba(${c},${(A*(u<1?1:.3)).toFixed(3)})`);
-        ctx.strokeStyle=g; ctx.lineCap="round"; ctx.lineWidth=m.w; ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(hx,hy); ctx.stroke(); ctx.lineWidth=m.w*.55; ctx.strokeStyle=`rgba(255,255,255,${Math.min(1,A*(u<1?1.3:.3)).toFixed(3)})`; ctx.beginPath(); ctx.moveTo(lerp(tx,hx,.55),lerp(ty,hy,.55)); ctx.lineTo(hx,hy); ctx.stroke();   /* a white-hot core near the head */
-        if(u<1){ const fl=1+(m.big? .8*Math.max(0,Math.sin(u*Math.PI*1.4)) : .3), r=m.w*(m.big?6:4)*fl, hg=ctx.createRadialGradient(hx,hy,0,hx,hy,r); hg.addColorStop(0,`rgba(255,255,250,${(A*.9).toFixed(3)})`); hg.addColorStop(1,"rgba(255,255,250,0)"); ctx.fillStyle=hg; ctx.fillRect(hx-r,hy-r,r*2,r*2); }   /* the burning head */
+        const c=m.tint; for(const [wk,ak,from] of [[1,.5,0],[.55,1,.35],[.25,1.3,.7]]){ const sx0=lerp(tx,hx,from), sy0=lerp(ty,hy,from), g2=ctx.createLinearGradient(sx0,sy0,hx,hy); g2.addColorStop(0,`rgba(${c},0)`); g2.addColorStop(1,`rgba(${c},${Math.min(1,A*ak*(u<1?1:.3)).toFixed(3)})`); ctx.strokeStyle=g2; ctx.lineCap="butt"; ctx.lineWidth=m.w*wk*.6; ctx.beginPath(); ctx.moveTo(sx0,sy0); ctx.lineTo(hx,hy); ctx.stroke(); }   /* a fine tapering scratch, brightest and thinnest toward the head */
+
         if(m.big&&u>.3){ const k=Math.min(1,(u-.3)/.7), trA=vis*.16*(u<1?k:Math.max(0,1-(u-1)/(life-1)))*(.75+.25*Math.sin(t*23+i)), sx0=m.x0+m.vx*m.L*.15, sy0=m.y0+m.vy*m.L*.15;   /* the glowing train it leaves behind */
           const tg=ctx.createLinearGradient(sx0,sy0,hx,hy); tg.addColorStop(0,`rgba(200,236,214,0)`); tg.addColorStop(.6,`rgba(200,236,214,${trA.toFixed(3)})`); tg.addColorStop(1,`rgba(200,236,214,${(trA*.4).toFixed(3)})`); ctx.strokeStyle=tg; ctx.lineWidth=m.w*.7; ctx.beginPath(); ctx.moveTo(sx0,sy0); ctx.lineTo(hx,hy); ctx.stroke(); } } }
     ctx.restore();
