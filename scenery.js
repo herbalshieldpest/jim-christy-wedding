@@ -1225,7 +1225,7 @@ const ambient=(function(){
   let fox=null, nextFox=45;
   const fsp=document.createElement("canvas"), fsx=fsp.getContext("2d");
   const FOX_G=[255,560];
-  function foxBounds(){ return {gmin:FOX_G[0],gmax:Math.min(FOX_G[1],H-gnd().vy-8)}; }
+  function foxBounds(){ return {gmin:FOX_G[0],gmax:Math.max(FOX_G[0]+40,Math.min(FOX_G[1],(H-gnd().vy)*.74))}; }   /* nothing crawls along the very bottom edge, where it's hard to see */
   /* where the lawn meets the tall reeds, traced from the photo (x, y as fractions of the picture) */
   const LAWN=[[0,.676],[.285,.663],[.45,.684],[.65,.71],[.85,.752],[1,.797]];
   function lawnMinG(sx){ const ip=toImg(sx,0); const ix=ip?Math.max(0,Math.min(1,ip[0])):sx/W; let i=0; while(i<LAWN.length-2&&ix>LAWN[i+1][0]) i++;
@@ -3062,7 +3062,7 @@ const ambient=(function(){
   const WAD={racc:{get:()=>racc,set:v=>racc=v,next:rnd(150,260)},beaver:{get:()=>beaver,set:v=>beaver=v,next:rnd(200,340)},hog:{get:()=>hog,set:v=>hog=v,next:rnd(120,260)},possum:{get:()=>possum,set:v=>possum=v,next:rnd(180,320)},otter:{get:()=>otter,set:v=>otter=v,next:rnd(220,380)},porc:{get:()=>porc,set:v=>porc=v,next:rnd(260,420)}};
   function startWaddler(kind){ if(false) return; const b=foxBounds(), g=rnd(b.gmin+40,b.gmax-10), side=Math.random()<.5, p=toGround(side? W+60 : -60, gnd().vy+g);
     const o={kind,Xw:p.Xw,Dw:p.Dw,state:"run",t:rnd(2,3.5),cycles:2+Math.floor(Math.random()*2),head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,alpha:1,spd:kind==="beaver"? .2 : kind==="possum"? .26 : kind==="hog"? .3 : kind==="otter"? .42 : kind==="porc"? .14 : .34,cad:kind==="beaver"? .5 : kind==="possum"? .55 : kind==="otter"? .75 : kind==="porc"? .42 : .6,yaw:side?Math.PI:0,fur:{len:kind==="beaver"? .7 : .95,nap:.32,sheen:kind==="beaver"? .12 : .05}};
-    const q=toGround(W*(side?rnd(.55,.8):rnd(.2,.45)),gnd().vy+g); o.tX=q.Xw; o.tD=q.Dw; o.ang=null; arrive(side?W+60:-60,o); return o; }
+    const q=toGround(W*(side?rnd(.55,.8):rnd(.2,.45)),gnd().vy+(Math.random()<.5? rnd(b.gmin+30,lerp(b.gmin,b.gmax,.5)) : rnd(lerp(b.gmin,b.gmax,.45),b.gmax))); o.tX=q.Xw; o.tD=q.Dw;   /* angled across the lawn, never just straight along it */ o.ang=null; arrive(side?W+60:-60,o); return o; }
   function raccoonParts(f,P,walking){
     const q=f.ph*Math.PI*1.3, yaw=f.yaw, far=z=>z*Math.cos(yaw)>0, parts=[];
     const fur=rgb(P.fur), furF=rgb(mulv(P.fur,.74)), dk=rgb(P.dark), dkF=rgb(mulv(P.dark,.8)), pale=rgb(P.pale), sh=[rgb(mulv(P.fur,.55)),rgb(mixv(P.fur,[255,210,150],.22))];
@@ -6191,14 +6191,28 @@ const viewInfo=(function(){
     ["Mountain system","Appalachian Mountains"]];
   const PIN=`<svg viewBox="0 0 30 38" aria-hidden="true"><path d="M15 1.5C7.6 1.5 1.8 7.2 1.8 14.4c0 9.6 11.1 20.3 12.3 21.5.5.5 1.3.5 1.8 0 1.2-1.2 12.3-11.9 12.3-21.5C28.2 7.2 22.4 1.5 15 1.5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14.2" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="15" cy="10.7" r="1.15" fill="currentColor"/><path d="M15 13.2v5.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
   /* a little engraving for the top: two wedding rings set in a setting sun, its rays fanning out, ridge lines folding away below, a pair of birds */
-  const ART=`<svg class="vi-art" viewBox="0 0 260 92" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <g stroke-width="1.15" opacity=".7">${Array.from({length:11},(_,i)=>{ const a=Math.PI*(1.09+i*.082), r0=33, r1=i%2? 39 : 45; return `<path d="M${(130+Math.cos(a)*r0).toFixed(1)} ${(64+Math.sin(a)*r0).toFixed(1)}L${(130+Math.cos(a)*r1).toFixed(1)} ${(64+Math.sin(a)*r1).toFixed(1)}"/>`; }).join("")}</g>
-    <path d="M102 64a28 28 0 0 1 56 0" stroke-width="1.3" opacity=".85"/>
-    <circle cx="121" cy="49" r="12" stroke-width="2"/><circle cx="139" cy="49" r="12" stroke-width="2"/>
-    <path d="M135.2 37.4l3.8-4.6 3.8 4.6-3.8 2.2z" stroke-width="1.2"/>
-    <path d="M4 70C26 62 48 66 70 61s40-5 60 1 46 3 68-4 38 2 58 10" stroke-width="1.3"/>
-    <path d="M14 84c28-10 56-9 84-11s52 4 80 2 50-6 72 2" stroke-width="1.15" opacity=".65"/>
-    <path d="M56 26q4.5-4.5 9 0q4.5-4.5 9 0" stroke-width="1.2"/><path d="M80 17q3.4-3.4 6.8 0q3.4-3.4 6.8 0" stroke-width="1.05" opacity=".8"/></svg>`;
+  /* the top of the card: two wedding rings linked together, one with its solitaire diamond catching the light, cradled in two laurel sprigs */
+  function ringsArt(){
+    const A=[110,64], B=[150,64], R=27, f=n=>(+n).toFixed(1);
+    const ring=(c,id)=>`<circle cx="${c[0]}" cy="${c[1]}" r="${R}" stroke-width="6.2" opacity=".18"/><circle cx="${c[0]}" cy="${c[1]}" r="${R+3}" stroke-width="1.5"/><circle cx="${c[0]}" cy="${c[1]}" r="${R-3}" stroke-width="1.1"/><path d="M${f(c[0]-R*.62)} ${f(c[1]-R*.62)}a${R} ${R} 0 0 1 ${f(R*.62*1.3)} ${f(-R*.25)}" stroke-width="1.4" opacity=".75"/>`;
+    /* where one band passes over the other, the one beneath is cut away a touch either side */
+    const cut=(c,top)=>`<g clip-path="url(#vi-${top?"t":"b"})"><circle cx="${c[0]}" cy="${c[1]}" r="${R}" stroke="#000" stroke-width="12"/></g>`;
+    /* the solitaire on the right-hand ring: a brilliant-cut stone in a four-prong setting, catching the light */
+    const gx=B[0]+R*Math.cos(-1.2), gy=B[1]+R*Math.sin(-1.2)-3.5;
+    const gem=`<g transform="translate(${f(gx)} ${f(gy)}) rotate(${f(-1.2*57.3+90)})" stroke-width="1.15"><path d="M-6.5 -1.2 L-4 -5 L4 -5 L6.5 -1.2 L0 7.2 Z" fill="currentColor" fill-opacity=".12"/><path d="M-6.5 -1.2 H6.5 M-4 -5 L-1.6 -1.2 L0 -5 L1.6 -1.2 L4 -5 M-1.6 -1.2 L0 7.2 L1.6 -1.2 M-4.2 -1.2 L0 7.2 L4.2 -1.2" stroke-width=".7" opacity=".85"/><path d="M-5.2 2.4 L-4.4 4.8 M5.2 2.4 L4.4 4.8" stroke-width="1.3"/></g>`;
+    const star=(x,y,s,o)=>{ x=+x; y=+y; return `<path d="M${x} ${f(y-s)}Q${f(x+s*.12)} ${f(y-s*.12)} ${f(x+s)} ${y}Q${f(x+s*.12)} ${f(y+s*.12)} ${x} ${f(y+s)}Q${f(x-s*.12)} ${f(y+s*.12)} ${f(x-s)} ${y}Q${f(x-s*.12)} ${f(y-s*.12)} ${x} ${f(y-s)}Z" fill="currentColor" stroke="none" opacity="${o}"/>`; };
+    /* two laurel sprigs cradling the rings */
+    const sprig=sd=>{ let p=`<path d="M130 102 Q${130+sd*42} 102 ${130+sd*74} 80" stroke-width="1.1" opacity=".8"/>`; for(let i=1;i<=6;i++){ const t=i/7, x=130+sd*(t*74*1.02), y=102-(t*t)*22-(1-t)*0, a=Math.atan2(-44*t,sd*74), L=9.5-i*.45;
+        for(const s2 of [-1,1]){ const ang=a+s2*.75*sd, ex=x+Math.cos(ang)*L*sd, ey=y+Math.sin(ang)*L; p+=`<path d="M${f(x)} ${f(y)}Q${f((x+ex)/2-s2*3.4*sd)} ${f((y+ey)/2-3.4)} ${f(ex)} ${f(ey)}Q${f((x+ex)/2+s2*1.6*sd)} ${f((y+ey)/2+1.6)} ${f(x)} ${f(y)}Z" fill="currentColor" fill-opacity=".22" stroke-width=".8" opacity=".85"/>`; } } return p; };
+    return `<svg class="vi-art" viewBox="0 0 260 112" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <defs><clipPath id="vi-t"><rect x="118" y="20" width="24" height="36"/></clipPath><clipPath id="vi-b"><rect x="118" y="72" width="24" height="36"/></clipPath>
+        <mask id="vi-ma" maskUnits="userSpaceOnUse"><rect width="260" height="112" fill="#fff"/>${cut(B,true)}</mask><mask id="vi-mb" maskUnits="userSpaceOnUse"><rect width="260" height="112" fill="#fff"/>${cut(A,false)}</mask></defs>
+      ${sprig(-1)}<g transform="translate(260 0) scale(-1 1)">${sprig(-1)}</g>
+      <g mask="url(#vi-ma)">${ring(A)}</g><g mask="url(#vi-mb)">${ring(B)}</g>${gem}
+      ${star(f(gx+13),f(gy-10),5.5,.9)}${star(f(gx-12),f(gy-14),3.2,.7)}${star(86,30,2.6,.55)}</svg>`;
+  }
+  
+  const ART=ringsArt();
   const ORN=`<svg class="vi-orn" viewBox="0 0 220 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M4 7h84M132 7h84" opacity=".55"/><path d="M110 2.5l4.5 4.5-4.5 4.5-4.5-4.5z"/><circle cx="96" cy="7" r="1.4" fill="currentColor" stroke="none"/><circle cx="124" cy="7" r="1.4" fill="currentColor" stroke="none"/></svg>`;
   const CSS=`.vi-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vh,32px) 16px;background:rgba(8,14,10,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
 .vi-back[hidden]{display:none}.vi-back.on{opacity:1}
@@ -6206,7 +6220,7 @@ const viewInfo=(function(){
 .vi-panel.has-map{width:min(980px,100%)}
 .vi-panel{max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;text-align:center;background:rgba(19,38,26,.86);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(18px,3vh,30px) clamp(22px,4.6vw,52px) clamp(20px,3.2vh,32px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
 .vi-back.on .vi-panel{transform:none}
-.vi-art{display:block;width:min(250px,64%,30vh);height:auto;margin:0 auto;color:#f6efe2;filter:drop-shadow(0 2px 10px rgba(0,0,0,.35))}
+.vi-art{display:block;width:min(270px,68%,30vh);height:auto;margin:0 auto;color:#f6efe2;filter:drop-shadow(0 2px 10px rgba(0,0,0,.35))}
 .vi-title{margin:clamp(8px,1.6vh,16px) 0 0;font:400 clamp(40px,6.6vh,58px)/1 var(--script,"Pinyon Script","Great Vibes",cursive);text-shadow:0 2px 14px rgba(0,0,0,.4)}
 .vi-sub{margin:clamp(10px,1.8vh,16px) 0 0;font:600 11.5px/1.5 ${F};letter-spacing:.28em;text-transform:uppercase;color:rgba(246,239,226,.74)}
 .vi-text{max-width:34em;margin:clamp(12px,2.2vh,20px) auto 0;font:italic 400 18px/1.55 ${F};color:rgba(250,245,236,.94)}
@@ -6221,27 +6235,29 @@ const viewInfo=(function(){
 .vi-x:hover,.vi-x:focus-visible{background:rgba(255,250,242,.08);border-color:rgba(255,250,242,.3);outline:none}.vi-x svg{width:18px;height:18px}
 .vi-body{display:grid;grid-template-columns:1fr;gap:0}
 .has-map .vi-body{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(18px,3vw,36px);align-items:start;margin-top:clamp(12px,2vh,18px)}
-.has-map .vi-facts{grid-template-columns:1fr 1fr;column-gap:22px;margin:-6px 0 0}.has-map .vi-fact{padding:clamp(6px,1vh,9px) 0}.has-map .vi-fact dd{font-size:15.5px;margin-top:3px}.has-map .vi-art{width:min(200px,50%,24vh)}.has-map .vi-text{max-width:44em}
+.has-map .vi-facts{grid-template-columns:1fr 1fr;column-gap:22px;margin:-6px 0 0}.has-map .vi-fact{padding:clamp(6px,1vh,9px) 0}.has-map .vi-fact dd{font-size:15.5px;margin-top:3px}.has-map .vi-art{width:min(250px,56%,26vh)}.has-map .vi-text{max-width:44em}
 .vi-map{margin:0;text-align:left}
-.vi-map a{position:relative;display:block;border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:3px;border-radius:2px;overflow:hidden;line-height:0;background:#e9e4d6}
+.vi-map a{position:relative;display:block;overflow:visible;border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:3px;border-radius:2px;overflow:hidden;line-height:0;background:#e9e4d6}
 .vi-map img{display:block;width:100%;height:auto}
 .vi-map figcaption{margin-top:9px;font:600 10.5px/1.4 ${F};letter-spacing:.24em;text-transform:uppercase;color:rgba(246,239,226,.66);text-align:center}
-.vi-pinmark{position:absolute;width:0;height:0}.vi-pinmark i{position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:#fffaf2;box-shadow:0 0 0 2px #7a2318,0 1px 6px rgba(0,0,0,.55)}
-.vi-pinmark i::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(122,35,24,.85);animation:viPulse 2.2s ease-out infinite}
-.vi-pinmark b{position:absolute;left:11px;top:-10px;white-space:nowrap;font:600 11px/1 ${F};letter-spacing:.14em;text-transform:uppercase;color:#fffaf2;background:rgba(122,35,24,.92);padding:5px 7px 4px;border-radius:2px;line-height:1}
-.vi-pinmark.left b{left:auto;right:11px}
-@keyframes viPulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.6);opacity:0}}
+.vi-pinmark{position:absolute;width:0;height:0;z-index:1}
+.vi-pinmark svg{position:absolute;left:-15px;top:-38px;width:30px;height:40px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.55))}
+.vi-pinmark i{position:absolute;left:-16px;top:-16px;width:32px;height:32px;border-radius:50%;border:2px solid rgba(122,35,24,.9);animation:viPulse 1.9s ease-out infinite}
+.vi-pinmark i+i{animation-delay:.95s}
+.vi-pinmark b{position:absolute;left:18px;top:-36px;white-space:nowrap;font:700 12px/1 ${F};letter-spacing:.16em;text-transform:uppercase;color:#fffaf2;background:#7a2318;border:1px solid rgba(255,250,242,.75);padding:6px 9px 5px;border-radius:2px;box-shadow:0 3px 8px rgba(0,0,0,.45)}
+.vi-pinmark.left b{left:auto;right:18px}
+@keyframes viPulse{0%{transform:scale(.4);opacity:1}100%{transform:scale(2.2);opacity:0}}
 @media (max-width:760px){.has-map .vi-body{grid-template-columns:1fr}.has-map .vi-facts{margin-top:8px}}@media (max-width:560px){.has-map .vi-facts{grid-template-columns:1fr}.has-map .vi-fact:nth-last-child(2){border-bottom:1px solid rgba(255,250,242,.16)}}
 @media (max-width:560px){.vi-facts{grid-template-columns:1fr}.vi-fact:nth-last-child(2){border-bottom:1px solid rgba(255,250,242,.16)}.vi-text{font-size:17px}}
 @media (max-height:720px) and (min-width:561px){.vi-art,.has-map .vi-art{width:150px}.vi-sub{margin-top:8px}.has-map .vi-fact{padding:5px 0}.vi-orn{margin-top:10px}.has-map .vi-text{font-size:16px}.vi-title{font-size:42px}.vi-text{font-size:16.5px;line-height:1.45}.vi-fact dd{font-size:16px}}
-@media (prefers-reduced-motion:reduce){.vi-back,.vi-panel{transition:none}.vi-pinmark i::after{animation:none}}`;
+@media (prefers-reduced-motion:reduce){.vi-back,.vi-panel{transition:none}.vi-pinmark i{animation:none;opacity:.5}}`;
   let back=null, last=null;
   function build(){ const st=document.createElement("style"); st.textContent=CSS; document.head.append(st);
     back=document.createElement("div"); back.className="vi-back"; back.hidden=true; back.setAttribute("data-no-scenery","");
     back.innerHTML=`<div class="vi-panel" role="dialog" aria-modal="true" aria-labelledby="vi-title"><button type="button" class="vi-x" aria-label="Close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
       ${ART}<h2 class="vi-title" id="vi-title">The View</h2><p class="vi-sub">From the front yard, where we&rsquo;ll say &ldquo;I do&rdquo;</p>
       <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the very spot where we&rsquo;ll be married. We&rsquo;re standing about 2,800 feet up on Red Ridge, on Meadow Mountain, one of the long, parallel ridges of the Allegheny Mountains. Wooded ridges fold away to the horizon, the meadows run gold with goldenrod, and in the evening the sun sets behind the mountains in exactly this light.</p>
-      ${ORN}<div class="vi-body"><figure class="vi-map" hidden><a target="_blank" rel="noopener" aria-label="Open the New Germany State Park trail map full size"><img alt="Trail map of New Germany State Park, with Hagen Cabin marked" loading="lazy"><span class="vi-pinmark" hidden><i></i><b>Hagen Cabin</b></span></a><figcaption>New Germany State Park trails</figcaption></figure>
+      ${ORN}<div class="vi-body"><figure class="vi-map" hidden><a target="_blank" rel="noopener" aria-label="Open the New Germany State Park trail map full size"><img alt="Trail map of New Germany State Park, with Hagen Cabin marked" loading="lazy"><span class="vi-pinmark" hidden><i></i><i></i><svg viewBox="0 0 30 40" aria-hidden="true"><path d="M15 1.2C7.6 1.2 1.6 7 1.6 14.3c0 9.8 11.4 22.4 12.6 23.7.4.5 1.2.5 1.6 0C17 36.7 28.4 24.1 28.4 14.3 28.4 7 22.4 1.2 15 1.2z" fill="#7a2318" stroke="#fffaf2" stroke-width="1.6"/><circle cx="15" cy="14.2" r="5.2" fill="#fffaf2"/></svg><b>Hagen Cabin</b></span></a><figcaption>New Germany State Park trails</figcaption></figure>
       <dl class="vi-facts">${FACTS.map(([k,v])=>`<div class="vi-fact"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl></div></div>`;
     document.body.append(back);
     back.addEventListener("click",e=>{ if(e.target===back||e.target.closest(".vi-x")) close(); });
@@ -6260,4 +6276,79 @@ const viewInfo=(function(){
   const fill=()=>document.querySelectorAll("[data-view-info]").forEach(b=>{ if(!b.innerHTML.trim()) b.innerHTML=PIN; });
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",fill); else fill();
   return {open,close,pin:PIN};
+})();
+/* ---- a downy woodpecker flies in, lands on the "about the view" button like it's a tree, taps it a few times, and a little card unfurls: "Learn about our view!" ---- */
+const viewBird=(function(){
+  if(typeof document==="undefined") return null;
+  const D=document, reduce=()=>matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const F='"Cormorant Garamond",Georgia,"Times New Roman",serif';
+  /* the downy, clinging upright: black and white checkered wing, the white back stripe, white underparts toward the "trunk", striped face, the male's red nape spot, a short chisel bill, a stiff tail braced below */
+  const PERCH=`<g class="vb-perch">
+    <path d="M17.2 40 L14.6 61.5 L17.6 57.6 L19.6 61.5 L21.6 40Z" fill="#171412"/><path d="M15.4 50.2l1.5-.4M15.8 54.4l1.4-.3M15.1 57.8l1.2-.2" stroke="#ece8de" stroke-width=".9" stroke-linecap="round"/>
+    <path d="M14.4 18.5C9.6 26 9.4 37.6 15.4 44.6L23.4 44.6C27.6 36.6 27.6 24.6 24.4 18.5Z" fill="#1a1715"/>
+    <path d="M21.2 18.6C27 22.6 28 35.6 24.2 44.6L19.6 44.6C21.6 35 21.6 25 19.2 19.4Z" fill="#f3f0e9"/>
+    <path d="M13.2 23.6C12.2 29.6 12.6 36 14.8 41.4" stroke="#eeebe2" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M13.8 22.6C11.6 30 12.6 38.4 16.4 45.4L20.2 42.6C18.4 34.6 18.4 27.6 17.6 22.4Z" fill="#121010"/>
+    <g fill="#f1eee6">${[[15,26],[17,27.4],[14.6,30.6],[16.8,32],[15.2,35.4],[17.4,36.6],[16.2,40.2],[18.2,41]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx=".95" ry=".7"/>`).join("")}</g>
+    <circle cx="21.4" cy="12.6" r="7.4" fill="#f3f0e9"/>
+    <path d="M14.4 11.4C15 6.4 19 4.6 22.6 5.2C25.8 5.8 28 8 28.4 10.4C25.6 9.4 22 9.2 18.6 10.2C17 10.6 15.6 11 14.4 11.4Z" fill="#171412"/>
+    <path d="M15.4 13.6C18.6 13.2 21.6 13.6 24.4 13.2L24.6 14.6C21.6 15.2 18.4 15 15.4 15.2Z" fill="#171412"/>
+    <path d="M17.6 18.6C20 18 22.8 17.4 25.6 16.4L25.2 17.8C22.6 19 20 19.6 17.8 19.8Z" fill="#171412"/>
+    <circle cx="16.2" cy="9.8" r="2.3" fill="#c8262b"/>
+    <circle cx="24.1" cy="12.2" r="1.15" fill="#0c0a0a"/><circle cx="24.4" cy="11.8" r=".35" fill="#fff"/>
+    <path class="vb-bill" d="M28 11.8L34.6 12.5L28 14.4Z" fill="#2b2622"/>
+    <path d="M24.4 29.6l2.6.6-1 1M24.4 37.4l2.6.6-1 1" stroke="#3a322c" stroke-width="1" fill="none" stroke-linecap="round"/></g>`;
+  /* in flight: level, wings beating in short bursts then folded to bound along */
+  const FLY=`<g class="vb-fly" transform="rotate(0)">
+    <path d="M10 33L1 31.2L3.4 33.4L1 35.6Z" fill="#171412"/>
+    <ellipse cx="20" cy="33.2" rx="12.4" ry="5.6" fill="#1a1715"/><path d="M11 35.6C17 38.6 25 38.8 31 35.4C27 39 16 39.4 11 35.6Z" fill="#f3f0e9"/>
+    <path d="M12 31C18 29.6 24 29.6 29 30.6" stroke="#eeebe2" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="34.4" cy="31.4" r="5.4" fill="#f3f0e9"/><path d="M29.4 30.2C30 27 32.8 25.6 35.4 26C37.6 26.4 39.2 28 39.4 29.6C37 29 34 29 31.6 29.8Z" fill="#171412"/><path d="M30.2 32.2C32.6 31.8 35 32.2 37.2 31.8L37.2 33C35 33.4 32.6 33.2 30.2 33.4Z" fill="#171412"/>
+    <circle cx="30.8" cy="28.2" r="1.7" fill="#c8262b"/><circle cx="36.4" cy="30.8" r=".9" fill="#0c0a0a"/><path d="M39.4 30.6L44.2 31.2L39.4 32.4Z" fill="#2b2622"/>
+    <g class="vb-wing"><path d="M24 31.4C21 22 14 15.6 6.4 13.4C8.6 17 9 19.4 8.4 21.6C11.6 22 13.6 24.6 14 27.6C17.6 28 21 29.4 24 31.4Z" fill="#141110"/>
+      <g fill="#f1eee6">${[[11,18.6],[13.6,20],[16,22],[18.4,24.4],[12.6,23],[15.4,25.4]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx=".9" ry=".6"/>`).join("")}</g></g></g>`;
+  const CSS=`.vb{position:fixed;left:0;top:0;z-index:5;width:46px;height:62px;pointer-events:none;will-change:transform;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+.vb svg{display:block;width:100%;height:100%;overflow:visible}.vb.on{pointer-events:auto;cursor:pointer}
+.vb-say{position:fixed;z-index:5;display:flex;align-items:center;gap:10px;padding:9px 16px 9px 14px;white-space:nowrap;cursor:pointer;color:#f6efe2;background:rgba(19,38,26,.82);border:1px solid rgba(255,250,242,.4);outline:1px solid rgba(255,250,242,.14);outline-offset:3px;border-radius:2px;box-shadow:0 12px 30px -12px rgba(0,0,0,.65);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  font:italic 500 18px/1 ${F};letter-spacing:.02em;text-shadow:0 1px 6px rgba(0,0,0,.35);opacity:0;transform:translateX(14px) scaleX(.6);transform-origin:100% 50%;transition:opacity .45s ease,transform .55s cubic-bezier(.2,.8,.2,1)}
+.vb-say.on{opacity:1;transform:none}
+.vb-say svg{width:26px;height:10px;flex:none;opacity:.8}
+.vb-say::after{content:"";position:absolute;right:-9px;top:50%;width:8px;height:1px;background:rgba(255,250,242,.55)}
+.vb-say:hover{background:rgba(19,38,26,.92);border-color:rgba(255,250,242,.7)}
+@media (max-width:640px){.vb-say{font-size:16px;padding:8px 12px 8px 11px}}`;
+  const VINE=`<svg viewBox="0 0 26 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"><path d="M1 6C6 3 10 8 15 5S22 2 25 4"/><path d="M7 4.6C7.6 2.4 9.6 1.4 11 1.8C10.4 3.6 9 4.6 7 4.6Z"/><path d="M17 4.6C17.6 6.8 19.4 7.8 21 7.4C20.4 5.6 19 4.6 17 4.6Z"/></svg>`;
+  let el=null, say=null, st=null, raf=0, nextT=0; const LP=(a,b,u)=>a+(b-a)*u;
+  function build(){ const s=D.createElement("style"); s.textContent=CSS; D.head.append(s);
+    el=D.createElement("div"); el.className="vb"; el.setAttribute("aria-hidden","true"); el.innerHTML=`<svg viewBox="0 0 46 62">${PERCH}${FLY}</svg>`; D.body.append(el);
+    say=D.createElement("button"); say.type="button"; say.className="vb-say"; say.innerHTML=`${VINE}<span>Learn about our view!</span>`; say.hidden=true; D.body.append(say);
+    const go=()=>{ const b=D.querySelector("[data-view-info]"); leave(); if(b&&typeof viewInfo!=="undefined"&&viewInfo) viewInfo.open(b); };
+    say.addEventListener("click",go); el.addEventListener("click",go); }
+  const btn=()=>{ const b=D.querySelector("[data-view-info]"); if(!b) return null; const r=b.getBoundingClientRect(); return r.width&&getComputedStyle(b).visibility!=="hidden"&&getComputedStyle(b).opacity!=="0"? r : null; };
+  const busy=()=>D.hidden||!!D.querySelector(".vi-back.on,.cc-back.on")||[...D.querySelectorAll(".panel")].some(p=>!p.hidden&&getComputedStyle(p).display!=="none");
+  function start(){ const r=btn(); if(!r||busy()){ nextT=performance.now()+20000; return; } if(!el) build();
+    const mob=innerWidth<=640, sc=mob? .82 : 1, px=r.left-31*sc, py=r.top+r.height/2-34*sc;
+    st={t0:performance.now(),ph:"fly",sc,P:[px,py],S:[-70,Math.max(10,py+(mob? -140 : 110))],dur:Math.min(3.2,Math.max(1.8,(px+70)/620)),taps:0};
+    el.querySelector(".vb-perch").style.display="none"; el.querySelector(".vb-fly").style.display=""; el.style.display=""; el.classList.remove("on"); cancelAnimationFrame(raf); raf=requestAnimationFrame(tick); }
+  function leave(){ if(!st||st.ph==="away") return; st.ph="away"; st.ta=performance.now(); say.classList.remove("on"); setTimeout(()=>{ if(!say.classList.contains("on")) say.hidden=true; },600); el.classList.remove("on"); }
+  function tick(now){ if(!st) return; const s=st, r=btn(); if(r&&s.ph!=="away"){ const mob=innerWidth<=640; s.P=[r.left-31*s.sc,r.top+r.height/2-34*s.sc]; }
+    const perchG=el.querySelector(".vb-perch"), flyG=el.querySelector(".vb-fly"), wing=el.querySelector(".vb-wing");
+    let x, y, rot=0, flip=false;
+    if(s.ph==="fly"){ const u=Math.min(1,(now-s.t0)/1000/s.dur), e=1-Math.pow(1-u,2.2); x=LP(s.S[0],s.P[0],e); y=LP(s.S[1],s.P[1],e)-Math.abs(Math.sin(u*Math.PI*3.2))*28*(1-u);   /* the downy's bounding flight */
+      const burst=((u*3.2)%1)<.55, fl=burst? Math.sin(now/1000*Math.PI*2*13) : .15; wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); rot=(1-u)*-4-u*55;
+      if(u>=1){ s.ph="land"; s.tl=now; perchG.style.display=""; flyG.style.display="none"; } }
+    if(s.ph==="land"||s.ph==="tap"||s.ph==="say"){ x=s.P[0]; y=s.P[1];
+      const tt=(now-(s.tl||now))/1000; if(s.ph==="land"&&tt>.35){ s.ph="tap"; s.tt=now; }
+      if(s.ph==="tap"){ const k=(now-s.tt)/1000, n=Math.floor(k/.22); const bill=Math.max(0,Math.sin((k%.22)/.22*Math.PI)); perchG.setAttribute("transform",`translate(${(bill*1.6).toFixed(2)} 0)`);
+        if(n>s.taps&&n<=3){ s.taps=n; try{ natureSfx.peck&&natureSfx.peck(x/innerWidth); }catch(e){} } if(k>.22*3.4){ perchG.removeAttribute("transform"); s.ph="say"; s.ts=now; say.hidden=false; el.classList.add("on"); requestAnimationFrame(()=>say.classList.add("on")); } }
+      if(s.ph==="say"){ const k=(now-s.ts)/1000; perchG.setAttribute("transform",`rotate(${(Math.sin(k*2.2)*2).toFixed(2)} 22 40)`); if(k>9) leave(); } }
+    if(s.ph==="away"){ const k=(now-s.ta)/1000; if(k<.25){ x=s.P[0]; y=s.P[1]; } else { if(perchG.style.display!=="none"){ perchG.style.display="none"; flyG.style.display=""; } const u=(k-.25)/1.6; x=s.P[0]-u*u*innerWidth*.9; y=s.P[1]-u*180+Math.sin(u*Math.PI*4)*12; flip=true; rot=-8;
+        const fl=Math.sin(now/1000*Math.PI*2*13); wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); if(u>=1){ el.style.display="none"; st=null; nextT=performance.now()+(200+Math.random()*120)*1000; return; } } }
+    if(s.ph==="say"){ const sr=el.getBoundingClientRect(); say.style.left=""; say.style.right=(innerWidth-sr.left+4)+"px"; say.style.top=(sr.top+sr.height*.42-say.offsetHeight/2)+"px"; }
+    el.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${(flip?-1:1)*s.sc},${s.sc}) rotate(${rot}deg)`; raf=requestAnimationFrame(tick); }
+  function loop(){ const now=performance.now(); if(!st&&now>nextT&&nextT>0) start(); setTimeout(loop,1000); }
+  D.addEventListener("mouseover",e=>{ if(st&&st.ph==="say"&&e.target.closest&&e.target.closest("[data-view-info]")) leave(); });
+  D.addEventListener("click",e=>{ if(st&&e.target.closest&&e.target.closest("[data-view-info]")) leave(); },true);
+  const begin=()=>{ if(!D.querySelector("[data-view-info]")) return; if(reduce()){ return; } nextT=performance.now()+6500; loop(); };
+  if(D.readyState==="loading") D.addEventListener("DOMContentLoaded",begin); else begin();
+  return {start};
 })();
