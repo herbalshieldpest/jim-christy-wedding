@@ -2172,6 +2172,13 @@ const ambient=(function(){
   /* ---- a pair of eastern bluebirds carrying a silk ribbon between them with the countdown on it (only when the host page asks for it with SceneryHost.banner) ---- */
   let ban=null, nextBan=rnd(3,5), banFirst=true; const bncv=document.createElement("canvas"), bncx=bncv.getContext("2d"), btex=document.createElement("canvas");
   /* a bluebird in true 3D: lofted body, blue back and wings, rusty breast and white belly, the wings feathered at the tips. Returns where its bill is, in the world. */
+  /* a body lofted through its cross-sections [along, half-width, half-height, centre-height]: each pair of neighbouring rings is wrapped in a single hull, so the outline runs smooth */
+  function hullLoft(S,pt,squash){ const hull=P0=>{ const p=P0.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]), cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]), lo=[], up=[];
+      for(const q of p){ while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0) lo.pop(); lo.push(q); } for(let k=p.length-1;k>=0;k--){ const q=p[k]; while(up.length>1&&cr(up[up.length-2],up[up.length-1],q)<=0) up.pop(); up.push(q); }
+      return lo.slice(0,-1).concat(up.slice(0,-1)); };
+    const pa=new Path2D(), rings=[]; for(let i=0;i<S.length-1;i++){ const A=S[i], B=S[i+1]; for(let k=0;k<(i===S.length-2?5:4);k++){ const t=k/4, a=lerp(A[0],B[0],t), w=lerp(A[1],B[1],t), hh=lerp(A[2],B[2],t), zc=lerp(A[3],B[3],t);
+      const ring=[]; for(let j=0;j<24;j++){ const th=j/24*6.283; ring.push(pt(a,w*Math.cos(th),zc+hh*Math.sin(th)*(squash&&Math.sin(th)>0? .92 : 1))); } rings.push(ring); } }
+    for(let i=0;i<rings.length-1;i++){ const h=hull(rings[i].concat(rings[i+1])); h.forEach((q,k)=>k? pa.lineTo(q[0],q[1]) : pa.moveTo(q[0],q[1])); pa.closePath(); } return pa; }
   function blueBird3D(x,P,f,flap,glide,proj,Kw,sunL,amp){ amp=amp||1;
     const crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
     const r=nrm(crs(f,[0,-1,0])), u=crs(r,f);
@@ -2204,9 +2211,9 @@ const ambient=(function(){
         if(!ghost&&px>.5) line(P_(a0,s0),P_(ta,ts),rgb(under? [228,228,232] : [70,90,140],.35),Math.max(.3,px*.12)); }   /* the pale feather shafts */
       if(ghost) return;
       /* the secondaries' rounded tips along the trailing edge */
-      for(let i=0;i<7;i++){ const t=(i+.5)/7, q=P_(lerp(-4.6,-6.2,t)-.3,lerp(1.8,8.6,t)); x.fillStyle=rgb(under? L(UFLT,lit*.9) : L(DEEP,lit*.8)); x.beginPath(); x.arc(q[0],q[1],Math.max(.5,px*.8),0,6.283); x.fill(); }
-      if(!under){ for(let row=0;row<2;row++) for(let i=0;i<5;i++){ const t=(i+.5)/5, q=P_(lerp(1.4,-.6,row)-t*.8,lerp(2.4,8,t)); x.fillStyle=rgb(L(BLU2,lit*1.15),.45); x.beginPath(); x.ellipse(q[0],q[1],Math.max(.4,px*.75),Math.max(.3,px*.5),0,0,6.283); x.fill(); } }   /* the bright coverts, laid like scales */
-      if(glow>.08){ const e0=P_(-2.2,13.2), e1=P_(-6,8.4), e2=P_(-6.2,3.6); x.strokeStyle=rgb([255,206,140],glow*.55); x.lineWidth=Math.max(.4,px*.3); x.beginPath(); x.moveTo(e0[0],e0[1]); x.quadraticCurveTo(e1[0],e1[1],e2[0],e2[1]); x.stroke(); }   /* sun shining through the feather edges */
+      { x.strokeStyle=rgb(under? L(UFLT,lit*.7) : L(DEEP,lit*.6),.5); x.lineWidth=Math.max(.3,px*.12); x.beginPath(); for(let i=0;i<7;i++){ const a=lerp(-4.4,-6.2,i/7), s0=lerp(1.8,8.6,i/7), q0=P_(a+.4,s0+.2), q1=P_(a-.15,s0+.6); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); } x.stroke(); }
+      if(!under){ for(let row=0;row<2;row++) for(let i=0;i<5;i++){ const t=(i+.5)/5, q=P_(lerp(1.4,-.6,row)-t*.8,lerp(2.4,8,t)); x.fillStyle=rgb(L(BLU2,lit*1.15),.45); x.beginPath(); x.ellipse(q[0],q[1],Math.max(.3,px*.5),Math.max(.25,px*.32),0,0,6.283); x.fill(); } }   /* the bright coverts, laid like scales */
+         /* sun shining through the feather edges */
     };
     const wings=sd=>{ if(glide){ wing(sd,.1); return; } const a0=x.globalAlpha, fl=k=>(Math.sin(flap+k)*.95+.08)*amp;                /* the quick beat of the wings, with the blur of the stroke either side */
       x.globalAlpha=a0*.12*(amp>1?1.4:1); wing(sd,fl(-.45*amp),true); wing(sd,fl(.45*amp),true); x.globalAlpha=a0; wing(sd,fl(0)); };
@@ -2219,8 +2226,7 @@ const ambient=(function(){
       smooth([t0,t5,t4,t3,t2,t1],g); }
     /* the body: plump and round-chested, tapering to the tail */
     const SECT=[[-5.2,1.1,1.0,.5],[-4,1.9,1.9,.3],[-2.4,2.6,2.7,0],[-.6,3.0,3.1,-.25],[1.2,3.0,3.1,-.3],[2.8,2.6,2.7,-.1],[4,2.2,2.3,.3]];
-    const body=new Path2D(); for(let i=0;i<SECT.length-1;i++){ const A=SECT[i], B=SECT[i+1]; for(let k=0;k<3;k++){ const t=k/3, a=lerp(A[0],B[0],t), w=lerp(A[1],B[1],t), hh=lerp(A[2],B[2],t), zc=lerp(A[3],B[3],t);
-        for(let j=0;j<16;j++){ const th=j/16*6.283, q=pt(a,w*Math.cos(th),zc+hh*Math.sin(th)); j? body.lineTo(q[0],q[1]) : body.moveTo(q[0],q[1]); } body.closePath(); } }
+    const body=hullLoft(SECT,pt,false);   /* one smooth skin through the cross-sections, not a string of rings */
     x.fillStyle=rgb(L(RUST,bodyLit)); x.fill(body);
     x.save(); x.clip(body);
     { const tp=pt(3,0,3.6), bt=pt(3,0,-3.1), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]);                   /* blue across the back, the rust breast below it, softly meeting */
@@ -2233,8 +2239,7 @@ const ambient=(function(){
     /* the head: big and round, the blue cap, a rusty throat, a dark eye with a pale ring, the small black bill */
     /* the head, lofted like the body so it grows out of the shoulders: a short thick neck, a rounded crown, the forehead sloping down to the bill */
     const HEAD=[[1.6,2.8,2.9,-.2],[3,2.55,2.65,.15],[4.2,2.3,2.45,.55],[5.2,2.2,2.35,.95],[6.1,2.0,2.1,1.1],[6.9,1.6,1.65,1.05],[7.5,1.0,1.05,.9],[7.8,.55,.6,.85]];
-    const head=new Path2D(); for(let i=0;i<HEAD.length-1;i++){ const A=HEAD[i], B=HEAD[i+1]; for(let k=0;k<3;k++){ const t=k/3, a=lerp(A[0],B[0],t), w=lerp(A[1],B[1],t), hh=lerp(A[2],B[2],t), zc=lerp(A[3],B[3],t);
-        for(let j=0;j<16;j++){ const th=j/16*6.283, q=pt(a,w*Math.cos(th),zc+hh*Math.sin(th)*(Math.sin(th)>0? .92 : 1)); j? head.lineTo(q[0],q[1]) : head.moveTo(q[0],q[1]); } head.closePath(); } }
+    const head=hullLoft(HEAD,pt,true);
     x.fillStyle=rgb(L(BLU,bodyLit)); x.fill(head);
     x.save(); x.clip(head);
     { const tp=pt(3,0,3.6), bt=pt(3,0,-3.1), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]);                       /* the same colour bands as the body, so head and body are one bird */
@@ -2363,12 +2368,12 @@ const ambient=(function(){
         if(!ghost&&px>.5) line(P_(a0,s0),P_(ta,ts),rgb(under? [228,228,232] : [70,90,140],.35),Math.max(.3,px*.12)); }   /* the pale feather shafts */
       if(ghost) return;
       /* the secondaries' rounded tips along the trailing edge */
-      for(let i=0;i<7;i++){ const t=(i+.5)/7, q=P_(lerp(-4.6,-6.2,t)-.3,lerp(1.8,8.6,t)); x.fillStyle=rgb(under? L(UFLT,lit*.9) : L(DEEP,lit*.8)); x.beginPath(); x.arc(q[0],q[1],Math.max(.5,px*.8),0,6.283); x.fill(); }
-      if(!under){ for(let row=0;row<2;row++) for(let i=0;i<5;i++){ const t=(i+.5)/5, q=P_(lerp(1.4,-.6,row)-t*.8,lerp(2.4,8,t)); x.fillStyle=rgb(L(BLU2,lit*1.15),.45); x.beginPath(); x.ellipse(q[0],q[1],Math.max(.4,px*.75),Math.max(.3,px*.5),0,0,6.283); x.fill(); } }   /* the bright coverts, laid like scales */
+      { x.strokeStyle=rgb(under? L(UFLT,lit*.7) : L(DEEP,lit*.6),.5); x.lineWidth=Math.max(.3,px*.12); x.beginPath(); for(let i=0;i<7;i++){ const a=lerp(-4.4,-6.2,i/7), s0=lerp(1.8,8.6,i/7), q0=P_(a+.4,s0+.2), q1=P_(a-.15,s0+.6); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); } x.stroke(); }
+      if(!under){ for(let row=0;row<2;row++) for(let i=0;i<5;i++){ const t=(i+.5)/5, q=P_(lerp(1.4,-.6,row)-t*.8,lerp(2.4,8,t)); x.fillStyle=rgb(L(BLU2,lit*1.15),.45); x.beginPath(); x.ellipse(q[0],q[1],Math.max(.3,px*.5),Math.max(.25,px*.32),0,0,6.283); x.fill(); } }   /* the bright coverts, laid like scales */
       if(!under){ for(let i=0;i<6;i++){ const t=(i+.5)/6; line(P_(lerp(-2.8,-4.8,t),lerp(2.6,11,t)),P_(lerp(-4.2,-5.8,t),lerp(2.2,9.6,t)),rgb(BLK,.55),Math.max(.3,px*.28)); }   /* the fine black barring across the blue */
         const wb=[P_(-4.6,2),P_(-5.2,8.6),P_(-6.1,8.4),P_(-5.6,1.9)]; smooth(wb,rgb(L(WHT,lit*1.1),.95));   /* the white tips of the secondaries make a bold bar */
         for(let i=0;i<4;i++){ const q=P_(-.2-i*.9,10.4-i*.3); x.fillStyle=rgb(L(WHT,lit),.7); x.beginPath(); x.ellipse(q[0],q[1],Math.max(.35,px*.5),Math.max(.25,px*.3),0,0,6.283); x.fill(); } }   /* white spots on the tertials and coverts */
-      if(glow>.08){ const e0=P_(-2.2,13.2), e1=P_(-6,8.4), e2=P_(-6.2,3.6); x.strokeStyle=rgb([255,206,140],glow*.55); x.lineWidth=Math.max(.4,px*.3); x.beginPath(); x.moveTo(e0[0],e0[1]); x.quadraticCurveTo(e1[0],e1[1],e2[0],e2[1]); x.stroke(); }   /* sun shining through the feather edges */
+         /* sun shining through the feather edges */
     };
     const wings=sd=>{ if(glide){ wing(sd,.1); return; } const a0=x.globalAlpha, fl=k=>Math.sin(flap+k)*.95+.08;                /* the quick beat of the wings, with the blur of the stroke either side */
       x.globalAlpha=a0*.12; wing(sd,fl(-.45),true); wing(sd,fl(.45),true); x.globalAlpha=a0; wing(sd,fl(0)); };
@@ -2383,8 +2388,7 @@ const ambient=(function(){
       { const a0=pt(-14.6,-2.45,-.33), a1=pt(-15.5,-.9,-.4), a2=pt(-15.5,.9,-.4), a3=pt(-14.6,2.45,-.33); x.strokeStyle=rgb(L(WHT,bodyLit),.85); x.lineWidth=Math.max(.5,px*.7); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.moveTo(a2[0],a2[1]); x.lineTo(a3[0],a3[1]); x.stroke(); } }   /* the white corners */
     /* the body: plump and round-chested, tapering to the tail */
     const SECT=[[-5.6,1.1,1.0,.5],[-4.2,1.8,1.8,.3],[-2.4,2.4,2.5,0],[-.4,2.75,2.85,-.2],[1.6,2.75,2.85,-.25],[3.2,2.4,2.5,-.05],[4.4,2.1,2.2,.3]];
-    const body=new Path2D(); for(let i=0;i<SECT.length-1;i++){ const A=SECT[i], B=SECT[i+1]; for(let k=0;k<3;k++){ const t=k/3, a=lerp(A[0],B[0],t), w=lerp(A[1],B[1],t), hh=lerp(A[2],B[2],t), zc=lerp(A[3],B[3],t);
-        for(let j=0;j<16;j++){ const th=j/16*6.283, q=pt(a,w*Math.cos(th),zc+hh*Math.sin(th)); j? body.lineTo(q[0],q[1]) : body.moveTo(q[0],q[1]); } body.closePath(); } }
+    const body=hullLoft(SECT,pt,false);   /* one smooth skin through the cross-sections, not a string of rings */
     x.fillStyle=rgb(L(RUST,bodyLit)); x.fill(body);
     x.save(); x.clip(body);
     { const tp=pt(3,0,3.6), bt=pt(3,0,-3.1), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]);                   /* blue across the back, the rust breast below it, softly meeting */
@@ -2397,8 +2401,7 @@ const ambient=(function(){
     /* the head: big and round, the blue cap, a rusty throat, a dark eye with a pale ring, the small black bill */
     /* the head, lofted like the body so it grows out of the shoulders: a short thick neck, a rounded crown, the forehead sloping down to the bill */
     const HEAD=[[1.6,2.8,2.9,-.2],[3,2.55,2.65,.15],[4.2,2.3,2.45,.55],[5.2,2.2,2.35,.95],[6.1,2.0,2.1,1.1],[6.9,1.6,1.65,1.05],[7.5,1.0,1.05,.9],[7.8,.55,.6,.85]];
-    const head=new Path2D(); for(let i=0;i<HEAD.length-1;i++){ const A=HEAD[i], B=HEAD[i+1]; for(let k=0;k<3;k++){ const t=k/3, a=lerp(A[0],B[0],t), w=lerp(A[1],B[1],t), hh=lerp(A[2],B[2],t), zc=lerp(A[3],B[3],t);
-        for(let j=0;j<16;j++){ const th=j/16*6.283, q=pt(a,w*Math.cos(th),zc+hh*Math.sin(th)*(Math.sin(th)>0? .92 : 1)); j? head.lineTo(q[0],q[1]) : head.moveTo(q[0],q[1]); } head.closePath(); } }
+    const head=hullLoft(HEAD,pt,true);
     x.fillStyle=rgb(L(BLU,bodyLit)); x.fill(head);
     x.save(); x.clip(head);
     { const tp=pt(3,0,3.6), bt=pt(3,0,-3.1), g=x.createLinearGradient(tp[0],tp[1],bt[0],bt[1]);                       /* the same colour bands as the body, so head and body are one bird */
@@ -2407,7 +2410,7 @@ const ambient=(function(){
       const g=x.createLinearGradient(c0[0]-dx/dd*R,c0[1]-dy/dd*R,c0[0]+dx/dd*R,c0[1]+dy/dd*R); g.addColorStop(0,"rgba(10,14,30,.22)"); g.addColorStop(.6,"rgba(255,200,130,0)"); g.addColorStop(1,`rgba(255,210,150,${(.22+glow*.3).toFixed(2)})`); x.fillStyle=g; x.fillRect(0,0,x.canvas.width/.6,x.canvas.height/.6); }
     x.restore();
     { x.save(); x.clip(head); for(const sd of [-1,1]){ const c=pt(6.7,sd*1.05,.35), rr=Math.max(.8,sc(6.5)*1.75); const g=x.createRadialGradient(c[0],c[1],0,c[0],c[1],rr); g.addColorStop(0,rgb(L(WHT,bodyLit),.95)); g.addColorStop(.7,rgb(L(WHT,bodyLit),.6)); g.addColorStop(1,rgb(L(WHT,bodyLit),0)); x.fillStyle=g; x.fillRect(c[0]-rr,c[1]-rr,rr*2,rr*2); } x.restore(); }   /* the pale face and throat */
-    { const ring=[]; for(let i=0;i<=12;i++){ const th=lerp(-1.45,1.45,i/12); ring.push(pt(4.3-Math.cos(th)*.5,Math.sin(th)*2.25,-.35-Math.cos(th)*1.55)); } x.strokeStyle=rgb(BLK,.9); x.lineWidth=Math.max(.45,px*.42); x.beginPath(); ring.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.stroke();   /* the black necklace */
+    { const ring=[]; for(let i=0;i<=12;i++){ const th=lerp(-1.45,1.45,i/12); ring.push(pt(4.3-Math.cos(th)*.5,Math.sin(th)*2.25,-.35-Math.cos(th)*1.55)); } x.strokeStyle=rgb(BLK,.7); x.lineWidth=Math.max(.4,px*.26); x.beginPath(); ring.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.stroke();   /* the black necklace */
       for(const sd of [-1,1]) line(pt(7.4,sd*.9,1.2),pt(5.2,sd*2.05,.5),rgb(BLK,.8),Math.max(.35,px*.3)); }   /* and the line from the bill back through the eye */
     { const cr=[pt(4.6,-.9,2.2),pt(5.8,-.6,2.9),pt(4.4,0,4.6),pt(2.4,0,4.3),pt(3.2,0,3.3),pt(5.8,.6,2.9),pt(4.6,.9,2.2)]; smooth(cr,rgb(L(BLU,bodyLit*1.05)));   /* the crest, raised */
       line(pt(5.4,0,2.9),pt(3,0,4.2),rgb(L(BLU2,bodyLit*1.2),.5),Math.max(.3,px*.2)); }
@@ -2450,7 +2453,7 @@ const ambient=(function(){
       const dn=[Math.sin(tw)*.0,Math.cos(tw),Math.sin(tw)];   /* the cloth's width hangs down, twisting a little toward and away from you */
       const sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x), gath=out>0? .5+.35*sm(out) : .5+.5*sm(Math.min(sc,1-sc)/.2), belly=1+.08*inn;   /* gathered and bunched where each bill grips it, opening out to full width as it droops between them */
       const hw=hgt*gath*belly;
-      pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hw,c[1]+dn[1]*hw,c[2]+dn[2]*hw), shade:.9+.2*Math.cos(tw*2.2)-(1-gath)*.35+Math.sin(s*Math.PI*2.2-B.t*4.6)*.07+.5*Math.pow(Math.max(0,Math.sin(s*Math.PI*2.6-B.t*1.7+Math.sin(tw)*2)),12)}   /* a band of sheen slides along the silk as it turns to the sun */); }
+      pts.push({top:proj(c[0],c[1],c[2]), bot:proj(c[0]+dn[0]*hw,c[1]+dn[1]*hw,c[2]+dn[2]*hw), shade:.92+.32*Math.cos(tw*2.2)-(1-gath)*.45+Math.sin(s*Math.PI*2.2-B.t*4.6)*.14+.5*Math.pow(Math.max(0,Math.sin(s*Math.PI*2.6-B.t*1.7+Math.sin(tw)*2)),12)}   /* a band of sheen slides along the silk as it turns to the sun */); }
     /* the lettering, set once per text and size into a strip that's wrapped onto the cloth */
     const texW=1400, texH=Math.round(texW*.85*hgt/span);   /* a fixed size, set once: the lettering belongs to the cloth and moves only with it */
     const key=text+"|"+texW+"|"+texH; if(btex._k!==key){ btex._k=key; btex.width=texW; btex.height=texH; const tx=btex.getContext("2d");
@@ -2487,7 +2490,7 @@ const ambient=(function(){
       const u0=(.075+.85*(-E+(1+2*E)*s0))*texW, u1=(.075+.85*(-E+(1+2*E)*s1))*texW;
       tri(p0.top,p1.top,p0.bot,[u0,0],[u1,0],[u0,texH]); tri(p1.top,p1.bot,p0.bot,[u1,0],[u1,texH],[u0,texH]); }
     { const xa=pts[0].top[0], xb=pts[N].top[0]; if(Math.abs(xb-xa)>2){ const g=x.createLinearGradient(xa,0,xb,0);   /* the folds catch the light and fall into shadow along its length */
-        for(let i=0;i<=N;i+=2){ const sh=pts[i].shade; g.addColorStop(i/N, sh<1? `rgba(70,44,20,${Math.min(.28,(1-sh)*.7).toFixed(3)})` : `rgba(255,236,204,${Math.min(.4,(sh-1)*1.6).toFixed(3)})`); }
+        for(let i=0;i<=N;i+=2){ const sh=pts[i].shade; g.addColorStop(i/N, sh<1? `rgba(60,36,16,${Math.min(.55,(1-sh)*1.5).toFixed(3)})` : `rgba(255,240,212,${Math.min(.6,(sh-1)*2.6).toFixed(3)})`); }   /* deep shadow in the folds, bright where the silk turns to the light */
         x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=g; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].top[0],pts[i].top[1]) : x.moveTo(pts[i].top[0],pts[i].top[1]); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]); x.closePath(); x.fill();
         { const rr=Math.max(W,H)*.45, gl=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,rr); gl.addColorStop(0,"rgba(255,206,120,.6)"); gl.addColorStop(.5,"rgba(255,190,110,.24)"); gl.addColorStop(1,"rgba(255,170,90,0)"); x.fillStyle=gl; x.fill(); }   /* where the sun is behind it, the silk glows */
         x.restore(); } }
@@ -2669,10 +2672,11 @@ const ambient=(function(){
     const fly3=p.three&&p.P3; x.fillStyle=`rgba(255,168,84,${fly3?.06:.16})`; x.fillRect(0,0,sz,sz);
     const rl=x.createLinearGradient(sz/2-sdx*sz*.25,0,sz/2+sdx*sz*.25,0); rl.addColorStop(0,"rgba(20,12,6,.2)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,`rgba(255,196,120,${fly3?.12:.35})`); x.fillStyle=rl; x.fillRect(0,0,sz,sz);
     if(!p.bg||(p.bgT=(p.bgT||0)-1)<=0){ p.bgT=15; const ip=toImg(p.x,p.y); p.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[120,100,70]; }
-    x.fillStyle=rgb(mixv(p.bg,[214,176,130],.4),(p.wing==null?.16:fly3?.1:.2)*Math.min(1,1.4/p.m)); x.fillRect(0,0,sz,sz);                     /* the haze of the air between you and the tree */
+    x.fillStyle=rgb(mixv(p.bg,[214,176,130],.4),(p.wing==null?.34:fly3?.12:.22)*Math.min(1,1.4/p.m)); x.fillRect(0,0,sz,sz);
+    if(p.wing==null){ x.fillStyle="rgba(60,46,34,.12)"; x.fillRect(0,0,sz,sz); }   /* on the trunk it sits in the same shade and the same depth of air as the bark around it */                     /* the haze of the air between you and the tree */
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; { const bl=Math.max(0,p.m-3)*.32+(p.state==="cling"||p.state==="hop"? .5 : 0); ctx.filter=bl>.3? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; { const bl=Math.max(0,p.m-3)*.32+(p.state==="cling"||p.state==="hop"? .75 : 0); ctx.filter=bl>.3? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
   }
   /* ---- fireflies blinking low over the lawn and along the edge of the field ---- */
   const flies=[], flyGlow=(()=>{ const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d"), g=x.createRadialGradient(24,24,0,24,24,24); g.addColorStop(0,"rgba(244,255,160,1)"); g.addColorStop(.3,"rgba(190,250,90,.5)"); g.addColorStop(1,"rgba(160,230,60,0)"); x.fillStyle=g; x.fillRect(0,0,48,48); return c; })();
@@ -2685,7 +2689,7 @@ const ambient=(function(){
       f.x=f.ax+Math.sin(f.wan*1.3+f.ph)*18; f.y=f.ay+Math.cos(f.wan*.9)*6;                                          /* drifting along the edge of the brush */
       if(!f.life&&Math.random()<dt*.02){ f.ax=rnd(0,W); f.ay=edgeY(f.ax); }
       const c=((t+f.ph*f.per/6.283)%f.per), on=c<.55? Math.sin(c/.55*Math.PI) : 0; if(on<=.01) continue;
-      const r=f.r*(dark?1.2:1), yy=f.y-c*5;                                                                    /* a small rising flash, the eastern firefly's J */
+      const vy0=gnd().vy, dk=Math.max(0,Math.min(1,(f.y-vy0)/Math.max(1,H-vy0))), sc=.28+1.05*dk*dk, r=f.r*(dark?1.2:1)*sc, yy=f.y-c*5*sc;   /* far off along the brush they are tiny pinpricks; near you they are bigger */                                                                    /* a small rising flash, the eastern firefly's J */
       ctx.globalAlpha=Math.min(1,on*1.1); ctx.drawImage(flyGlow,f.x-r*3,yy-r*3,r*6,r*6); }
     ctx.globalAlpha=1;
     ctx.restore();
@@ -2862,7 +2866,7 @@ const ambient=(function(){
   }
   function drawMonarchs(dt,dark){
     const F=H*.5, cx=W/2, cy=H*.52, g=gnd();
-    nextMon-=(lull>0?0:dt); if(nextMon<=0&&mons.length<(MOBILE()?2:3)){ nextMon=rnd(12,28); const side=Math.random()<.5?-1:1;
+    nextMon-=(lull>0?0:dt)*(dog&&!dog.gone&&!mons.length?4:1); if(nextMon<=0&&mons.length<(MOBILE()?2:3)){ nextMon=rnd(12,28); const side=Math.random()<.5?-1:1;
       mons.push({kind:Math.random()<.35?"monarch":pick(["tiger","tiger","spice","frit","frit","admiral","cloak","sulphur","sulphur"]),t:0,life:rnd(22,40),sx:side<0? -30 : W+30,sy:g.vy+rnd(-30,90),z:rnd(2.2,6.5),dir:-side,ph:rnd(0,6),flapT:0,glide:0,ang:.4,tz:rnd(2,6),wy:rnd(0,6)}); }
     if(!mons.length) return;
     const x=ctx; x.save(); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high";                 /* straight onto the scene: no full-screen pass every frame */
@@ -2871,8 +2875,8 @@ const ambient=(function(){
       /* a lazy, wandering course: drifting across, rising and dipping, coming nearer and farther */
       const fl=(m.flee=Math.max(0,(m.flee||0)-dt))>0? 1+2.2*m.flee : 1; if(fl>1){ m.sy+=Math.sin(m.t*13)*90*dt*m.flee; m.ang=.35+Math.sin(m.t*Math.PI*2*8)*1.1; }   /* fleeing: faster, jinking */
       m.sx+=m.dir*(26+Math.sin(m.t*.7+m.ph)*14)*dt*(4/m.z)*fl; m.sy+=(Math.sin(m.t*1.1+m.wy)*22+Math.sin(m.t*2.9)*10)*dt; m.sy=Math.max(g.vy-70,Math.min(H*.92,m.sy));
-      if(dog&&!dog.gone&&!dog.hidden&&!m.flee&&!(m.dip>0)&&Math.random()<dt/28) m.dip=rnd(6,9);   /* now and then one drifts down low over the lawn, just where Willow is */
-      if(m.dip>0){ m.dip-=dt; if(dog&&!dog.gone){ const s0=toScreen(dog.Xw,dog.Dw); m.sy+=((s0.y-.2*s0.g)-m.sy)*Math.min(1,dt*.8); m.sx+=(s0.x-m.sx)*Math.min(1,dt*.12); } }
+      if(dog&&!dog.gone&&!dog.hidden&&!m.flee&&!(m.dip>0)&&Math.random()<dt/9) m.dip=rnd(7,11);   /* now and then one drifts down low over the lawn, just where Willow is */
+      if(m.dip>0){ m.dip-=dt; if(dog&&!dog.gone){ const s0=toScreen(dog.Xw,dog.Dw); m.sy+=((s0.y-.13*s0.g)-m.sy)*Math.min(1,dt*1.1); m.sx+=(s0.x+Math.sin(m.t*.8)*s0.g*.25-m.sx)*Math.min(1,dt*.35); } }
       if(Math.random()<dt*.15) m.tz=rnd(1.6,6.5); m.z+=(m.tz-m.z)*dt*.25;
       if(m.t>m.life||m.sx<-60||m.sx>W+60){ mons.splice(i,1); continue; }
       /* flap a few beats, then sail with the wings held up in a shallow V */
@@ -3076,9 +3080,9 @@ const ambient=(function(){
 
   /* ---- insects of the meadow: a common green darner patrolling the lawn in fast straight darts and hovers, and bumble bees working low over the clover near you ---- */
   const bugs=[]; let nextDarner=rnd(50,110), nextBee=rnd(35,80);
-  function startBug(kind){ const F=H*.5, cx=W/2, cy=H*.52, side=Math.random()<.5?-1:1, z=kind==="bee"? rnd(.55,1.1) : rnd(.7,1.6), sx=side<0? -40 : W+40, sy=kind==="bee"? H*rnd(.78,.9) : H*rnd(.6,.8);
+  function startBug(kind){ const F=H*.5, cx=W/2, cy=H*.52, side=Math.random()<.5?-1:1, z=kind==="bee"? rnd(.8,1.5) : rnd(.7,1.6), sx=side<0? -40 : W+40, sy=kind==="bee"? H*rnd(.78,.9) : H*rnd(.6,.8);
     bugs.push({kind,t:0,life:kind==="bee"? rnd(16,24) : rnd(18,28),P:[(sx-cx)*z/F,(sy-cy)*z/F,z],V:[-side,0,0],st:"go",st0:0,tg:null,dur:0,hov:0,ph:rnd(0,6)}); }
-  function bugTarget(b){ const F=H*.5, cx=W/2, cy=H*.52, leaving=b.t>b.life, z=b.kind==="bee"? rnd(.5,1.1) : rnd(.6,1.8);
+  function bugTarget(b){ const F=H*.5, cx=W/2, cy=H*.52, leaving=b.t>b.life, z=b.kind==="bee"? rnd(.75,1.5) : rnd(.6,1.8);
     const sx=leaving? (b.P[0]>0? W+80 : -80) : W*rnd(.08,.92), sy=b.kind==="bee"? H*rnd(.8,.95) : H*rnd(.58,.84); b.tg=[(sx-cx)*z/F,(sy-cy)*z/F,z]; }
   function dragonfly3D(x,P,f,t,proj,K,dark){
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
@@ -3098,13 +3102,14 @@ const ambient=(function(){
     const th=pt(2.2,0,.3); x.fillStyle=rgb(mulv([86,160,70],lt)); x.beginPath(); x.ellipse(th[0],th[1],Math.max(1,px*2.1),Math.max(1,px*1.6),0,0,6.283); x.fill();
     const hd=pt(4.4,0,.4); x.fillStyle=rgb(mulv([96,150,90],lt)); x.beginPath(); x.arc(hd[0],hd[1],Math.max(1,px*1.55),0,6.283); x.fill();
     x.fillStyle=`rgba(255,255,240,${dark?.15:.4})`; x.beginPath(); x.arc(hd[0]-px*.4,hd[1]-px*.6,Math.max(.4,px*.45),0,6.283); x.fill(); }
-  function bee2D(x,sx,sy,sz,hd,t,dark){ const lt=dark?.55:1; x.save(); x.translate(sx,sy); x.scale(hd<0?-1:1,1);
-    const wb=Math.sin(t*Math.PI*2*30); x.fillStyle=`rgba(230,236,246,${dark?.12:.28})`; for(const g of [-.4,0,.4]){ x.beginPath(); x.ellipse(-sz*.05,-sz*.55,sz*.5,sz*.2,-.6+(wb+g)*.5,0,6.283); x.fill(); }   /* the wings: a blur */
-    const fuzz=(cx2,cy2,rx,ry,col)=>{ x.fillStyle=rgb(mulv(col,lt)); x.beginPath(); x.ellipse(cx2,cy2,rx,ry,0,0,6.283); x.fill(); x.strokeStyle=rgb(mulv(col,lt*.85),.6); x.lineWidth=Math.max(.4,sz*.04); for(let i=0;i<10;i++){ const a=i/10*6.283; x.beginPath(); x.moveTo(cx2+Math.cos(a)*rx*.9,cy2+Math.sin(a)*ry*.9); x.lineTo(cx2+Math.cos(a)*rx*1.12,cy2+Math.sin(a)*ry*1.12); x.stroke(); } };
-    fuzz(-sz*.42,sz*.04,sz*.42,sz*.34,[236,196,60]); x.save(); x.beginPath(); x.ellipse(-sz*.42,sz*.04,sz*.42,sz*.34,0,0,6.283); x.clip(); x.fillStyle=rgb(mulv([30,26,22],lt)); x.fillRect(-sz*.62,-sz,sz*.16,sz*2); x.fillRect(-sz*.95,-sz,sz*.16,sz*2); x.restore();   /* the banded abdomen */
-    fuzz(0,-sz*.06,sz*.3,sz*.28,[30,26,22]); x.fillStyle=rgb(mulv([238,200,70],lt)); x.beginPath(); x.ellipse(0,-sz*.24,sz*.26,sz*.12,0,0,6.283); x.fill();   /* black thorax, yellow collar */
-    fuzz(sz*.32,-sz*.02,sz*.16,sz*.17,[24,20,18]);
-    x.strokeStyle=rgb(mulv([24,20,18],lt)); x.lineWidth=Math.max(.5,sz*.05); x.beginPath(); x.moveTo(sz*.4,-sz*.1); x.lineTo(sz*.56,-sz*.32); x.moveTo(sz*.06,sz*.18); x.lineTo(sz*.1,sz*.42); x.moveTo(-sz*.12,sz*.2); x.lineTo(-sz*.18,sz*.44); x.stroke();
+  function bee2D(x,sx,sy,sz,hd,t,dark){ const lt=dark?.55:1, Y=mulv([206,164,58],lt), K=mulv([30,26,22],lt), soft=Math.max(.35,sz*.06); x.save(); x.translate(sx,sy); x.scale(hd<0?-1:1,1);
+    /* the common eastern bumble bee, about the size of a thumbnail: a soft round furry body, yellow thorax, black abdomen with one yellow band; the wings a faint shimmer */
+    const blob=(cx2,cy2,rx,ry,col)=>{ const g=x.createRadialGradient(cx2-rx*.3,cy2-ry*.4,0,cx2,cy2,Math.max(rx,ry)*1.15); g.addColorStop(0,rgb(mixv(col,[255,240,200],.18))); g.addColorStop(.7,rgb(col)); g.addColorStop(1,rgb(col,0)); x.fillStyle=g; x.beginPath(); x.ellipse(cx2,cy2,rx*1.15,ry*1.15,0,0,6.283); x.fill(); };
+    x.filter=`blur(${soft.toFixed(2)}px)`;
+    blob(-sz*.36,sz*.05,sz*.4,sz*.32,K); blob(-sz*.22,sz*.02,sz*.12,sz*.3,Y); blob(sz*.02,-sz*.04,sz*.27,sz*.26,Y); blob(sz*.3,sz*.02,sz*.14,sz*.15,K);
+    x.filter="none";
+    x.strokeStyle=rgb(K,.7); x.lineWidth=Math.max(.35,sz*.05); x.beginPath(); for(const [a,b] of [[.08,.22],[-.08,.24],[-.22,.22]]){ x.moveTo(sz*a,sz*b); x.lineTo(sz*(a-.02),sz*(b+.18)); } x.stroke();   /* legs hanging under */
+    const wb=Math.sin(t*Math.PI*2*30); x.fillStyle=`rgba(225,232,240,${dark?.08:.16})`; for(const g of [-.5,0,.5]){ x.beginPath(); x.ellipse(-sz*.04,-sz*.36,sz*.34,sz*.12,-.5+(wb+g)*.45,0,6.283); x.fill(); }
     x.restore(); }
   function drawBugs(dt,dark){
     nextDarner-=(lull>0?0:dt); if(nextDarner<=0){ nextDarner=rnd(110,220); if(!dark&&!bugs.some(b=>b.kind==="darner")) startBug("darner"); }
@@ -3120,7 +3125,7 @@ const ambient=(function(){
       const sx=cx+b.P[0]*F/b.P[2], sy=cy+b.P[1]*F/b.P[2]; b.sx=sx; b.sy=sy; if(b.t>b.life+20){ bugs.splice(i,1); continue; }
       ctx.save(); ctx.globalAlpha=Math.min(1,b.t/.4);
       if(b.kind==="darner") dragonfly3D(ctx,b.P,b.V,b.t,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz,cy+Y3*F/zz]; },.0074,dark);
-      else bee2D(ctx,sx,sy+(b.st==="visit"? Math.sin(b.t*14)*.6 : 0),Math.max(3,.0074*5.5*F/b.P[2]),b.V[0],b.t,dark);
+      else bee2D(ctx,sx,sy+(b.st==="visit"? Math.sin(b.t*14)*.6 : 0),Math.max(2.5,.0074*3*F/b.P[2]),b.V[0],b.t,dark);
       ctx.restore(); }
   }
   /* ---- an eastern box turtle plods across the grass close to you: high domed shell, dark with yellow-orange blotches; it stops now and then, and pulls in when a dog comes near ---- */
@@ -3375,7 +3380,7 @@ const ambient=(function(){
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
-    blitRegion(jcv,ax,ay,(.5+.4)*F/Math.max(.6,zs)+40,.5+Math.max(0,.95-zs)*3,Math.min(1,T/.4,(J.dur-T)/.4));
+    blitRegion(jcv,ax,ay,(.5+.4)*F/Math.max(.6,zs)+40,.5+Math.max(0,.95-zs)*3,Math.min(1,T/.4,(J.dur-T)/.4),true);
   }
   /* ---- a rooster pheasant explodes out of the grass right in front of you: wings whirring, copper and green and a long barred tail, crowing, then sailing away low over the field ---- */
   const featherPat=(()=>{ const c=document.createElement("canvas"); c.width=c.height=96; const x=c.getContext("2d");
@@ -3523,7 +3528,7 @@ const ambient=(function(){
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
     const bl=P[2]<.95? (.95-P[2])*9+.6 : .6+Math.max(0,P[2]-6)*.12;                                                      /* too near for the lens at first, then soft with distance */
-    blitRegion(pfcv,sx,sy,.016*32*F/Math.max(.3,P[2])+30,bl,Math.min(1,T/.12,(11-P[2])/1.5));
+    blitRegion(pfcv,sx,sy,.016*32*F/Math.max(.3,P[2])+30,bl,Math.min(1,T/.12,(11-P[2])/1.5),true);
   }
   /* ---- a red-tailed hawk (a "chicken hawk"), in true 3D like the other birds: it comes over your shoulder from behind, sails out over the lawn on broad wings,
      flares and drops into the grass, sits up tall turning its head, then beats off away from you into the distance ---- */
@@ -3559,7 +3564,12 @@ const ambient=(function(){
     parts.push({p:[[-.6,5.4,0,3.6],[.2,9.8,0,3.8],[1,13.4,0,3.1]],c:rgb(P.back),sh:[rgb(mulv(P.back,.6)),rgb(mixv(P.back,[255,200,140],.25))]});
     parts.push({p:[[1.6,6.4,0,2.8],[2.2,10.6,0,2.9],[2.2,13,0,2.2]],c:rgb(P.breast),bias:-.06});                       /* pale breast */
     for(const [a,b,zz] of [[2.8,7.4,-1.2],[3.2,7.2,0],[2.8,7.4,1.2],[3,8.2,-.6],[3,8.2,.6]]) parts.push({p:[[a,b,zz,.6]],c:rgb(P.band),bias:-.12});   /* the dark belly band */
-    for(const sd of [-1,1]){ const op=1-fold; parts.push({p:[[0,13,sd*2.8,1.6],[-3.6+op*2,7+op*8,sd*(3+op*10),1.3],[-5.6+op*1,3+op*10,sd*(2.6+op*14),.9]],c:far(sd)?rgb(mulv(P.wing,.8)):rgb(P.wing),bias:.02}); }   /* folded wings (still settling as it lands) */
+    for(const sd of [-1,1]){ const op=Math.max(0,Math.min(1.15,1-fold)), L3=(a,b)=>a.map((v,i)=>lerp(v,b[i],Math.min(1,op))), col=far(sd)?rgb(mulv(P.wing,.8)):rgb(P.wing);
+      if(op<.05) parts.push({p:[[0,13,sd*2.8,1.6],[-3.6,7,sd*3,1.3],[-5.6,3,sd*2.6,.9]],c:col,bias:.02});
+      else { const sh=[.6,13.4,sd*2.6], wr=L3([-2.4,10,sd*3.2],[2.2,20.6,sd*4.6]), tp=L3([-6.2,3.8,sd*2.9],[-1.2,29.6,sd*6.2]), tt=L3([-6.6,4.4,sd*2.5],[-6.6,27,sd*5.6]), tb=L3([-3.2,6.4,sd*2.5],[-6.4,14.6,sd*3.6]);   /* the broad wing raised over the back, folding down into place */
+        const fing=[0,1,2,3].map(i=>{ const u=i/3; return [lerp(tp[0],tt[0],u)+(i%2? -.4 : .3)*op,lerp(tp[1],tt[1],u)+(1.4-Math.abs(u-.4)*2)*op,lerp(tp[2],tt[2],u),-1]; });
+        parts.push({poly:true,p:[[...sh,0],[...wr,0],...fing,[...tb,0]],c:col,bias:.02*(far(sd)?-1:1)+(far(sd)? .4 : -.2)});
+        parts.push({poly:true,p:[[...sh,0],[...wr,0],[lerp(wr[0],tb[0],.5),lerp(wr[1],tb[1],.5)-.5,lerp(wr[2],tb[2],.5),0],[...tb,0]],c:rgb(mixv(P.wing,P.breast,.35)),bias:(far(sd)? .39 : -.21)}); } }   /* paler coverts near the shoulder */   /* folded wings (still settling as it lands) */
     const hy=16.2; parts.push({p:[[1.4,hy,0,2.5]],c:rgb(P.head)});
     const lk=h.look||0, bx=1.4+Math.cos(lk)*2.6, bz=Math.sin(lk)*2.6;
     parts.push({p:[[1.4+Math.cos(lk)*1.6,hy-.2,Math.sin(lk)*1.6,1.3],[bx,hy-.7,bz,.6]],c:rgb(P.beak),bias:-.08});        /* hooked beak, turning with the head */
@@ -3571,28 +3581,29 @@ const ambient=(function(){
     if(!hawkG) return; const h=hawkG, inAir=h.state==="approach"||h.state==="leave";
     if(layer==="near"&&!inAir) return;
     const F=H*.5, cx=W/2, cy=H*.52, sk=Math.max(.5,(h.ty-gnd().vy)/150), zT=6, kL=.16*toScreen(h.Xw,h.Dw).g/26*.85, Kw=kL*zT/F;
-    const sitBlit=a=>{ const s=toScreen(h.Xw,h.Dw); h.ct=(h.ct||0)-dt; if(h.ct<=0||!h.pal){ h.ct=1.5; const G=groundPal(s,dark), lit=dark?.45:.62;
+    const sitBlit=(a,dy)=>{ const s=toScreen(h.Xw,h.Dw), s2=dy? {...s,y:s.y-dy} : s; h.ct=(h.ct||0)-dt; if(h.ct<=0||!h.pal){ h.ct=1.5; const G=groundPal(s,dark), lit=dark?.45:.62;
         h.pal={...G, back:mulv([100,68,44],lit), breast:mulv([224,212,190],lit), band:mulv([70,46,30],lit), wing:mulv([86,58,38],lit), head:mulv([92,62,40],lit), beak:mulv([70,66,64],lit), leg:mulv([210,178,70],lit), tail:mulv([184,88,44],lit)}; }
       if(!h.blades) h.blades=Array.from({length:10},()=>({ox:rnd(-14,14),h:rnd(3,6),lean:rnd(-.5,.5),c:Math.random()}));
       if(!h.airC||(h.airT=(h.airT||0)-dt)<=0){ h.airT=.6; const ip=toImg(s.x,s.y-30*kL), ip2=toImg(s.x,s.y-90*kL); const c1=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[150,130,90], c2=(ip2&&sampleAt(Math.max(0,Math.min(1,ip2[0])),Math.max(0,Math.min(1,ip2[1]))))||c1;
         h.airC=mixv(mixv(c1,c2,.5),[236,184,126],.35); }                                                              /* the warm, dusty evening air between you and the far edge of the lawn */
       h.air={c:h.airC,a:dark?.32:.4,blur:.6};
-      h.rt=0; critterBlit(null,null,h,s,kL,h.pal,()=>hawkSitParts(h,h.pal),h.yaw,40,40,10,h.blades,a,.7); return s; };
-    if(layer==="ground"&&inAir){ if(h.state==="leave"&&h.st<.5) sitBlit(1-h.st/.5); return; }                       /* lifting off: the sitting bird fades as the flying one takes over */
+      h.rt=0; critterBlit(null,null,h,s2,kL,h.pal,()=>hawkSitParts(h,h.pal),h.yaw,40,40,10,dy>2? null : h.blades,a,.7); return s; };
+    if(layer==="ground"&&inAir) return;
     h.t+=dt; h.st+=dt;
     let P=null, flare=0, glide=false;
     if(h.state==="approach"){
       const u=Math.min(1,h.st/h.dur), e=u*(2-u), z=zT;                                                          /* far off: a long glide in from the side, dropping toward the far edge of the lawn */
-      h.x=lerp(h.sx0,h.tx,e); h.y=lerp(h.sy0,h.ty-9*kL,e*e)+Math.sin(u*Math.PI)*-14; h.m=1; P=[(h.x-cx)*z/F,(h.y-cy)*z/F,z];
+      h.x=lerp(h.sx0,h.tx,e); h.y=lerp(h.sy0,h.ty-15*kL,e*e)+Math.sin(u*Math.PI)*-14; h.m=1; P=[(h.x-cx)*z/F,(h.y-cy)*z/F,z];
       flare=Math.max(0,(u-.82)/.18); glide=Math.sin(h.t*1.6)>-.3&&flare===0;                                       /* mostly sailing, a few deep beats, then flaring up to land */
-      if(u>=1){ h.state="land"; h.st=0; h.fold=0; h.fx=h.x; h.fy=h.y; arrive(h.tx,h); h.yaw=h.V&&h.V[0]<0? Math.PI-.35 : .35; } }   /* everything small on the lawn scatters */
+      if(u>=1){ h.state="land"; h.st=0; h.fold=0; h.fx=h.x; h.fy=h.y; arrive(h.tx,h); h.yaw=h.V&&h.V[0]<0? Math.PI-.35 : .35; sitBlit(1,6*kL); return; }   /* the same frame it touches down, the standing bird is there */ }   /* everything small on the lawn scatters */
     else if(h.state==="land"||h.state==="sit"){
-      if(h.state==="land"){ const u=Math.min(1,h.st/1.1); h.fold=u*u*(3-2*u); if(h.st>1.1){ h.state="sit"; h.st=0; h.dur=rnd(7,11); } }   /* wings fold smoothly as it settles */
+      if(h.state==="land"){ const u=Math.max(0,Math.min(1,(h.st-.2)/1.0)); h.fold=u*u*(3-2*u)-Math.sin(Math.min(1,h.st/.9)*Math.PI*3)*.12*(1-u); if(h.st>1.25){ h.state="sit"; h.st=0; h.dur=rnd(7,11); h.fold=1; } }   /* touches down wings still up, a mantling flutter, then folds them away */
       h.lookT-=dt; if(h.lookT<=0){ h.lookT=rnd(.6,1.8); h.lookTo=rnd(-1.4,1.4); } h.look+=((h.lookTo||0)-h.look)*Math.min(1,dt*8);
-      if(h.state==="sit"&&h.st>h.dur){ const s0=toScreen(h.Xw,h.Dw); h.state="leave"; h.st=0; h.pp=null; h.lx0=s0.x; h.ly0=s0.y-9*kL; h.ltx=h.tx<W/2? -W*.05 : W*1.05; h.lty=gnd().vy-rnd(60,140); }
-      const XF=.6, s=sitBlit(h.state==="land"? Math.min(1,h.st/XF) : 1);
-      if(h.state==="land"&&h.st<XF){ const e=h.st/XF, ee=e*e*(3-2*e); h.x=lerp(h.fx,s.x,ee); h.y=lerp(h.fy,s.y-9*kL,ee); h.m=1; P=[(h.x-cx)*zT/F,(h.y-cy)*zT/F,zT]; flare=1-ee*.4; glide=true; h.drawA=1-ee; }   /* the flying bird settles and dissolves into the sitting one */
-      else { h.x=s.x; h.y=s.y-14*kL; h.m=1; return; } }
+      if(h.state==="sit"&&h.st>h.dur){ h.state="lift"; h.st=0; }
+      const dy=h.state==="land"? Math.pow(1-Math.min(1,h.st/.28),2)*6*kL : 0, s=sitBlit(1,dy);   /* the last few inches of the drop as its feet reach for the grass */
+      h.x=s.x; h.y=s.y-14*kL; h.m=1; return; }
+    else if(h.state==="lift"){ const u=Math.min(1,h.st/.45); h.fold=1-u*u*(3-2*u)*1.1; const s=sitBlit(1,u*u*9*kL); h.x=s.x; h.y=s.y-14*kL;   /* wings open, a spring off the grass... */
+      if(u>=1){ h.state="leave"; h.st=0; h.pp=null; h.lx0=s.x; h.ly0=s.y-9*kL-9*kL; h.ltx=h.tx<W/2? -W*.05 : W*1.05; h.lty=gnd().vy-rnd(60,140); } return; }   /* ...and it is the flying bird that carries on */
     else { const u=Math.min(1,h.st/5), z=zT*Math.pow(10/zT,u), e=u*(2-u);                                      /* lifting off and beating away from you into the distance */
       h.x=lerp(h.lx0,h.ltx,e); h.y=lerp(h.ly0,h.lty,e)-Math.sin(u*Math.PI)*20*sk; h.m=zT/z; P=[(h.x-cx)*z/F,(h.y-cy)*z/F,z]; glide=(h.st%1.4)>.9;
       if(u>=1){ hawkG=null; nextHawkG=rnd(150,260); return; } }
@@ -3604,13 +3615,13 @@ const ambient=(function(){
     const x=hkcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,hkcv.width,hkcv.height);
     hawk3D(x,P,h.V||V,h.fl,glide,flare,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz-h.x+sz/2, cy+Y3*F/zz-h.y+sz/2]; },Kw);
     x.globalCompositeOperation="source-atop"; const sp=sun(), sdx=Math.sign(sp.x-h.x)||1, lt=dark?.5:.74;
-    x.fillStyle=`rgba(20,14,8,${(1-lt).toFixed(2)})`; x.fillRect(0,0,sz,sz); x.fillStyle="rgba(255,164,80,.16)"; x.fillRect(0,0,sz,sz);
+    x.fillStyle=`rgba(20,14,8,${(1-lt).toFixed(2)})`; x.fillRect(0,0,sz,sz); x.fillStyle="rgba(255,164,80,.09)"; x.fillRect(0,0,sz,sz);
     const rl=x.createLinearGradient(sz/2-sdx*sz*.25,0,sz/2+sdx*sz*.25,0); rl.addColorStop(0,"rgba(20,12,6,.2)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,"rgba(255,196,120,.28)"); x.fillStyle=rl; x.fillRect(0,0,sz,sz);
     if(!h.bg||(h.bgT=(h.bgT||0)-1)<=0){ h.bgT=8; const ip=toImg(h.x,h.y); h.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,130,90]; }
-    const haze=Math.min(.78,Math.max(0,(zT/h.m-2)/12)+.18); x.fillStyle=rgb(mixv(h.bg,[236,184,126],.25),haze); x.fillRect(0,0,sz,sz);
+    const haze=Math.min(.78,Math.max(0,(zT/h.m-2)/12)+.1); x.fillStyle=rgb(mixv(h.bg,[236,184,126],.25),haze); x.fillRect(0,0,sz,sz);
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    const bl=.6+Math.max(0,h.m-3)*.4; ctx.save(); ctx.globalAlpha=h.state==="leave"? Math.min(1,(1-h.st/5)*3,h.st/.5) : h.state==="land"? h.drawA : Math.min(1,h.st*2); ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(hkcv,0,0,sz,sz,h.x-sz/2,h.y-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
+    const bl=.6+Math.max(0,h.m-3)*.4; ctx.save(); ctx.globalAlpha=h.state==="leave"? Math.min(1,(1-h.st/5)*3) : Math.min(1,h.st*2); ctx.filter=`blur(${bl.toFixed(1)}px)`; ctx.drawImage(hkcv,0,0,sz,sz,h.x-sz/2,h.y-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
   }
   /* ---- little brown bats in 3D: membrane wings on finger bones, beating deep and fast, jinking after insects over the lawn ---- */
   function bat3D(x,P,V,ph,proj,K){
@@ -5085,7 +5096,7 @@ const ambient=(function(){
       for(const q of sqs) L.push({y:toScreen(q.Xw,q.Dw).y,fn:()=>drawSquirrel(q,dt,dark)});
       stepDoe(dt); if(doe){ const d=doe; L.push({y:toScreen(d.Xw,d.Dw).y,fn:()=>paintDeer(deerPose(d,1,false),dark,{yaw:d.yaw,alpha:d.alpha})}); L.push({y:toScreen(d.fawn.Xw,d.fawn.Dw).y,fn:()=>paintDeer(deerPose(d.fawn,.62,true),dark,{yaw:d.fawn.yaw,alpha:d.alpha})}); }
       drawHenAll(dt,dark,L);
-      if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||(hawkG.state==="leave"&&hawkG.st<.5))) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
+      if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||hawkG.state==="lift")) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L);
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
@@ -5102,12 +5113,12 @@ const ambient=(function(){
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { rigShot(kind,yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=700; c.height=420; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,700,420);
+  return { hawkDbg(){ return hawkG&&{st:hawkG.state,t:+hawkG.st.toFixed(2),x:Math.round(hawkG.x),y:Math.round(hawkG.y),tx:Math.round(hawkG.tx),ty:Math.round(hawkG.ty)}; }, rigShot(kind,yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=700; c.height=420; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,700,420);
       const f={kind,ph:.4,head:0,turn:0,state:'run',yaw,sniff:0,cock:.5,worm:0}, lit=.68, P={fur:mulv(kind==='racc'?[128,120,108]:[110,70,42],lit),dark:mulv([30,27,26],lit),pale:mulv([226,220,206],lit),tail:mulv([44,40,38],lit),teeth:mulv([226,128,40],lit),stick:mulv([150,120,84],lit),leaf:mulv([92,110,52],lit),body:mulv([238,112,32],.8),spot:mulv([214,42,26],.8),back:mulv([92,82,72],lit),breast:mulv([196,86,40],lit),belly:mulv([226,214,196],lit),head:mulv([42,38,36],lit),ring:mulv([236,232,222],lit),bill:mulv([232,184,60],lit),leg:mulv([110,92,76],lit),worm:mulv([190,120,110],lit)};
       const parts=kind==='racc'? raccoonParts(f,P,true) : kind==='beaver'? beaverParts(f,P,true) : kind==='eft'? eftParts(Object.assign(f,{state:'walk'}),P) : robinParts(Object.assign(f,{state:'listen'}),P);
       x.translate(350,340); x.scale(sc,sc); rigDraw(x,parts,rigView(yaw,pitch),1); return c.toDataURL(); }, newDbg(){ const P=o=>o&&{x:Math.round(toScreen(o.Xw,o.Dw).x),y:Math.round(toScreen(o.Xw,o.Dw).y),g:Math.round(toScreen(o.Xw,o.Dw).g),st:o.state}; return {racc:P(racc),beaver:P(beaver),eft:P(eft),robin:P(wcs.find(w=>w.kind==="robin")),chip:P(sqs.find(q=>q.kind==="chip"))}; }, bfSheet(){ const ks=Object.keys(BFLY), c=document.createElement('canvas'); c.width=ks.length*2*26*5; c.height=34*5+20; const x=c.getContext('2d'); x.fillStyle='#6b6248'; x.fillRect(0,0,c.width,c.height);
       ks.forEach((k,i)=>{ const sp=butterflySprite(k)[0]; const ox=i*2*26*5+26*5; x.save(); x.translate(ox,0); x.drawImage(sp,0,0,sp.width/2,sp.height/2); x.scale(-1,1); x.drawImage(sp,0,0,sp.width/2,sp.height/2); x.restore(); }); return c.toDataURL(); }, clDbg(){ return {c:clods.length,h:holes.map(h=>[Math.round(h.x),Math.round(h.y),+h.w.toFixed(1),+h.a.toFixed(2)]),c0:clods[0]&&[Math.round(clods[0].x),Math.round(clods[0].y),+clods[0].r.toFixed(1)],lab:lab&&[lab.state,Math.round(toScreen(lab.Xw,lab.Dw).x),Math.round(toScreen(lab.Xw,lab.Dw).y)]}; }, pfShot(views){ const c=document.createElement('canvas'); c.width=1200; c.height=800; const x=c.getContext('2d'); x.fillStyle='#8a7a66'; x.fillRect(0,0,1200,800); const sunL=[.3,-.2,.93];
-      views.forEach((v,i)=>{ const cx=200+(i%3)*400, cy=200+Math.floor(i/3)*400, F=900; const P=[0,0,3]; pileatedFly3D(x,P,v.f,v.flap,v.glide,(X,Y,Z)=>[cx+X*F/Z,cy+Y*F/Z],.045,sunL); }); return c.toDataURL(); },
+      views.forEach((v,i)=>{ const cx=200+(i%3)*400, cy=200+Math.floor(i/3)*400, F=900; const P=[0,0,3]; (v.fn==='jay'?blueJay3D:v.fn==='bb'?blueBird3D:pileatedFly3D)(x,P,v.f,v.flap,v.glide,(X,Y,Z)=>[cx+X*F/Z,cy+Y*F/Z],.045,sunL); }); return c.toDataURL(); },
     tuShot(yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=900; c.height=560; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,900,560);
       const tu={ph:1,hide:0,hd:0,state:'walk',yaw,spots:[]}, lit=.62, P={shell:mulv([66,44,22],lit*1.15), spot:mulv([226,158,46],lit*1.1), rim:mulv([92,70,34],lit), skin:mulv([74,54,36],lit), head:mulv([82,58,36],lit), beak:mulv([150,128,92],lit), claw:mulv([58,46,34],lit)};
       const M=turtleShell(); x.translate(450,400); x.scale(sc,sc); const V=rigView(yaw,pitch); rigDraw(x,turtleParts(tu,P),V,1); drawTurtleShell(x,V,M,P,1); return c.toDataURL(); }, tuDbg(){ return turtle&&{x:Math.round(turtle.sx),y:Math.round(toScreen(turtle.Xw,turtle.Dw).y),st:turtle.state}; }, pkDbg(){ return pecker&&{st:pecker.state,x:Math.round(pecker.x),y:Math.round(pecker.y),m:+(pecker.m||1).toFixed(2)}; }, jmDbg(){ return jm&&{t:+jm.t.toFixed(2),x:Math.round(jm.sx||0),y:Math.round(jm.sy||0)}; }, critDbg(){ const o={}; for(const [k,v] of [["fox",fox],["gray",coyote],["cub",cub],["mom",mom]]) if(v){ const q=toScreen(v.Xw,v.Dw); o[k]=[Math.round(q.x),Math.round(q.y),+q.g.toFixed(1),v.state]; } return o; }, jayDbg(){ return jays&&{t:+jays.t.toFixed(1),x:Math.round(jays.ax||0),y:Math.round(jays.ay||0),z:+(jays.zs||0).toFixed(2)}; }, metDbg(){ return {m:meteors.map(m=>[Math.round(m.x0),Math.round(m.y0),+(t-m.t0).toFixed(2),m.big]),comet:[Math.round(W*.34),Math.round(Math.max(H*.075,scr(.335,.058)[1]))],d:+duskV.toFixed(3)}; }, hazeDbg(){ return plumes.map(q=>[q.kind,q.spot,+q.t.toFixed(1),q.parts.length]); }, dogDbg(){ return [dog,lab].map(d=>d&&{...(({x,y})=>({x:Math.round(x),y:Math.round(y)}))(toScreen(d.Xw,d.Dw)),st:d.state,ch:!!d.chase,led:!!d.led}); }, scrDbg(x,y){ return scr(x,y).map(Math.round); }, chDbg(){ return {mons:mons.map(m=>[Math.round(m.sx),Math.round(m.sy),+m.t.toFixed(1)]),ch:bbChase&&[Math.round(bbChase.sx||0),Math.round(bbChase.sy||0),+bbChase.t.toFixed(1)],nc:+nextChase.toFixed(1),life:mons.map(m=>+m.life.toFixed(1))}; }, utvPts(){ return UTV_PATH.map(([ix,iy])=>{ const s0=scr(ix,iy), g=toGround(s0[0],s0[1]); return [Math.round(s0[0]),Math.round(s0[1]),+g.Xw.toFixed(2),+trueZ(g.Dw).toFixed(2)]; }).concat([[gnd().vy,FOC(),GF]]); }, utvDbg(){ if(!utv) return null; const q=utvAt(utv,utv.d); return {d:+utv.d.toFixed(2),len:+utv.len.toFixed(1),X:+q[0].toFixed(2),Z:+q[1].toFixed(2),sx:Math.round(utv.sx||0),sy:Math.round(utv.sy||0),r:Math.round(utv.sr||0),hv:+(utv.hv||0).toFixed(4),pi:+(utv.pitch||0).toFixed(3),ro:+(utv.roll||0).toFixed(3),v:+utv.v.toFixed(3),yaw:+(utv.yaw||0).toFixed(2),dm:+utv.cum[utv.iM].toFixed(2),aw:utv.away}; }, soarDbg(k){ return soarers.filter(b=>b.kind===k).map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,b.st||'',+b.Y.toFixed(2),+b.Z.toFixed(1)]; }); }, ravDbg(){ return soarers.filter(b=>b.kind==="raven").map(b=>{ const c=w2s(b.X,b.Y,b.Z); return [c.x,c.y,!!b.roll]; }); }, bigDbg(){ return bigL&&{x:bigL.sx,y:bigL.sy,S:bigL.sS,k:bigL.kind,D:bigL.D}; }, ptDbg(){ return {st:dog&&dog.state,t:dog&&+dog.t.toFixed(1),covey:covey.length,pheas:!!pheas,q:covey[0]&&[Math.round(covey[0].sx),Math.round(covey[0].sy)],d:dog&&toScreen(dog.Xw,dog.Dw)}; }, banDbg(){ return ban&&ban.bp; }, pfDbg(){ if(!pf) return null; const F=H*.5; return {t:+pf.t.toFixed(2),sx:Math.round(W/2+pf.P[0]*F/pf.P[2]),sy:Math.round(H*.52+pf.P[1]*F/pf.P[2]),z:+pf.P[2].toFixed(2),r:Math.round(.016*32*F/Math.max(.3,pf.P[2])+30)}; }, eagleDbg(){ if(!eag) return null; const P=eagleAt(eag,eag.t/eag.dur); return {t:+eag.t.toFixed(1),P:P.map(v=>+v.toFixed(2)),sx:Math.round(W/2+P[0]*H*.5/P[2]),sy:Math.round(H*.52+P[1]*H*.5/P[2]),amp:+eag.amp.toFixed(2),bank:+eag.bank.toFixed(2),hy:+eag.hy.toFixed(2)}; }, where(){ return [dog,lab].map(d=>d&&Object.assign(toScreen(d.Xw,d.Dw),{flee:!!d.flee,st:d.state})).concat([buck&&Object.assign(buckPose(),{on:buck.onLawn})]).concat(wcs.map(w=>Object.assign(toScreen(w.Xw,w.Dw),{st:w.state}))).concat(mons.map(m=>({x:m.sx,y:m.sy,st:"mon",z:m.z}))).concat(sqs.map(q=>Object.assign(toScreen(q.Xw,q.Dw),{st:"sq:"+q.kind+":"+q.state}))).concat([cub,mom].filter(Boolean).map(b=>Object.assign(toScreen(b.Xw,b.Dw),{st:"bear"}))).concat(hawkG?[{x:hawkG.x,y:hawkG.y,st:"hk:"+hawkG.state+":"+hawkG.st.toFixed(2)}]:[]).concat(hum&&hum.sx!=null?[{x:hum.sx,y:hum.sy,st:"hum"}]:[]).concat(pecker?[{x:pecker.x,y:pecker.y,st:"pk:"+pecker.state,z:pecker.m}]:[]); }, spawn(n){ lastArrive=-99; callT=t+4; if(n!=="lull") lull=0; if(n==="skunk"){ skunk=null; nextSkunk=0; } else if(n==="bobcat"){ bobcat=null; nextBobcat=0; } else if(n==="turkeys"){ turks=null; nextTurks=0; } else if(n==="pheasw"){ pheasW=null; nextPheasW=0; } else if(n==="grouse"){ grouse=null; pheas=null; flushGrouse(); } else if(n==="pheasant"){ grouse=null; pheas=null; flushPheasant(); } else if(n==="owl"){ soarers=soarers.filter(b=>b.kind!=="owl"); startOwl(); } else if(n==="vultures"){ soarers=soarers.filter(b=>b.kind!=="vult"); startVultures(); } else if(n==="geese"){ if(flocks.length>=2) flocks.shift(); flocks.push(newFlock()); } else if(n==="deer"){ herd=[]; nextDeer=0; } else if(n==="bats"){ duskV=Math.max(duskV,.5); } else if(n==="dig"&&lab){ startDig(lab); } else if(n==="roll"&&lab){ startRoll(lab); } else if(n==="bfjump"&&dog){ const s0=toScreen(dog.Xw,dog.Dw); mons.push({t:0,life:30,sx:s0.x+s0.g*.3,sy:s0.y-s0.g*.2,z:3,dir:-1,ph:0,flapT:0,glide:0,ang:.4,tz:3,wy:0}); dog.bfT=0; } else if(n.startsWith("bfly:")){ cmon=null; startCmon(n.split(":")[1]); } else if(n==="raccoon"){ racc=startWaddler("racc"); } else if(n==="beaver"){ beaver=startWaddler("beaver"); } else if(n==="eft"){ eft=null; startEft(); } else if(n==="robin"){ wcs.length=0; startRobins(); } else if(n==="chipmunk"){ startSquirrels("chip"); } else if(n==="darner"){ startBug("darner"); } else if(n==="bee"){ startBug("bee"); } else if(n==="fireflies"){ for(let i=0;i<28;i++){ const x0=rnd(W*.05,W*.95); flies.push({ax:x0,ay:gnd().vy+lawnMinG(x0)+rnd(0,H*.32),x:x0,y:0,per:rnd(2.4,5),ph:rnd(0,6),wan:rnd(0,6),r:rnd(1.4,2.4),life:t+rnd(30,45)}); } }   /* a summer night's worth, rising over the lawn */ else if(n==="fox"){ nextFox=0; dog=lab=null; rompAt=null; } else if(n==="cub"){ nextCub=0; dog=lab=null; rompAt=null; } else if(n==="grayfox") nextCoyote=0; else if(n==="coyote"){ coy2=null; nextCoy2=0; } else if(n==="turtle"){ turtle=null; nextTurtle=0; } else if(n==="jays"){ jays=null; nextJays=0; startJays(); } else if(n==="pheasfront"){ pf=null; nextPF=0; } else if(n==="lab") nextLab=0;  else if(n==="point"&&dog){ const sx=toScreen(dog.Xw,dog.Dw).x, q=toGround(sx,gnd().vy+lawnMinG(sx)+6); dog.tX=q.Xw; dog.tD=q.Dw; dog.toBrush=true; dog.state="run"; dog.romp=0; dog.chase=false; dog.toViewer=false; dog.legs=Math.max(dog.legs,2); } else if(n==="quail"){ quails=[]; startQuail(); } else if(n==="chase"){ bbChase=null; nextChase=0; } else if(n==="utv"){ utv=null; startUtv(); } else if(n==="utv2"){ utv=null; utvRoute=1; startUtv(); } else if(n==="utv1"){ utv=null; utvRoute=0; startUtv(); } else if(n==="falcon"){ soarers=soarers.filter(b=>b.kind!=="falcon"); startFalcon(); } else if(n==="heron"){ soarers=soarers.filter(b=>b.kind!=="heron"); startHeron(); } else if(n==="hawkv"){ soarers=soarers.filter(b=>b.kind!=="hawk"); startHawk(); } else if(n==="ravens"){ soarers=soarers.filter(b=>b.kind!=="raven"); startRavens(); } else if(n==="cmon"){ cmon=null; startCmon(); } else if(n==="banner"){ ban=null; startBanner(); } else if(n==="eagle"){ eag=null; startEagle(false); } else if(n==="goldeneagle"){ eag=null; startEagle(true); } else if(n==="greet"&&dog){ dog.legs=0; dog.romp=0; dog.state="run"; dog.tX=dog.Xw; dog.tD=dog.Dw; dog.pointed=true; } else if(n==="buckLawn"){ buck2=null; startBuck(); buck.plan=[{k:"walk",...lawnPt()},{k:"look",dur:8}]; } else if(n==="flock"){ bbFlock=null; startFlock("blue"); } else if(n==="finch"){ bbFlock=null; startFlock("finch"); } else if(n==="woodcock"){ wcs.length=0; nextWc=0; } else if(n==="monarch"){ nextMon=0; } else if(n==="doe"){ doe=null; nextDoe=0; } else if(n==="hum"){ hum=null; nextHum=0; } else if(n==="hen"){ hen=null; nextHen=0; } else if(n==="lull"){ lull=60; } else if(n==="jaymon"){ jm=null; startJM(); } else if(n==="smoke"){ nextSmoke=0; } else if(n==="mistcol"){ nextMistC=0; } else if(n==="meteor"){ duskV=Math.max(duskV,.62); metNext=t; } else if(n==="dusk"){ duskV=.62; } else if(n==="squirrels"){ nextSq=0; } else if(n==="bigleaf"){ bigL=null; nextBig=0; } else if(n==="hawkg"){ hawkG=null; nextHawkG=0; } else if(n==="pecker"){ pecker=null; nextPecker=0; startPecker(); } else if(n.startsWith("moth")){ hero=null; nextHero=0; forceDir=n.split(":")[1]==="in"?"in":n.split(":")[1]==="out"?"out":null; forceMoth=n.split(":")[1]||null; } else if(n==="buck2"){ buck2=null; nextBuck2=0; } else if(n==="sit"&&dog){ dogSit(dog,false); dog.st=7; dog.scr=[1.6,4.4]; if(lab){ dogSit(lab,false); lab.st=7; lab.scr=null; } } else if(n==="romp"){ dog=lab=null; rompAt=0; } else if(n==="mom"&&cub) cub.momAt=0; }, get on(){ return on; }, set(v){ on=!!v; try{ localStorage.setItem(SC.key+"-ambient",on?"on":"off"); }catch(e){} start(); natureSfx.refresh(); } };
@@ -5313,7 +5324,14 @@ const critterMenu=(function(){
    {o:.3,p:"!13,48 !15.6,45.4 18.2,48 !15.6,50.6"},{o:.45,p:"!49,52 !51.4,49.6 53.8,52 !51.4,54.4"},{o:.3,p:"!52,16 !54,14 56,16 !54,18"},{o:.4,p:"!12,18 !14.4,15.6 16.8,18 !14.4,20.4"},
    {p:"!32,14 35,15 36.4,18 38.6,21 39.6,26 39.6,33 38.6,40 36,45 32,47 28,45 25.4,40 24.4,33 24.4,26 25.4,21 27.6,18 29,15"},
    {o:.55,p:"!29,47 32,45.6 35,47 36,52 32,56.4 28,52"},{o:.25,p:"!23,51 32,43 41,51 32,61.6"},
-   {h:1,p:"!31.6,20 !32.4,20 !32.4,40 !31.6,40"},{p:"!29,15 26,9 !24,6 !24.6,5.6 26.8,8.6 !30,14.6"},{p:"!35,15 38,9 !40,6 !39.4,5.6 37.2,8.6 !34,14.6"}]
+   {h:1,p:"!31.6,20 !32.4,20 !32.4,40 !31.6,40"},{p:"!29,15 26,9 !24,6 !24.6,5.6 26.8,8.6 !30,14.6"},{p:"!35,15 38,9 !40,6 !39.4,5.6 37.2,8.6 !34,14.6"}],
+  utv:[ /* the side-by-side, Jim & Christy aboard: roll cage, two riders, chunky tyres */
+   {p:"!24,30 !27.4,13 !46,13 !48.6,30 !46.6,30 !44.4,15.2 !29,15.2 !26,30"},
+   {p:"!4.6,42 !6.6,34.6 !22,32.4 !25,29 !48,29 !50.4,32.6 !58.6,33.6 !60,42 !56,42 52.4,37.4 45.6,37.4 41.6,42 !22.6,42 18.6,37.4 12,37.4 8.4,42"},
+   {p:"33.70,20.40 33.43,21.57 32.68,22.51 31.60,23.03 30.40,23.03 29.32,22.51 28.57,21.57 28.30,20.40 28.57,19.23 29.32,18.29 30.40,17.77 31.60,17.77 32.68,18.29 33.43,19.23"},{p:"43.30,20.40 43.03,21.57 42.28,22.51 41.20,23.03 40.00,23.03 38.92,22.51 38.17,21.57 37.90,20.40 38.17,19.23 38.92,18.29 40.00,17.77 41.20,17.77 42.28,18.29 43.03,19.23"},
+   {p:"!27.4,29.6 27.8,25.6 31,23.8 34.2,25.6 34.6,29.6"},{p:"!37,29.6 37.4,25.6 40.6,23.8 43.8,25.6 44.2,29.6"},
+   {p:"22.60,46.00 22.17,48.46 20.92,50.63 19.00,52.24 16.65,53.09 14.15,53.09 11.80,52.24 9.88,50.63 8.63,48.46 8.20,46.00 8.63,43.54 9.88,41.37 11.80,39.76 14.15,38.91 16.65,38.91 19.00,39.76 20.92,41.37 22.17,43.54"},{p:"56.00,46.00 55.57,48.46 54.32,50.63 52.40,52.24 50.05,53.09 47.55,53.09 45.20,52.24 43.28,50.63 42.03,48.46 41.60,46.00 42.03,43.54 43.28,41.37 45.20,39.76 47.55,38.91 50.05,38.91 52.40,39.76 54.32,41.37 55.57,43.54"},
+   {h:1,p:"18.00,46.00 17.65,47.30 16.70,48.25 15.40,48.60 14.10,48.25 13.15,47.30 12.80,46.00 13.15,44.70 14.10,43.75 15.40,43.40 16.70,43.75 17.65,44.70"},{h:1,p:"51.40,46.00 51.05,47.30 50.10,48.25 48.80,48.60 47.50,48.25 46.55,47.30 46.20,46.00 46.55,44.70 47.50,43.75 48.80,43.40 50.10,43.75 51.05,44.70"},{h:1,p:"!9,36.6 !21,35 !21,36.2 !9,37.8"}]
   };
   /* the outline to a smooth closed path */
   function critterPath(spec){ const P=spec.trim().split(/\s+/).map(s=>{ const sh=s[0]==="!"; const [x,y]=(sh?s.slice(1):s).split(",").map(Number); return {x,y,sh}; });
@@ -5327,7 +5345,7 @@ const critterMenu=(function(){
     const sh=s=>`<path d="${critterPath(s.p)}"${s.o?` opacity="${s.o}"`:""}/>`;
     const mask=S.filter(s=>s.h).map(s=>`<path d="${critterPath(s.p)}" fill="#000"/>`).join(""), under=S.filter((s,i)=>!s.h&&i<last).map(sh).join(""), over=S.filter((s,i)=>!s.h&&i>last).map(sh).join("");
     return `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g fill="currentColor">${last<0? over : `<defs><mask id="${id}"><rect width="64" height="64" fill="#fff"/>${mask}</mask></defs><g mask="url(#${id})">${under}</g>${over}`}</g></svg>`; }
-  const LIST=[["Mammals",[["fox","fox","Red fox"],["grayfox","grayfox","Gray fox"],["coyote","coyote","Coyote"],["cub","bear","Black bears"],["bobcat","bobcat","Bobcat"],["raccoon","raccoon","Raccoon"],["skunk","skunk","Striped skunk"],["beaver","beaver","Beaver"],["buckLawn","buck","White-tailed buck"],["doe","doe","Doe & fawn"],["squirrels","squirrel","Squirrels"],["chipmunk","chipmunk","Chipmunk"],["bats","bats","Little brown bats"],["romp","dogs","Willow & Tulip"]]],
+  const LIST=[["Mammals",[["fox","fox","Red fox"],["grayfox","grayfox","Gray fox"],["coyote","coyote","Coyote"],["cub","bear","Black bears"],["bobcat","bobcat","Bobcat"],["raccoon","raccoon","Raccoon"],["skunk","skunk","Striped skunk"],["beaver","beaver","Beaver"],["buckLawn","buck","White-tailed buck"],["doe","doe","Doe & fawn"],["squirrels","squirrel","Squirrels"],["bats","bats","Little brown bats"],["romp","dogs","Willow & Tulip"],["utv","utv","Jim & Christy"]]],
     ["Birds",[["eagle","eagle","Bald eagle"],["goldeneagle","goldeneagle","Golden eagle"],["hawkg","redtail","Red-tailed hawk"],["falcon","falcon","Peregrine falcon"],["heron","heron","Great blue heron"],["ravens","ravens","Common ravens"],["vultures","vultures","Turkey vultures"],["owl","owl","Barred owl"],["geese","geese","Canada geese"],["turkeys","turkeys","Wild turkeys"],["hen","hen","Hen & poults"],["pheasfront","pheasant","Ring-necked pheasant"],["grouse","grouse","Ruffed grouse"],["quail","quail","Bobwhite quail"],["woodcock","woodcock","Woodcocks"],["robin","robin","American robin"],["flock","bluebirds","Eastern bluebirds"],["finch","finch","Goldfinches"],["jays","jays","Blue jays"],["pecker","pecker","Pileated woodpecker"],["hum","hum","Hummingbird"]]],
     ["Butterflies & Moths",[["cmon","monarch","Monarch"],["bfly:tiger","tiger","Tiger swallowtail"],["bfly:spice","spice","Spicebush swallowtail"],["bfly:frit","frit","Great spangled fritillary"],["bfly:admiral","admiral","Red admiral"],["bfly:cloak","cloak","Mourning cloak"],["bfly:sulphur","sulphur","Clouded sulphur"],["moth","moth","Luna moth"]]],
     ["Small Wonders",[["turtle","turtle","Box turtle"],["eft","eft","Red eft"],["fireflies","fireflies","Fireflies"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]]];
