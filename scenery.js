@@ -935,7 +935,7 @@ const ambient=(function(){
         x.fillStyle=g; x.beginPath(); x.moveTo(sp.x,sp.y); x.lineTo(sp.x+Math.cos(ang-wdt)*L,sp.y+Math.sin(ang-wdt)*L); x.lineTo(sp.x+Math.cos(ang+wdt)*L,sp.y+Math.sin(ang+wdt)*L); x.closePath(); x.fill(); }
       x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="destination-in"; const v=x.createLinearGradient(0,0,0,ch); v.addColorStop(0,"#000"); v.addColorStop(Math.min(.99,IY(.5)/H),"#000"); v.addColorStop(Math.min(1,IY(.68)/H),"rgba(0,0,0,0)"); x.fillStyle=v; x.fillRect(0,0,cw,ch);   /* the beams show in the air over the valley, and thin out before the lawn */
       if("filter" in ctx) ctx.filter="blur(3px)"; ctx.drawImage(sbC,0,0,cw*q,ch*q); ctx.filter="none"; }   /* beams fanning out through the gaps in the cloud */
-    { const g=ctx.createLinearGradient(0,IY(.42),0,H); g.addColorStop(0,`rgba(255,214,150,${(.1*a).toFixed(3)})`); g.addColorStop(1,`rgba(255,214,150,${(.04*a).toFixed(3)})`); ctx.fillStyle=g; ctx.fillRect(-W,IY(.42),W*3,H*2); }   /* the land warms in the light */
+    { const y0=IY(.3), y1=IY(.46), g=ctx.createLinearGradient(0,y0,0,H); const f=Math.max(.01,Math.min(.99,(y1-y0)/Math.max(1,H-y0))); g.addColorStop(0,"rgba(255,214,150,0)"); g.addColorStop(f,`rgba(255,214,150,${(.1*a).toFixed(3)})`); g.addColorStop(1,`rgba(255,214,150,${(.04*a).toFixed(3)})`); ctx.fillStyle=g; ctx.fillRect(-W,y0,W*3,H*2); }   /* the land warms in the light, fading in softly (no hard edge across the picture) */
     ctx.restore(); }
   /* the northern lights, low over the ridges to the right: green curtains with rays shimmering up through them, rose and violet along their tops */
   const auC=document.createElement("canvas"), auX=auC.getContext("2d");
