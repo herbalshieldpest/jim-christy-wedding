@@ -6122,41 +6122,52 @@ const critterMenu=(function(){
 const viewInfo=(function(){
   if(typeof document==="undefined") return null;
   const F='"Cormorant Garamond",Georgia,"Times New Roman",serif', MAP="https://www.google.com/maps/search/?api=1&query=39.6325435%2C-79.1129743";
-  const FACTS=[["Where","Hagen Cabin on Meadow Mountain<br>239 Moonridge Lane<br>Grantsville, MD 21536"],
-    ["Coordinates",`<a href="${MAP}" target="_blank" rel="noopener">39.6325&deg; N<br>79.1130&deg; W</a>`],
-    ["Elevation","About 2,800 ft (850 m)"],
+  const FACTS=[["Where","Hagen Cabin on Meadow Mountain<br>239 Moonridge Lane, Grantsville, MD"],
+    ["Coordinates",`<a href="${MAP}" target="_blank" rel="noopener">39.6325&deg; N, 79.1130&deg; W</a>`],
+    ["You&rsquo;re standing on","Red Ridge, Meadow Mountain"],
+    ["Elevation","About 2,800 feet (850 m)"],
+    ["Meadow Mountain","An Allegheny ridge, summit 3,022 ft"],
     ["County","Garrett County, Maryland"],
-    ["Mountain system","Appalachian Mountains"],
-    ["Range","Allegheny Mountains, on the Appalachian Plateau"],
-    ["You&rsquo;re standing on","Red Ridge, on Meadow Mountain"],
-    ["Meadow Mountain","A long Allegheny ridge, summit 3,022 ft"]];
+    ["Range","Allegheny Mountains"],
+    ["Mountain system","Appalachian Mountains"]];
+  const PIN=`<svg viewBox="0 0 30 38" aria-hidden="true"><path d="M15 1.5C7.6 1.5 1.8 7.2 1.8 14.4c0 9.6 11.1 20.3 12.3 21.5.5.5 1.3.5 1.8 0 1.2-1.2 12.3-11.9 12.3-21.5C28.2 7.2 22.4 1.5 15 1.5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14.2" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="15" cy="10.7" r="1.15" fill="currentColor"/><path d="M15 13.2v5.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+  /* a little engraving for the top: two wedding rings set in a setting sun, its rays fanning out, ridge lines folding away below, a pair of birds */
+  const ART=`<svg class="vi-art" viewBox="0 0 260 92" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-width="1.15" opacity=".7">${Array.from({length:11},(_,i)=>{ const a=Math.PI*(1.09+i*.082), r0=33, r1=i%2? 39 : 45; return `<path d="M${(130+Math.cos(a)*r0).toFixed(1)} ${(64+Math.sin(a)*r0).toFixed(1)}L${(130+Math.cos(a)*r1).toFixed(1)} ${(64+Math.sin(a)*r1).toFixed(1)}"/>`; }).join("")}</g>
+    <path d="M102 64a28 28 0 0 1 56 0" stroke-width="1.3" opacity=".85"/>
+    <circle cx="121" cy="49" r="12" stroke-width="2"/><circle cx="139" cy="49" r="12" stroke-width="2"/>
+    <path d="M135.2 37.4l3.8-4.6 3.8 4.6-3.8 2.2z" stroke-width="1.2"/>
+    <path d="M4 70C26 62 48 66 70 61s40-5 60 1 46 3 68-4 38 2 58 10" stroke-width="1.3"/>
+    <path d="M14 84c28-10 56-9 84-11s52 4 80 2 50-6 72 2" stroke-width="1.15" opacity=".65"/>
+    <path d="M56 26q4.5-4.5 9 0q4.5-4.5 9 0" stroke-width="1.2"/><path d="M80 17q3.4-3.4 6.8 0q3.4-3.4 6.8 0" stroke-width="1.05" opacity=".8"/></svg>`;
+  const ORN=`<svg class="vi-orn" viewBox="0 0 220 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M4 7h84M132 7h84" opacity=".55"/><path d="M110 2.5l4.5 4.5-4.5 4.5-4.5-4.5z"/><circle cx="96" cy="7" r="1.4" fill="currentColor" stroke="none"/><circle cx="124" cy="7" r="1.4" fill="currentColor" stroke="none"/></svg>`;
   const CSS=`.vi-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vh,32px) 16px;background:rgba(8,14,10,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
 .vi-back[hidden]{display:none}.vi-back.on{opacity:1}
-.vi-panel{position:relative;box-sizing:border-box;width:min(800px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;background:rgba(19,38,26,.84);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(20px,3.4vh,34px) clamp(20px,3.4vw,40px) clamp(18px,3vh,30px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
+.vi-panel{position:relative;box-sizing:border-box;width:min(700px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;text-align:center;background:rgba(19,38,26,.86);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(18px,3vh,30px) clamp(22px,4.6vw,52px) clamp(20px,3.2vh,32px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
 .vi-back.on .vi-panel{transform:none}
-.vi-pin{display:block;width:30px;height:38px;margin:0 auto 6px;color:#f6efe2;opacity:.9}
-.vi-title{margin:0;text-align:center;font:italic 500 clamp(30px,5vh,42px)/1.05 ${F};text-shadow:0 2px 14px rgba(0,0,0,.4)}
-.vi-sub{margin:8px 0 0;text-align:center;font:600 11.5px/1.5 ${F};letter-spacing:.26em;text-transform:uppercase;color:rgba(246,239,226,.72)}
-.vi-text{margin:clamp(12px,2vh,18px) 0 0;font:400 17.5px/1.5 ${F};color:rgba(250,245,236,.94)}
-.vi-text em{font-style:italic}
-.vi-facts{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:10px 16px;margin:clamp(16px,2.6vh,24px) 0 0;padding:clamp(14px,2.2vh,20px) 0 0;border-top:1px solid rgba(255,250,242,.22)}
-.vi-facts dt{font:600 10.5px/1.9 ${F};letter-spacing:.22em;text-transform:uppercase;color:rgba(246,239,226,.66);white-space:nowrap}
-.vi-facts dd{margin:0;font:400 16px/1.4 ${F};color:#f6efe2}
-.vi-facts a{color:inherit;text-decoration:underline;text-decoration-color:rgba(255,250,242,.45);text-underline-offset:3px}
-.vi-facts a:hover{text-decoration-color:#f6efe2}
+.vi-art{display:block;width:min(250px,64%,30vh);height:auto;margin:0 auto;color:#f6efe2;filter:drop-shadow(0 2px 10px rgba(0,0,0,.35))}
+.vi-title{margin:clamp(8px,1.6vh,16px) 0 0;font:400 clamp(40px,6.6vh,58px)/1 var(--script,"Pinyon Script","Great Vibes",cursive);text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.vi-sub{margin:clamp(10px,1.8vh,16px) 0 0;font:600 11.5px/1.5 ${F};letter-spacing:.28em;text-transform:uppercase;color:rgba(246,239,226,.74)}
+.vi-text{max-width:34em;margin:clamp(12px,2.2vh,20px) auto 0;font:italic 400 18px/1.55 ${F};color:rgba(250,245,236,.94)}
+.vi-orn{display:block;width:200px;max-width:60%;height:auto;margin:clamp(14px,2.4vh,22px) auto 0;color:rgba(246,239,226,.7)}
+.vi-facts{display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(18px,3.4vw,40px);margin:clamp(8px,1.6vh,14px) 0 0;text-align:left}
+.vi-fact{padding:clamp(7px,1.3vh,12px) 0;border-bottom:1px solid rgba(255,250,242,.16)}
+.vi-fact:nth-last-child(-n+2){border-bottom:0}
+.vi-fact dt{font:600 10.5px/1.3 ${F};letter-spacing:.24em;text-transform:uppercase;color:rgba(246,239,226,.62)}
+.vi-fact dd{margin:4px 0 0;font:400 17px/1.35 ${F};color:#f6efe2}
+.vi-fact a{color:inherit;text-decoration:underline;text-decoration-color:rgba(255,250,242,.45);text-underline-offset:3px}.vi-fact a:hover{text-decoration-color:#f6efe2}
 .vi-x{position:absolute;right:10px;top:10px;width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid transparent;border-radius:2px;color:#f6efe2;cursor:pointer}
 .vi-x:hover,.vi-x:focus-visible{background:rgba(255,250,242,.08);border-color:rgba(255,250,242,.3);outline:none}.vi-x svg{width:18px;height:18px}
-@media (max-width:720px){.vi-facts{grid-template-columns:auto 1fr}}@media (max-width:560px){.vi-facts{grid-template-columns:1fr;gap:2px}.vi-facts dd{margin-bottom:10px}.vi-text{font-size:17px}}
+@media (max-width:560px){.vi-facts{grid-template-columns:1fr}.vi-fact:nth-last-child(2){border-bottom:1px solid rgba(255,250,242,.16)}.vi-text{font-size:17px}}
+@media (max-height:720px) and (min-width:561px){.vi-art{width:170px}.vi-title{font-size:42px}.vi-text{font-size:16.5px;line-height:1.45}.vi-fact dd{font-size:16px}}
 @media (prefers-reduced-motion:reduce){.vi-back,.vi-panel{transition:none}}`;
-  const PIN=`<svg viewBox="0 0 30 38" aria-hidden="true"><path d="M15 1.5C7.6 1.5 1.8 7.2 1.8 14.4c0 9.6 11.1 20.3 12.3 21.5.5.5 1.3.5 1.8 0 1.2-1.2 12.3-11.9 12.3-21.5C28.2 7.2 22.4 1.5 15 1.5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14.2" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="15" cy="10.7" r="1.15" fill="currentColor"/><path d="M15 13.2v5.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
   let back=null, last=null;
   function build(){ const st=document.createElement("style"); st.textContent=CSS; document.head.append(st);
     back=document.createElement("div"); back.className="vi-back"; back.hidden=true; back.setAttribute("data-no-scenery","");
     back.innerHTML=`<div class="vi-panel" role="dialog" aria-modal="true" aria-labelledby="vi-title"><button type="button" class="vi-x" aria-label="Close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
-      <span class="vi-pin">${PIN}</span><h2 class="vi-title" id="vi-title">The View</h2><p class="vi-sub">From the front yard, where we&rsquo;ll say &ldquo;I do&rdquo;</p>
-      <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the spot where the ceremony will take place. We&rsquo;re standing about 2,800 feet up on <em>Red Ridge</em>, on <em>Meadow Mountain</em>, one of the long, parallel ridges of the <em>Allegheny Mountains</em>, the high, rugged western section of the <em>Appalachians</em>, here in the far western corner of Maryland.</p>
-      <p class="vi-text">Ridge after wooded ridge folds away toward the horizon. Meadows of goldenrod and tall grass run down to the tree line, and in the evening the sun sinks behind the mountains in exactly the light you see here.</p>
-      <dl class="vi-facts">${FACTS.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>`;
+      ${ART}<h2 class="vi-title" id="vi-title">The View</h2><p class="vi-sub">From the front yard, where we&rsquo;ll say &ldquo;I do&rdquo;</p>
+      <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the very spot where we&rsquo;ll be married. We&rsquo;re standing about 2,800 feet up on Red Ridge, on Meadow Mountain, one of the long, parallel ridges of the Allegheny Mountains. Wooded ridges fold away to the horizon, the meadows run gold with goldenrod, and in the evening the sun sets behind the mountains in exactly this light.</p>
+      ${ORN}<dl class="vi-facts">${FACTS.map(([k,v])=>`<div class="vi-fact"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl></div>`;
     document.body.append(back);
     back.addEventListener("click",e=>{ if(e.target===back||e.target.closest(".vi-x")) close(); });
     back.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); close(); }
