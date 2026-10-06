@@ -748,7 +748,7 @@ const ambient=(function(){
     const sp=sun(), cxr=sp.x, cyr=sp.y, R=sdDist()*1.52, bw=R*.15;
     const cw=Math.ceil(W), ch=Math.ceil(Math.max(10,IY(.56))); if(rbC.width!==cw||rbC.height!==ch){ rbC.width=cw; rbC.height=ch; }
     const x=rbX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch);
-    const ring=(r0,r1,stops,al)=>{ const g=x.createRadialGradient(cxr,cyr,r0,cxr,cyr,r1); stops.forEach(([p,c,k])=>g.addColorStop(p,rgb(c,k*al))); x.fillStyle=g; x.beginPath(); x.arc(cxr,cyr,r1,0,6.283); x.arc(cxr,cyr,r0,6.283,0,true); x.fill(); };
+    const ring=(r0,r1,stops,al)=>{ r0=Math.max(0,r0); r1=Math.max(r0+1,r1); const g=x.createRadialGradient(cxr,cyr,r0,cxr,cyr,r1);   /* (a negative radius throws, which stopped the whole scene) */ stops.forEach(([p,c,k])=>g.addColorStop(p,rgb(c,k*al))); x.fillStyle=g; x.beginPath(); x.arc(cxr,cyr,r1,0,6.283); x.arc(cxr,cyr,r0,6.283,0,true); x.fill(); };
     const SPEC=[[0,[150,90,220],0],[.1,[130,100,240],.4],[.2,[110,110,250],.6],[.26,[70,130,255],.75],[.42,[80,210,120],.8],[.58,[250,236,90],.85],[.72,[255,160,50],.85],[.86,[255,70,50],.8],[1,[255,60,50],0]];
     ring(R-bw*7,R-bw,[[0,[255,250,240],0],[1,[255,250,240],.1]],1);   /* the sky a touch brighter just inside the bow */
     ring(R-bw,R+bw*.15,SPEC,1);
