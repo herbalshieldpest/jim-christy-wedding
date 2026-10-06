@@ -3633,7 +3633,7 @@ const ambient=(function(){
   function featherTex(x,RX,RY,RW,RH,cell,ang,alpha){ const pat=x.createPattern(featherPat,"repeat"); if(!pat) return; const k=Math.max(.08,cell/12);
     try{ pat.setTransform(new DOMMatrix().translateSelf(RX,RY).rotateSelf(ang*57.3).scaleSelf(k,k)); }catch(e){}
     x.save(); x.globalCompositeOperation="source-atop"; x.globalAlpha=alpha; x.fillStyle=pat; x.fillRect(RX,RY,RW,RH); x.restore(); }
-  const nearFade=sz=>Math.max(0,Math.min(1,1-(sz/Math.min(W,H)-.14)/.18));   /* the closer and bigger, the fainter: out of focus and gone before it reaches you */
+  const nearFade=sz=>Math.max(0,Math.min(1,1-(sz/Math.min(W,H)-.34)/.22));   /* the closer and bigger, the fainter: out of focus and gone before it reaches you */
   function blitRegion(cv,cxp,cyp,rad,blur,alpha,solid){ if(!solid) alpha*=nearFade(Math.max(0,rad-30)*1.1);                       /* only the patch around the bird, so the blur doesn't run over the whole frame */
     const k=.6, x0=Math.max(0,Math.floor((cxp-rad)*k)), y0=Math.max(0,Math.floor((cyp-rad)*k)), x1=Math.min(cv.width,Math.ceil((cxp+rad)*k)), y1=Math.min(cv.height,Math.ceil((cyp+rad)*k));
     if(x1<=x0||y1<=y0) return; ctx.save(); ctx.globalAlpha=alpha; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`; ctx.drawImage(cv,x0,y0,x1-x0,y1-y0,x0/k,y0/k,(x1-x0)/k,(y1-y0)/k); ctx.restore(); ctx.filter="none"; }
