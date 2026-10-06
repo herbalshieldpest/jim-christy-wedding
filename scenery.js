@@ -6359,7 +6359,7 @@ const critterMenu=(function(){
     ["Day Sky",[["rainbow","rainbow","Rainbow"],["storm","storm","Distant storm"],["mistcol","mist","Mountain mist"]]," sky-day"],
     ["Night Sky",[["dusk","nightfall","Nightfall"],["meteor","meteor","Meteor shower"],["comet","comet","Comet"],["milkyway","milkyway","Milky Way"],["aurora","aurora","Northern lights"]]," sky-night"]];
   const F='"Cormorant Garamond",Georgia,"Times New Roman",serif';
-  const SUNI='<svg class="cc-si" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><path d="M10 1.6v2.6M10 15.8v2.6M1.6 10h2.6M15.8 10h2.6M4 4l1.8 1.8M14.2 14.2L16 16M4 16l1.8-1.8M14.2 5.8L16 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>', MOONI='<svg class="cc-si" viewBox="0 0 20 20" aria-hidden="true"><path d="M13.6 2.4a7.6 7.6 0 1 0 4 11.6A6.2 6.2 0 0 1 13.6 2.4z" fill="currentColor"/><circle cx="5" cy="4" r=".8" fill="currentColor"/><circle cx="2.6" cy="8.4" r=".6" fill="currentColor"/></svg>';
+  const SUNI='<svg class="cc-si" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.1"/><circle cx="12" cy="12" r="2" fill="currentColor" opacity=".55"/><g stroke="currentColor" stroke-linecap="round"><path stroke-width="1.1" d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3"/><path stroke-width=".8" d="M5.4 5.4l2 2M16.6 16.6l2 2M5.4 18.6l2-2M16.6 7.4l2-2"/></g></svg>', MOONI='<svg class="cc-si" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 3.6a8.6 8.6 0 1 0 5 13.4 7 7 0 0 1-5-13.4z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M19.2 4.2l.45 1.1 1.1.45-1.1.45-.45 1.1-.45-1.1-1.1-.45 1.1-.45zM21.4 9.6l.3.7.7.3-.7.3-.3.7-.3-.7-.7-.3.7-.3z" fill="currentColor"/></svg>';
   const CSS=`.cc-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(10px,2.4vh,24px) 16px;background:rgba(12,8,4,.46);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
 .cc-back[hidden]{display:none}.cc-back.on{opacity:1}
 .cc-panel{position:relative;box-sizing:border-box;width:min(1540px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;background:rgba(24,16,8,.76);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(16px,3vh,32px) clamp(16px,2.4vw,36px) clamp(14px,2.6vh,30px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
@@ -6383,15 +6383,9 @@ const critterMenu=(function(){
 .cc-toast.on{opacity:1;transform:translate(-50%,0)}
 @media (max-width:600px){.cc-back{padding:12px}.cc-panel{background:rgba(24,16,8,.86);padding:26px 10px 18px}.cc-sub{font-size:10.5px;letter-spacing:.2em;padding:0 30px}.cc-sec{margin:20px 4px 6px;font-size:11px}.cc-grid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}.cc-tile{font-size:10.5px;letter-spacing:.08em;padding:9px 2px}.cc-tile svg{width:46px;height:46px}}
 .cc-tile span{hyphens:manual;max-width:100%}
-.cc-si{width:15px;height:15px;flex:none;margin-right:-4px}
-.cc-sec.sky-day{color:#ffdf9e}.cc-sec.sky-day:before,.cc-sec.sky-day:after{background:linear-gradient(90deg,transparent,rgba(255,214,140,.5),transparent)}
-.cc-sec.sky-night{color:#c4cffb}.cc-sec.sky-night:before,.cc-sec.sky-night:after{background:linear-gradient(90deg,transparent,rgba(170,186,255,.5),transparent)}
-.cc-tile.sky-day{background:linear-gradient(180deg,rgba(104,166,226,.62) 0%,rgba(160,196,226,.5) 45%,rgba(246,204,132,.55) 80%,rgba(240,168,92,.6) 100%);border-color:rgba(255,226,170,.42)}
-.cc-tile.sky-day svg{color:#fff}.cc-tile.sky-day span{text-shadow:0 1px 3px rgba(60,40,10,.55)}
-.cc-tile.sky-night{background:radial-gradient(circle at 18% 22%,rgba(255,255,255,.9) 0 .7px,transparent 1.2px),radial-gradient(circle at 78% 14%,rgba(255,255,255,.75) 0 .6px,transparent 1.1px),radial-gradient(circle at 62% 38%,rgba(255,255,255,.6) 0 .5px,transparent 1px),radial-gradient(circle at 34% 58%,rgba(255,255,255,.5) 0 .5px,transparent 1px),radial-gradient(circle at 88% 64%,rgba(255,255,255,.7) 0 .6px,transparent 1.1px),linear-gradient(180deg,#0a0f2c 0%,#18214a 70%,#2a2c52 100%);border-color:rgba(160,178,255,.3)}
-.cc-tile.sky-night svg{color:#dfe6ff}
-.cc-tile.sky-day:hover,.cc-tile.sky-day:focus-visible{background:linear-gradient(180deg,rgba(140,190,232,.46),rgba(246,206,140,.4));border-color:rgba(255,226,170,.6)}
-.cc-tile.sky-night:hover,.cc-tile.sky-night:focus-visible{border-color:rgba(190,204,255,.65);box-shadow:0 0 14px -2px rgba(150,170,255,.45)}
+.cc-si{width:22px;height:22px;flex:none;margin:-6px -2px -6px 0;opacity:.9}
+.cc-sec.sky-day .cc-si{color:#f0d29a}.cc-sec.sky-night .cc-si{color:#d6dcf2}
+.cc-sec.sky-day{color:rgba(240,216,168,.82)}.cc-sec.sky-night{color:rgba(216,224,246,.82)}
 @media (max-height:690px) and (min-width:1100px){.cc-sub{display:none}.cc-sec{margin:7px 0 3px}.cc-title{font-size:28px}.cc-tile{padding-top:3px;padding-bottom:3px}}
 @media (prefers-reduced-motion:reduce){.cc-back,.cc-panel,.cc-tile svg,.cc-toast{transition:none}}`;
   let back=null, last=null, toastEl=null, toastT=null;
