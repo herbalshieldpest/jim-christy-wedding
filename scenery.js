@@ -4883,20 +4883,49 @@ const ambient=(function(){
     rigDraw(x,darnerParts(d,dark?.55:.86,vm),closeView(Pc),u); closePost(dfCv,x,sz,sx,sy,z,dark,d); }
   /* ---- a southern flying squirrel gliding past at dusk: soft grey-brown fur above and creamy white below, the furred skin stretched taut from wrist to ankle
      into a square sail, the flat feathery tail steering behind, and huge dark night eyes ---- */
-  function flySqParts(m,lt){ const B=m.B, out=[], C=(c,a)=>rgb(mulv(c,lt),a), FU=[150,128,104], WH=[236,230,216], DK=[52,40,32], sh=c=>[C(mulv(c,.55)),C(mixv(c,[255,236,200],.25))];
-    const SP=m.spread??1, P=q=>{ const lat=Math.abs(q[2])>1.4? Math.sign(q[2])*(1.4+(Math.abs(q[2])-1.4)*SP) : q[2], v=toCam(B,q[0]*(Math.abs(q[2])>1.4? .7+.3*SP : 1),q[1],lat); return [v[0],v[1],v[2],q[3]||0]; }, add=(pts,c,o)=>out.push(Object.assign({p:pts.map(P),c},o||{}));   /* SP: the membrane spread wide (1) or folded in along its sides (0) */
-    const und=m.under, top=und? WH : FU, bil=Math.sin(m.t*5)*.15;
-    for(const sd of [-1,1]){ const mem=[[3.2,0,sd*1.5,0],[5.0,-.25,sd*7.0,-1],[2.2,-.35+bil,sd*6.2,0],[-1.2,-.4+bil,sd*6.0,0],[-5.0,-.25,sd*6.7,-1],[-4.4,0,sd*1.6,0]];   /* the gliding membrane */
-      add(mem,C(top),{poly:true,bias:.05}); add(mem.slice(1,5).map(q=>[q[0],q[1],q[2]+sd*.05,.22]),C(und? mixv(WH,FU,.35) : mulv(FU,.7)),{bias:.04});
-      add([[3.1,0,sd*1.3,.5],[5.0,-.25,sd*7.0,.3]],C(und? WH : FU),{bias:-.01}); add([[5.0,-.25,sd*7.0,.32],[5.5,-.3,sd*7.4,.2]],C([222,196,180]),{bias:-.02});   /* forelimb and paw */
-      add([[-4,0,sd*1.4,.55],[-5.0,-.25,sd*6.7,.35]],C(und? WH : FU),{bias:-.01}); add([[-5.0,-.25,sd*6.7,.36],[-5.5,-.3,sd*7.2,.22]],C([222,196,180]),{bias:-.02}); }
-    add([[-5,0,0,1.8],[-2,.2,0,2.3],[1.5,.2,0,2.2],[4,.1,0,1.7]],C(und? WH : FU),{sh:sh(und? WH : FU)});
-    const tw=Math.sin(m.t*3)*.25, tail=[[-5.4,0,1.0,0],[-9,-.1+tw*.3,1.9,0],[-13,-.2+tw,2.0,0],[-16,-.3+tw*1.4,1.3,0],[-17.4,-.3+tw*1.6,0,-1],[-16,-.3+tw*1.4,-1.3,0],[-13,-.2+tw,-2.0,0],[-9,-.1+tw*.3,-1.9,0],[-5.4,0,-1.0,0]];
-    add(tail,C(und? mixv(WH,FU,.45) : mulv(FU,.92)),{poly:true,bias:.06});                                                      /* the flat feathery tail */
-    const Hc=[6.1,.3,0]; add([[4.2,.2,0,1.7],[...Hc,2.0],[7.7,-.05,0,1.05]],C(FU),{sh:sh(FU)}); add([[6.8,-.7,0,1.2],[7.8,-.5,0,.8]],C(WH),{bias:-.04});
-    add([[8.6,-.05,0,.36]],C([150,110,104]),{bias:-.3});
-    for(const sd of [-1,1]){ add([[6.6,.75,sd*1.25,.78]],"rgba(10,8,8,.96)",{bias:-.2}); add([[6.85,1.0,sd*1.45,.2]],"rgba(255,252,246,.7)",{bias:-.25});   /* the huge dark night eyes */
-      add([[5.0,1.9,sd*1.0,.55]],C(mulv(FU,.85)),{bias:.03}); }
+  /* the southern flying squirrel, built in 3-D: a small round body in soft olive-grey fur over a creamy white belly; the patagium, the furred skin stretched
+     from wrist to ankle, edged with a darker band and held out at the front by the little cartilage spur at each wrist; a broad, flat, feathery tail; a
+     round head with short rounded ears, a pink nose, long whiskers and the huge dark eyes of a night animal. In the air the membrane billows and ripples
+     with the air under it and the tail steers; on the ground the membrane folds in along its flanks and it sits up on its haunches, tail curled behind. */
+  function flySqParts(m,lt){ const B=m.B, out=[], C=(c,a)=>rgb(mulv(c,lt),a), FU=[142,124,100], FU2=[110,94,76], WH=[238,232,218], DK=[60,48,38], PK=[214,170,160], sh=c=>[C(mulv(c,.5)),C(mixv(c,[255,236,200],.28))];
+    const SP=m.spread??1, T=m.t||0, P=q=>{ const v=toCam(B,q[0],q[1],q[2]); return [v[0],v[1],v[2],q[3]||0]; }, add=(pts,c,o)=>out.push(Object.assign({p:pts.map(P),c},o||{}));
+    const und=m.under, sit=1-SP, air=SP, bil=(Math.sin(T*4.2)*.22+Math.sin(T*9.5)*.08)*air, rip=u=>Math.sin(T*7+u*5)*.12*air;   /* the membrane billows and ripples */
+    const lat=w=>1.3+(w-1.3)*SP, top=und? WH : FU;
+    /* the patagium, one side at a time: leading edge from the shoulder out along the forearm to the wrist spur, a slightly scalloped trailing edge back to the ankle */
+    for(const sd of [-1,1]){
+      const wr=[5.0-sit*1.2,-.3-sit*.8,sd*lat(6.6)], sp=[4.4-sit*1.0,-.35-sit*.8,sd*lat(7.7)], an=[-5.0+sit*1.0,-.45-sit*.9,sd*lat(6.3)];
+      const edge=[sp,[3.6,-.6+bil*.6+rip(.1),sd*lat(7.0)],[2.0,-.85+bil+rip(.25),sd*lat(6.55)],[0.2,-1.0+bil+rip(.45),sd*lat(6.2)],[-1.8,-.98+bil+rip(.65),sd*lat(6.25)],[-3.5,-.8+bil*.7+rip(.85),sd*lat(6.55)],[-4.6,-.6+rip(.95),sd*lat(6.6)],an];   /* a softly scalloped edge, drawn in a little between wrist and ankle */
+      const mem=[[3.0,.1,sd*1.35],wr,...edge,[-4.4,.05,sd*1.45],[-1,.2,sd*1.6],[1.6,.25,sd*1.55]];
+      if(SP>.08){ add(mem.map(q=>[...q,0]),C(top),{poly:true,bias:.05});
+        add(edge.map(q=>[q[0],q[1]+.02,q[2]*1.0,.3]),C(und? mixv(WH,FU,.55) : DK),{bias:.04});   /* the dark band along its edge */
+        add([[2.4,-.3,sd*lat(3.8),.0],[0,-.5+bil*.6,sd*lat(4.0),.0],[-2.6,-.4+bil*.5,sd*lat(4.0),.0]].map(q=>[q[0],q[1],q[2],.55]),C(und? mixv(WH,FU,.12) : mixv(FU,[255,236,200],.06),.6),{bias:.045});   /* the light catching the stretched skin */
+      } else add([[3,0,sd*1.5,.9],[0,-.2,sd*1.85,1.1],[-3.4,-.1,sd*1.7,.9]],C(mulv(FU,.9)),{bias:.02});   /* folded along the flank */
+      add([[3.0,0,sd*1.3,.55],[(3+wr[0])/2,(0+wr[1])/2,sd*(1.3+Math.abs(wr[2]))/2,.42],wr.concat(.3)],C(und? WH : FU2),{bias:-.01});   /* forearm along the leading edge */
+      add([wr.concat(.26),sp.concat(.12)],C(FU2),{bias:-.015}); add([[wr[0]+.4,wr[1]-.05,wr[2],.3]],C(PK),{bias:-.02});   /* the wrist spur and little hand */
+      add([[-4.0,0,sd*1.4,.75],[(-4+an[0])/2,(an[1])/2,sd*(1.4+Math.abs(an[2]))/2,.55],an.concat(.36)],C(und? WH : FU2),{bias:-.01}); add([[an[0]-.5,an[1]-.1,an[2],.4]],C(PK),{bias:-.02});   /* hind leg and foot */
+    }
+    /* body: furred back over a pale belly */
+    const by=sit*.9;
+    add([[-5.0,.1+by*.2,0,1.75],[-2.8,.4+by*.5,0,2.35],[0,.5+by*.8,0,2.5],[2.4,.45+by,0,2.25],[4.3,.35+by*1.1,0,1.65]],C(FU),{sh:sh(FU)});
+    add([[-4.4,-.35+by*.2,0,1.45],[-1.8,-.4+by*.5,0,2.0],[1.4,-.3+by*.8,0,1.95],[3.6,-.2+by,0,1.4]],C(WH),{bias:und? -.06 : .06});
+    /* head */
+    const hy=.4+by*1.4+sit*.3, Hc=[6.2,hy,0];
+    add([[4.6,hy-.05,0,1.65],[...Hc,1.85],[7.5,hy-.2,0,1.3],[8.5,hy-.35,0,.8]],C(FU),{sh:sh(FU)});
+    add([[6.6,hy-.95,0,1.1],[8.0,hy-.7,0,.6]],C(WH),{bias:-.04});   /* pale throat and chin */
+    add([[9.0,hy-.38,0,.34]],C(PK),{bias:-.3});   /* the nose */
+    for(const sd of [-1,1]){
+      add([[5.4,hy+1.4,sd*.95,.62],[5.2,hy+2.05,sd*1.12,.42]],C(FU2),{bias:.02}); add([[5.3,hy+1.6,sd*1.05,.3]],C(PK,.8),{bias:-.05});   /* rounded ears */
+      add([[7.0,hy+.55,sd*1.18,.68]],"rgba(8,6,6,.97)",{bias:-.2}); add([[7.25,hy+.82,sd*1.38,.2]],"rgba(255,252,246,.8)",{bias:-.28});   /* the big night eyes, a glint in each */
+      add([[6.7,hy+.55,sd*1.05,.82]],C(mulv(FU2,.8),.85),{bias:-.15});   /* the dark ring round the eye */
+      for(const k of [-1,0,1]) add([[8.5,hy-.3,sd*.55,.05],[9.6,hy-.25+k*.35,sd*(1.6+Math.abs(k)*.2),.03],[10.6,hy-.3+k*.7,sd*(2.4+Math.abs(k)*.3),.015]],"rgba(40,32,26,.55)",{bias:-.25});   /* whiskers */
+    }
+    /* the broad flat tail: in the air it trails and steers, on the ground it curls up behind */
+    const tw=Math.sin(T*2.4)*.35*air+(m.steer||0)*.6, curl=sit;
+    const tp=k=>{ const s=k/4, x=-5.6-11.5*s*(1-curl*.45), y=-.1+(tw*s*s)*1.2*air+curl*(s*s*7.5+s*1.5); return [x,y]; };
+    const tl=[]; for(let k=0;k<=4;k++){ const [x,y]=tp(k), w=[1.0,1.9,2.25,2.1,1.2][k]; tl.push([x,y,w]); }
+    const tail=[...tl.map(([x,y,w])=>[x,y,w,0]),[tp(4.6)[0],tp(4.6)[1],0,0],...tl.slice().reverse().map(([x,y,w])=>[x,y,-w,0])];
+    add(tail,C(und? mixv(WH,FU,.45) : mulv(FU,.95)),{poly:true,bias:.06});
+    add(tl.map(([x,y,w],i)=>[x,y+.05,0,i? .35 : .55]),C(und? mixv(WH,FU,.3) : FU2),{bias:.055});   /* the darker midline */
     return out; }
   let fsq=null, nextFsq=rnd(160,320); const fqCv=document.createElement("canvas"), fqCx=fqCv.getContext("2d");
   /* the flying squirrel comes from behind and above you: it launches from the trees over your head, sails out over you at an angle, its pale belly and
@@ -4918,7 +4947,7 @@ const ambient=(function(){
       if(m.phase==="sit"){ Pc=m.P1; spread=Math.max(0,1-m.lt*3); f=v3.n([m.d*.6,.25*Math.max(0,1-m.lt*2),.8]); if(m.lt>sitT){ m.phase="run"; m.lt=0; m.R0=m.P1.slice(); } }   /* folds its membrane in and sits up */
       else { const k=Math.min(1,m.lt/1.3), sx=m.s1[0]+m.d*W*.16*k, sy=m.s1[1]-H*.06*k-Math.abs(Math.sin(k*Math.PI*3))*H*.012, z=m.z1*(1+.35*k);   /* bounding off toward the cover */
         Pc=[(sx-cx)*z/F,-(sy-cy)*z/F,z]; f=v3.n([m.d,.05,.5]); spread=0; m.alpha=1-Math.max(0,(k-.6)/.4); if(k>=1){ fsq=null; nextFsq=rnd(240,420); return; } } }
-    const upH=v3.a(v3.s(up,Math.cos(bank)),v3.s(v3.x(f,up),Math.sin(bank))); m.B=basisFrom(f,upH); m.spread=spread; m.sharp=m.phase!=="glide";
+    const upH=v3.a(v3.s(up,Math.cos(bank)),v3.s(v3.x(f,up),Math.sin(bank))); m.B=basisFrom(f,upH); m.spread=spread; m.sharp=m.phase!=="glide"; m.steer=bank*-1.5;
     m.under=v3.d(m.B.u,v3.s(Pc,-1))<0;                                                                                            /* above you, you see its pale underside */
     const z=Pc[2]; if(z<.05) return; const uu=m.K*F/z, sz=Math.ceil(Math.min(1800,40*uu)), sx=cx+Pc[0]*F/z, sy=cy-Pc[1]*F/z; m.sx=sx; m.sy=sy; m.z=z;
     if(fqCv.width<sz||fqCv.height<sz) fqCv.width=fqCv.height=sz;
