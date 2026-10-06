@@ -3306,10 +3306,10 @@ const ambient=(function(){
     wcs.push({kind:"kill",live:true,male:true,Xw:p.Xw,Dw:p.Dw,yaw:side<0? 0 : Math.PI,ph:rnd(0,6),state:"run",t:0,life:rnd(36,50),alpha:1,head:0,cock:0,peck:0,hopA:0,tX:q.Xw,tD:q.Dw,disp:0,kb:0,callT:.4,dispN:0});
     natureSfx.sing&&natureSfx.sing("killdeer",side*.8); }
   function startSongbirds(kind){ if(kind==="kill") return startKilldeer(); wcs.length=0; const sx0=rnd(W*.25,W*.75), n=kind==="card"?2:1;
-    for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-60,60))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(kind==="card"?4:30,kind==="card"?30:100)); wcs.push({kind,male:i===0,Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.4,1.2),life:rnd(32,48),alpha:0,head:0,cock:0,peck:0,hopA:0}); }
+    for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-60,60))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(kind==="card"?4:30,kind==="card"?30:100)); wcs.push({kind,live:true,male:i===0,Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.4,1.2),life:rnd(32,48),alpha:0,head:0,cock:0,peck:0,hopA:0}); }
     natureSfx.sing&&natureSfx.sing(kind==="card"?"cardinal":"killdeer",(sx0/W*2-1)*.8); }
   function startRobins(){ const n=1+Math.floor(Math.random()*2), sx0=rnd(W*.25,W*.8);
-    for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-120,120))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(20,90)); wcs.push({kind:"robin",Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.6,1.8),life:rnd(30,50),alpha:0,head:0,cock:0,worm:0}); } }
+    for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-120,120))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(20,90)); wcs.push({kind:"robin",live:true,Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.6,1.8),life:rnd(30,50),alpha:0,head:0,cock:0,worm:0}); } }
   function startWoodcocks(){ const n=2+Math.floor(Math.random()*2), sx0=rnd(W*.2,W*.85);
     for(let i=0;i<n;i++){ const sx=Math.max(W*.05,Math.min(W*.95,sx0+rnd(-80,80))), p=toGround(sx,gnd().vy+lawnMinG(sx)+rnd(2,10));
       wcs.push({Xw:p.Xw,Dw:p.Dw,yaw:rnd(0,6.28),ph:rnd(0,6),state:"wait",t:-i*rnd(.6,1.8),life:rnd(30,50),alpha:0,head:0,probe:0,turn:0}); } }
