@@ -4644,7 +4644,7 @@ const ambient=(function(){
     const haze=Math.min(.3,Math.max(0,(z-2)/16)); if(haze>0){ x.fillStyle=rgb(h.bg,haze); x.fillRect(0,0,sz,sz); }
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=1; ctx.filter=z<1.2? "none" : "blur(.5px)"; ctx.drawImage(cv,0,0,sz,sz,sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none"; }
+    ctx.save(); ctx.globalAlpha=h.alpha??1; ctx.filter=z<1.2||h.sharp? "none" : "blur(.5px)"; ctx.drawImage(cv,0,0,sz,sz,sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none"; }
   const ik2=(h,T,L1,L2,bend)=>{ const d=v3.m(T,h); let D=Math.hypot(d[0],d[1],d[2])||1e-6; const dn=v3.s(d,1/D); D=Math.min(D,L1+L2-.02); const a=(L1*L1-L2*L2+D*D)/(2*D), hh=Math.sqrt(Math.max(0,L1*L1-a*a)), bp=v3.n(v3.m(bend,v3.s(dn,v3.d(bend,dn))));
     return [v3.a(h,v3.a(v3.s(dn,a),v3.s(bp,hh))),v3.a(h,v3.s(dn,D))]; };
 
@@ -4884,7 +4884,7 @@ const ambient=(function(){
   /* ---- a southern flying squirrel gliding past at dusk: soft grey-brown fur above and creamy white below, the furred skin stretched taut from wrist to ankle
      into a square sail, the flat feathery tail steering behind, and huge dark night eyes ---- */
   function flySqParts(m,lt){ const B=m.B, out=[], C=(c,a)=>rgb(mulv(c,lt),a), FU=[150,128,104], WH=[236,230,216], DK=[52,40,32], sh=c=>[C(mulv(c,.55)),C(mixv(c,[255,236,200],.25))];
-    const P=q=>{ const v=toCam(B,q[0],q[1],q[2]); return [v[0],v[1],v[2],q[3]||0]; }, add=(pts,c,o)=>out.push(Object.assign({p:pts.map(P),c},o||{}));
+    const SP=m.spread??1, P=q=>{ const lat=Math.abs(q[2])>1.4? Math.sign(q[2])*(1.4+(Math.abs(q[2])-1.4)*SP) : q[2], v=toCam(B,q[0]*(Math.abs(q[2])>1.4? .7+.3*SP : 1),q[1],lat); return [v[0],v[1],v[2],q[3]||0]; }, add=(pts,c,o)=>out.push(Object.assign({p:pts.map(P),c},o||{}));   /* SP: the membrane spread wide (1) or folded in along its sides (0) */
     const und=m.under, top=und? WH : FU, bil=Math.sin(m.t*5)*.15;
     for(const sd of [-1,1]){ const mem=[[3.2,0,sd*1.5,0],[5.0,-.25,sd*7.0,-1],[2.2,-.35+bil,sd*6.2,0],[-1.2,-.4+bil,sd*6.0,0],[-5.0,-.25,sd*6.7,-1],[-4.4,0,sd*1.6,0]];   /* the gliding membrane */
       add(mem,C(top),{poly:true,bias:.05}); add(mem.slice(1,5).map(q=>[q[0],q[1],q[2]+sd*.05,.22]),C(und? mixv(WH,FU,.35) : mulv(FU,.7)),{bias:.04});
@@ -4899,13 +4899,26 @@ const ambient=(function(){
       add([[5.0,1.9,sd*1.0,.55]],C(mulv(FU,.85)),{bias:.03}); }
     return out; }
   let fsq=null, nextFsq=rnd(160,320); const fqCv=document.createElement("canvas"), fqCx=fqCv.getContext("2d");
-  function startFsq(){ const F=H*.5, cx=W/2, cy=H*.52, d=Math.random()<.5? 1 : -1, z0=rnd(1.8,2.3), z1=rnd(.45,.6), s0=[W*(d>0? -.08 : 1.08),H*rnd(.1,.24)], s1=[W*(d>0? 1.12 : -.12),H*rnd(.56,.74)];
-    fsq={t:0,dur:rnd(2.8,3.4),P0:[(s0[0]-cx)*z0/F,-(s0[1]-cy)*z0/F,z0],P1:[(s1[0]-cx)*z1/F,-(s1[1]-cy)*z1/F,z1],K:.011,d}; return fsq; }
+  /* the flying squirrel comes from behind and above you: it launches from the trees over your head, sails out over you at an angle, its pale belly and
+     the stretched membrane showing as it goes, glides down across the lawn, and at the last moment swings its body up, tail down, to brake, and lands
+     in the grass. It sits up a moment, big dark eyes catching the light, then bounds off toward the cover. */
+  function startFsq(){ const F=H*.5, cx=W/2, cy=H*.52, d=Math.random()<.5? 1 : -1, z0=rnd(.2,.26), z1=rnd(1.5,1.8);
+    const s0=[W*(.5-d*rnd(.28,.4)),-H*rnd(.2,.32)], lx=W*rnd(.38,.62)+d*W*.08, ly=gnd().vy+lawnMinG(lx)+rnd(70,140), s1=[lx,ly];
+    fsq={t:0,dur:rnd(3,3.6),P0:[(s0[0]-cx)*z0/F,-(s0[1]-cy)*z0/F,z0],P1:[(s1[0]-cx)*z1/F,-(s1[1]-cy)*z1/F,z1],K:.02,d,s1,z1,phase:"glide",lt:0}; return fsq; }
   function drawFsq(dt,dark){
     nextFsq-=(lull>0?0:dt); if(!fsq&&nextFsq<=0){ if(!(dark||duskV>.35)||stageBusy()) nextFsq=rnd(20,40); else startFsq(); }
-    if(!fsq) return; const m=fsq; m.t+=dt; const u=m.t/m.dur; if(u>=1){ fsq=null; nextFsq=rnd(240,420); return; }
-    const F=H*.5, cx=W/2, cy=H*.52, path=w=>bez3(m.P0,v3.a(v3.l(m.P0,m.P1,.33),[0,.08,0]),v3.a(v3.l(m.P0,m.P1,.7),[0,-.04,0]),m.P1,w), Pc=path(u), v=v3.m(path(Math.min(1,u+.01)),path(Math.max(0,u-.01)));
-    const f=v3.n([v[0],v[1]*.35,v[2]]), bank=Math.sin(m.t*1.7)*.18-m.d*.12, upH=v3.a(v3.s([0,1,0],Math.cos(bank)),v3.s(v3.x(f,[0,1,0]),Math.sin(bank))); m.B=basisFrom(f,upH);
+    if(!fsq) return; const m=fsq; m.t+=dt; const F=H*.5, cx=W/2, cy=H*.52;
+    let Pc, f, spread=1, bank=0, up=[0,1,0];
+    if(m.phase==="glide"){ const u0=Math.min(1,m.t/m.dur), u=1-Math.pow(1-u0,1.25);   /* it bleeds off speed as it comes in */
+      const path=w=>bez3(m.P0,v3.a(v3.l(m.P0,m.P1,.35),[0,-.03,0]),v3.a(v3.l(m.P0,m.P1,.78),[0,.05,0]),m.P1,w); Pc=path(u); const v=v3.m(path(Math.min(1,u+.01)),path(Math.max(0,u-.01)));
+      const flare=Math.max(0,(u0-.82)/.18);   /* the landing flare: body swung up, membrane billowed to brake */
+      f=v3.n([v[0],v[1]*.35+flare*.9*Math.hypot(v[0],v[2]),v[2]]); bank=(Math.sin(m.t*1.7)*.16-m.d*.22)*(1-flare); spread=1-flare*.15;
+      if(u0>=1){ m.phase="sit"; m.lt=0; } }
+    else { m.lt+=dt; const sitT=1.8;
+      if(m.phase==="sit"){ Pc=m.P1; spread=Math.max(0,1-m.lt*3); f=v3.n([m.d*.6,.25*Math.max(0,1-m.lt*2),.8]); if(m.lt>sitT){ m.phase="run"; m.lt=0; m.R0=m.P1.slice(); } }   /* folds its membrane in and sits up */
+      else { const k=Math.min(1,m.lt/1.3), sx=m.s1[0]+m.d*W*.16*k, sy=m.s1[1]-H*.06*k-Math.abs(Math.sin(k*Math.PI*3))*H*.012, z=m.z1*(1+.35*k);   /* bounding off toward the cover */
+        Pc=[(sx-cx)*z/F,-(sy-cy)*z/F,z]; f=v3.n([m.d,.05,.5]); spread=0; m.alpha=1-Math.max(0,(k-.6)/.4); if(k>=1){ fsq=null; nextFsq=rnd(240,420); return; } } }
+    const upH=v3.a(v3.s(up,Math.cos(bank)),v3.s(v3.x(f,up),Math.sin(bank))); m.B=basisFrom(f,upH); m.spread=spread; m.sharp=m.phase!=="glide";
     m.under=v3.d(m.B.u,v3.s(Pc,-1))<0;                                                                                            /* above you, you see its pale underside */
     const z=Pc[2]; if(z<.05) return; const uu=m.K*F/z, sz=Math.ceil(Math.min(1800,40*uu)), sx=cx+Pc[0]*F/z, sy=cy-Pc[1]*F/z; m.sx=sx; m.sy=sy; m.z=z;
     if(fqCv.width<sz||fqCv.height<sz) fqCv.width=fqCv.height=sz;
