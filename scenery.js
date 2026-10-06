@@ -738,18 +738,18 @@ const ambient=(function(){
     if(!rb){ return; } const dt0=Math.min(.1,(t-(rb.lt??t))); rb.lt=t; rb.t+=dt0; if(rb.t>rb.dur){ rb=null; return; }
     const a=Math.min(1,rb.t/7,(rb.dur-rb.t)/6)*(rb.forced? 1 : Math.max(0,1-duskV*1.4)); if(a<=.01) return;
     drawRain(a*.7,.55,95,[.08,.6]);
-    /* not the whole bow: one leg standing in the shower over the far ridge on the left, curving up and over toward the sun's side and out of the frame */
-    const cxr=IX(.9), fa=IX(.9)-IX(.22), fb=ridgeY(SKYL.far,.22)+H*.03, R=(fa*fa+fb*fb)/(2*fb), cyr=R-H*.03, bw=R*.06, cols=[[255,64,54],[255,146,40],[255,232,84],[84,206,104],[66,136,255],[112,84,226],[146,86,208]];
+    /* the bow is a ring about the same centre as the sun dogs' halo, only much wider: here we see just its left side, standing in the shower over the far ridge
+       and climbing out of the top of the frame; a smooth spectrum, red on the outside, with the faint second bow beyond it, its colours reversed */
+    const sp=sun(), cxr=sp.x, cyr=sp.y, R=sdDist()*1.9, bw=R*.055;
     const cw=Math.ceil(W), ch=Math.ceil(Math.max(10,IY(.56))); if(rbC.width!==cw||rbC.height!==ch){ rbC.width=cw; rbC.height=ch; }
     const x=rbX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch);
-    { const g=x.createRadialGradient(cxr,cyr,R*.6,cxr,cyr,R-bw*.5); g.addColorStop(0,"rgba(255,250,240,0)"); g.addColorStop(1,"rgba(255,250,240,.12)"); x.fillStyle=g; x.beginPath(); x.arc(cxr,cyr,R-bw*.5,Math.PI,2*Math.PI); x.fill(); }   /* brighter sky inside the bow */
-    x.filter=`blur(${Math.max(1,bw*.18).toFixed(1)}px)`;
-    cols.forEach((c,i)=>{ x.strokeStyle=rgb(c,.8); x.lineWidth=bw/cols.length*1.7; x.beginPath(); x.arc(cxr,cyr,R-i*bw/cols.length,Math.PI,2*Math.PI); x.stroke(); });
-    cols.forEach((c,i)=>{ x.strokeStyle=rgb(c,.24); x.lineWidth=bw*1.3/cols.length*1.7; x.beginPath(); x.arc(cxr,cyr,R*1.3+i*bw*1.3/cols.length,Math.PI,2*Math.PI); x.stroke(); });   /* the faint second bow, its colours reversed */
-    x.filter="none";
+    const ring=(r0,r1,stops,al)=>{ const g=x.createRadialGradient(cxr,cyr,r0,cxr,cyr,r1); stops.forEach(([p,c,k])=>g.addColorStop(p,rgb(c,k*al))); x.fillStyle=g; x.beginPath(); x.arc(cxr,cyr,r1,0,6.283); x.arc(cxr,cyr,r0,6.283,0,true); x.fill(); };
+    const SPEC=[[0,[150,90,220],0],[.12,[120,90,240],.55],[.26,[70,130,255],.75],[.42,[80,210,120],.8],[.58,[250,236,90],.85],[.72,[255,160,50],.85],[.86,[255,70,50],.8],[1,[255,60,50],0]];
+    ring(R-bw*7,R-bw,[[0,[255,250,240],0],[1,[255,250,240],.1]],1);   /* the sky a touch brighter just inside the bow */
+    ring(R-bw,R+bw*.15,SPEC,1);
+    ring(R*1.33-bw*.2,R*1.33+bw*1.5,SPEC.map(([p,c,k])=>[1-p,c,k]).reverse(),.3);   /* the second bow */
     x.globalCompositeOperation="destination-in";
     { const g=x.createLinearGradient(0,0,0,ch); g.addColorStop(0,"rgba(0,0,0,.08)"); g.addColorStop(.45,"rgba(0,0,0,.6)"); g.addColorStop(1,"#000"); x.fillStyle=g; x.fillRect(0,0,cw,ch); }   /* strongest low down where it stands in the rain, fading as it climbs */
-    { const g=x.createLinearGradient(0,0,cw,0); g.addColorStop(0,"#000"); g.addColorStop(.6,"#000"); g.addColorStop(1,"rgba(0,0,0,.2)"); x.fillStyle=g; x.fillRect(0,0,cw,ch); }
     ctx.save(); ridgePath(ctx,SKYL.near,1); ctx.clip(); ctx.globalAlpha=a*.95; ctx.globalCompositeOperation="screen"; ctx.drawImage(rbC,0,0); ctx.restore(); }
   /* ---- a thunderstorm over the far ridge: the clouds there go slate-grey, a curtain of rain hangs under them behind the near ridge, and every so often
      lightning flickers inside the cloud or a bolt forks down onto the far ridge; seconds later the thunder rolls in. When it passes, sometimes a rainbow ---- */
@@ -808,7 +808,8 @@ const ambient=(function(){
     ctx.restore(); }
   /* sun dogs: with ice crystals high up, two bright patches of light stand either side of the low sun at the same height, red on the side toward the sun and
      trailing off white away from it, sometimes joined by a faint ring of halo through them */
-  function drawSundogs(){ if(sdA<=.01) return; const sp=sun(), d=Math.min(W*.24,H*.42), a=sdA*(.85+.15*Math.sin(t*.4));
+  function sdDist(){ return Math.min(W*.24,H*.42); }
+  function drawSundogs(){ if(sdA<=.01) return; const sp=sun(), d=sdDist(), a=sdA*(.85+.15*Math.sin(t*.4));
     ctx.save(); ctx.globalCompositeOperation="screen";
     ctx.lineWidth=Math.max(6,d*.05); { const g=ctx.createRadialGradient(sp.x,sp.y,d*.9,sp.x,sp.y,d*1.12); g.addColorStop(0,"rgba(255,140,90,0)"); g.addColorStop(.42,`rgba(255,150,100,${(.1*a).toFixed(3)})`); g.addColorStop(.6,`rgba(255,240,220,${(.08*a).toFixed(3)})`); g.addColorStop(1,"rgba(200,220,255,0)"); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sp.x,sp.y,d*1.12,Math.PI*.95,Math.PI*2.05); ctx.arc(sp.x,sp.y,d*.9,Math.PI*2.05,Math.PI*.95,true); ctx.fill(); }   /* the faint 22-degree halo */
     for(const sd of [-1,1]){ const x=sp.x+sd*d, y=sp.y, h=d*.28, w=d*.09;
@@ -818,25 +819,54 @@ const ambient=(function(){
       { const g=ctx.createLinearGradient(w*.6,0,w*5,0); g.addColorStop(0,`rgba(255,250,240,${(.16*a).toFixed(3)})`); g.addColorStop(1,"rgba(255,250,240,0)"); ctx.fillStyle=g; ctx.fillRect(w*.6,-h*.06,w*4.4,h*.12); }   /* the faint white tail */
       ctx.restore(); }
     ctx.restore(); }
-  /* a hot-air balloon drifting slowly across the far valley, high over the ridges: bright striped gores, the sun catching one side, a little wicker basket
-     on its ropes, and every so often the burner flaring orange as it climbs */
-  function newBalloon(){ const dir=Math.random()<.5? 1 : -1, pal=pick([[[214,48,44],[246,196,60],[36,92,170]],[[230,110,40],[250,226,170],[150,40,60]],[[40,120,90],[240,220,150],[200,70,50]],[[70,60,150],[240,180,60],[220,90,120]]]);
-    return {t:0,dur:75,dir,x0:dir>0? -.08 : 1.08,y0:rnd(.17,.27),sz:rnd(.75,1.1),pal,burn:0,nb:rnd(2,5),ph:rnd(0,6)}; }
-  function drawBalloon(){ const b=balloon; if(!b) return; const u=b.t/b.dur, a=Math.min(1,b.t/2,(b.dur-b.t)/3); if(a<=0) return;
-    const sp=sun(), x=W*(b.x0+b.dir*1.16*u), y=H*(b.y0-u*.05)+Math.sin(b.t*.4+b.ph)*H*.006, R=Math.min(W,H)*.04*b.sz;
-    b.nb-=1/60; if(b.nb<=0){ b.nb=rnd(4,9); b.burn=1; } b.burn=Math.max(0,b.burn-1/60/1.6);
-    const lit=Math.sign(sp.x-x)||1, P=b.pal;
-    ctx.save(); ctx.globalAlpha=a*.96; ctx.translate(x,y);
-    const env=()=>{ ctx.beginPath(); ctx.moveTo(0,R*1.55); ctx.bezierCurveTo(-R*.45,R*1.2,-R*1.02,R*.55,-R*1.02,-R*.1); ctx.bezierCurveTo(-R*1.02,-R*.85,-R*.55,-R*1.25,0,-R*1.25); ctx.bezierCurveTo(R*.55,-R*1.25,R*1.02,-R*.85,R*1.02,-R*.1); ctx.bezierCurveTo(R*1.02,R*.55,R*.45,R*1.2,0,R*1.55); ctx.closePath(); };
-    ctx.save(); env(); ctx.clip();
-    const n=8; for(let i=0;i<n;i++){ const f0=-1+i*2/n, f1=f0+2/n, c=P[i%3]; ctx.fillStyle=rgb(c); ctx.beginPath(); ctx.moveTo(0,R*1.6); for(let k=0;k<=12;k++){ const v=-1.3+k/12*2.9; ctx.lineTo(Math.sin(f0*Math.PI/2)*R*1.05*Math.cos(v*.55),v*R); } for(let k=12;k>=0;k--){ const v=-1.3+k/12*2.9; ctx.lineTo(Math.sin(f1*Math.PI/2)*R*1.05*Math.cos(v*.55),v*R); } ctx.closePath(); ctx.fill(); }   /* the gores, curving round the envelope */
-    { const g=ctx.createLinearGradient(-R*lit,0,R*lit,0); g.addColorStop(0,"rgba(20,14,24,.55)"); g.addColorStop(.55,"rgba(20,14,24,.05)"); g.addColorStop(.85,"rgba(255,236,200,.12)"); g.addColorStop(1,"rgba(255,226,180,.28)"); ctx.fillStyle=g; ctx.fillRect(-R*1.2,-R*1.4,R*2.4,R*3.1); }   /* lit from the sun's side */
-    { const g=ctx.createLinearGradient(0,-R*1.3,0,R*1.6); g.addColorStop(0,"rgba(255,255,255,.1)"); g.addColorStop(.7,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,.3)"); ctx.fillStyle=g; ctx.fillRect(-R*1.2,-R*1.4,R*2.4,R*3.1); }
-    ctx.restore();
-    ctx.strokeStyle="rgba(40,30,24,.7)"; ctx.lineWidth=Math.max(.5,R*.03); ctx.beginPath(); for(const sx of [-.24,-.08,.08,.24]){ ctx.moveTo(sx*R*1.2,R*1.45); ctx.lineTo(sx*R*.55,R*1.95); } ctx.stroke();   /* the ropes */
-    if(b.burn>0){ const g=ctx.createRadialGradient(0,R*1.75,0,0,R*1.75,R*.5); g.addColorStop(0,`rgba(255,220,120,${(.9*b.burn).toFixed(2)})`); g.addColorStop(1,"rgba(255,140,40,0)"); ctx.fillStyle=g; ctx.fillRect(-R*.5,R*1.25,R,R); }   /* the burner */
-    ctx.fillStyle="rgb(96,66,40)"; ctx.fillRect(-R*.17,R*1.92,R*.34,R*.26); ctx.fillStyle="rgba(150,110,70,.8)"; ctx.fillRect(-R*.17,R*1.92,R*.34,R*.06);   /* the basket */
-    ctx.restore(); }
+  /* ---- a hot-air balloon drifting across the far valley ----
+     A true 3-D envelope: a full round crown that tapers to the mouth, its fabric in tall curving gores that turn slowly as the balloon spins on the wind.
+     We're looking toward the low sun, so the balloon is backlit: the side toward us sits in soft shadow, a bright rim of light runs round its sun-side edge,
+     and the fabric glows warm where the light comes through it. It's a long way off, so the evening haze softens and warms its colours, and it bobs gently
+     as it drifts and climbs. Below it the skirt, the load lines to a small wicker basket, and the burner now and then roaring up a tongue of flame that lights
+     the inside of the mouth. */
+  function newBalloon(){ const dir=Math.random()<.5? 1 : -1, pal=pick([[[206,40,44],[248,196,52],[30,84,168],[246,240,226]],[[226,96,34],[252,222,150],[120,30,58],[246,240,226]],[[34,112,84],[240,214,140],[196,62,46],[246,240,226]],[[64,54,146],[242,176,52],[214,80,116],[246,240,226]]]);
+    return {t:0,dur:75,dir,x0:dir>0? -.07 : 1.07,y0:rnd(.16,.24),sz:rnd(.85,1.05),pal,burn:0,nb:rnd(2,5),ph:rnd(0,6),spin:rnd(0,6),pat:Math.floor(rnd(0,3))}; }
+  const blC=document.createElement("canvas"), blX=blC.getContext("2d");
+  function drawBalloon(){ const b=balloon; if(!b) return; const u=b.t/b.dur, a=Math.min(1,b.t/2.5,(b.dur-b.t)/3); if(a<=0) return;
+    const sp=sun(), x=W*(b.x0+b.dir*1.14*u), y=H*(b.y0-u*.04)+Math.sin(b.t*.35+b.ph)*H*.005, R=Math.min(W,H)*.046*b.sz;
+    const dt0=Math.min(.1,t-(b.lt??t)); b.lt=t; b.nb-=dt0; if(b.nb<=0){ b.nb=rnd(4,9); b.burn=1; } b.burn=Math.max(0,b.burn-dt0/1.8); b.spin+=dt0*.06*b.dir;
+    const S=2, cw=Math.ceil(R*2.6*S), ch=Math.ceil(R*4.2*S); if(blC.width!==cw||blC.height!==ch){ blC.width=cw; blC.height=ch; }
+    const c=blX; c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cw,ch); c.setTransform(S,0,0,S,cw/2,R*1.45*S);   /* drawn at twice the size, origin at the envelope's centre */
+    /* the envelope's profile: radius at each height v (-1 at the crown, +1 at the mouth) */
+    const top=-R*1.32, bot=R*1.5, prof=v=>{ const yy=lerp(top,bot,(v+1)/2); if(yy<-R*.15){ const k=(yy+R*.15)/(R*1.17); return R*Math.sqrt(Math.max(0,1-k*k)); } const k=(yy+R*.15)/(bot+R*.15); return R*(1-.82*Math.pow(k,1.35))*(1-.04*k); };
+    const Y=v=>lerp(top,bot,(v+1)/2), NV=28, NG=16;
+    const lsx=Math.sign(sp.x-x)||1, P=b.pal, pat=b.pat;
+    const gcol=k=>pat===0? P[k%3] : pat===1? (k%2? P[3] : P[(k>>1)%3]) : P[k%4];
+    /* the gores, front-facing ones only, each shaded by how it faces the light */
+    for(let k=0;k<NG;k++){ const f0=k/NG*6.283+b.spin, f1=(k+1)/NG*6.283+b.spin, fm=(f0+f1)/2; if(Math.cos(fm)<-.15) continue;
+      const nx=Math.sin(fm), nz=Math.cos(fm);
+      const rim=Math.max(0,nx*lsx)**2.2*(1-nz*.55), trans=Math.max(0,nz)*Math.max(0,.6+.4*nx*lsx);   /* the sun-side rim, and light glowing through the fabric */
+      const col=gcol(k), sh=.42+.18*nz;
+      const r=Math.min(255,col[0]*sh+255*rim*.55+col[0]*trans*.35+60*trans*.2), g=Math.min(255,col[1]*sh+226*rim*.5+col[1]*trans*.32+40*trans*.2), bl=Math.min(255,col[2]*sh+180*rim*.4+col[2]*trans*.28);
+      c.fillStyle=`rgb(${r|0},${g|0},${bl|0})`; c.beginPath();
+      for(let i=0;i<=NV;i++){ const v=-1+2*i/NV, rr=prof(v); c.lineTo(Math.sin(f0)*rr,Y(v)); }
+      for(let i=NV;i>=0;i--){ const v=-1+2*i/NV, rr=prof(v); c.lineTo(Math.sin(f1)*rr,Y(v)); }
+      c.closePath(); c.fill(); }
+    /* round it off: the crown catches the sky, the lower curve falls into shadow, and the load tapes run down each seam */
+    c.save(); c.beginPath(); for(let i=0;i<=NV;i++){ const v=-1+2*i/NV; c.lineTo(-prof(v),Y(v)); } for(let i=NV;i>=0;i--){ const v=-1+2*i/NV; c.lineTo(prof(v),Y(v)); } c.closePath(); c.clip();
+    { const g=c.createLinearGradient(0,top,0,bot); g.addColorStop(0,"rgba(255,236,210,.22)"); g.addColorStop(.35,"rgba(255,236,210,0)"); g.addColorStop(.75,"rgba(20,10,20,.12)"); g.addColorStop(1,"rgba(20,10,20,.38)"); c.fillStyle=g; c.fillRect(-R*1.2,top,R*2.4,bot-top); }
+    { const g=c.createRadialGradient(lsx*R*.55,-R*.1,0,lsx*R*.55,-R*.1,R*1.1); g.addColorStop(0,"rgba(255,214,150,.28)"); g.addColorStop(1,"rgba(255,214,150,0)"); c.globalCompositeOperation="screen"; c.fillStyle=g; c.fillRect(-R*1.3,top,R*2.6,bot-top); c.globalCompositeOperation="source-over"; }   /* warm light through the sun-side fabric */
+    { const g=c.createLinearGradient(-R*lsx,0,R*lsx,0); g.addColorStop(0,"rgba(10,6,16,.32)"); g.addColorStop(.5,"rgba(10,6,16,0)"); c.fillStyle=g; c.fillRect(-R*1.2,top,R*2.4,bot-top); }   /* the shadow side */
+    c.strokeStyle="rgba(30,20,20,.22)"; c.lineWidth=Math.max(.35,R*.012);
+    for(let k=0;k<NG;k++){ const f=k/NG*6.283+b.spin; if(Math.cos(f)<0) continue; c.beginPath(); for(let i=0;i<=NV;i++){ const v=-1+2*i/NV; c.lineTo(Math.sin(f)*prof(v),Y(v)); } c.stroke(); }
+    c.restore();
+    { const rw=R*.07; c.strokeStyle=`rgba(255,${200+(lsx>0?30:0)},150,.5)`; c.lineWidth=rw; c.beginPath(); for(let i=2;i<=NV-3;i++){ const v=-1+2*i/NV; c.lineTo(lsx*prof(v)*.985,Y(v)); } c.stroke(); }   /* the bright rim of sunlight along its edge */
+    /* the mouth and skirt, the burner's glow inside it */
+    const mr=prof(1)*1.02; c.fillStyle="rgba(40,24,22,.9)"; c.beginPath(); c.ellipse(0,bot,mr,mr*.28,0,0,6.283); c.fill();
+    if(b.burn>0){ const g=c.createRadialGradient(0,bot-R*.15,0,0,bot-R*.15,R*.75); g.addColorStop(0,`rgba(255,226,140,${(.9*b.burn).toFixed(2)})`); g.addColorStop(.4,`rgba(255,150,50,${(.5*b.burn).toFixed(2)})`); g.addColorStop(1,"rgba(255,120,30,0)"); c.globalCompositeOperation="screen"; c.fillStyle=g; c.fillRect(-R,bot-R,R*2,R*1.4); c.globalCompositeOperation="source-over";
+      c.fillStyle=`rgba(255,236,170,${(.95*b.burn).toFixed(2)})`; c.beginPath(); c.moveTo(-R*.05,bot+R*.33); c.quadraticCurveTo(-R*.07,bot+R*.05,0,bot-R*.22*(.7+.3*Math.sin(t*30))); c.quadraticCurveTo(R*.07,bot+R*.05,R*.05,bot+R*.33); c.fill(); }   /* the flame */
+    c.strokeStyle="rgba(46,34,28,.75)"; c.lineWidth=Math.max(.35,R*.014); c.beginPath(); for(const s0 of [-1,-.35,.35,1]){ c.moveTo(s0*mr*.95,bot+R*.02); c.lineTo(s0*R*.13,bot+R*.42); } c.stroke();   /* the load lines */
+    { const bx=-R*.14, by=bot+R*.42, bw=R*.28, bh=R*.22, g=c.createLinearGradient(bx,0,bx+bw,0); g.addColorStop(0,lsx<0? "rgb(150,108,66)" : "rgb(70,48,30)"); g.addColorStop(1,lsx<0? "rgb(70,48,30)" : "rgb(150,108,66)"); c.fillStyle=g; c.beginPath(); c.moveTo(bx,by); c.lineTo(bx+bw,by); c.lineTo(bx+bw*.93,by+bh); c.lineTo(bx+bw*.07,by+bh); c.closePath(); c.fill();
+      c.fillStyle="rgba(190,150,100,.9)"; c.fillRect(bx-R*.01,by-R*.02,bw+R*.02,R*.035); c.strokeStyle="rgba(40,26,16,.35)"; c.lineWidth=R*.008; c.beginPath(); for(let i=1;i<4;i++){ c.moveTo(bx+bw*.05,by+bh*i/4); c.lineTo(bx+bw*.95,by+bh*i/4); } c.stroke(); }   /* the wicker basket */
+    /* far off in the evening air: haze softens and warms it */
+    c.setTransform(1,0,0,1,0,0); c.globalCompositeOperation="source-atop"; c.fillStyle="rgba(214,170,128,.24)"; c.fillRect(0,0,cw,ch); c.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=a; if("filter" in ctx) ctx.filter="blur(.35px)"; ctx.drawImage(blC,x-cw/S/2,y-R*1.45,cw/S,ch/S); ctx.filter="none"; ctx.restore(); }
   /* a sunburst: the clouds part, the sun blazes out, and long beams fan down through the gaps across the valley, then it closes up again */
   const sbC=document.createElement("canvas"), sbX=sbC.getContext("2d");
   function drawSunburst(){ if(sbA<=.01) return; const sp=sun(), L=Math.hypot(W,H)*1.2, a=sbA;
@@ -852,30 +882,50 @@ const ambient=(function(){
     ctx.restore(); }
   /* the northern lights, low over the ridges to the right: green curtains with rays shimmering up through them, rose and violet along their tops */
   const auC=document.createElement("canvas"), auX=auC.getContext("2d");
-  /* a ray of light, standing up from the curtain's hem: bright green low down, fading through to rose and violet at its top */
-  const auRay=(()=>{ const c=document.createElement("canvas"); c.width=8; c.height=128; const x=c.getContext("2d"), g=x.createLinearGradient(0,128,0,0);
-    g.addColorStop(0,"rgba(120,255,160,0)"); g.addColorStop(.04,"rgba(150,255,175,1)"); g.addColorStop(.16,"rgba(90,245,150,.75)"); g.addColorStop(.38,"rgba(80,220,150,.38)"); g.addColorStop(.6,"rgba(200,90,170,.26)"); g.addColorStop(.82,"rgba(170,80,200,.12)"); g.addColorStop(1,"rgba(150,80,200,0)");
-    x.fillStyle=g; x.fillRect(0,0,8,128); const h=x.createLinearGradient(0,0,8,0); h.addColorStop(0,"rgba(0,0,0,0)"); h.addColorStop(.5,"#000"); h.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=h; x.fillRect(0,0,8,128); return c; })();
-  /* the curtains: ribbons sweeping across the right of the sky at different depths, each folding as it goes, nearer parts taller and brighter */
-  const AUR=[{P:[[.4,.98],[.56,.42],[.76,.74],[1.03,.3]],h:.34,amp:1.25,ph:0,sp:1},{P:[[.54,1],[.68,.8],[.84,.9],[1.06,.66]],h:.2,amp:.85,ph:2.3,sp:.8},{P:[[.6,.56],[.72,.26],[.88,.36],[1.05,.1]],h:.22,amp:.7,ph:4.1,sp:1.2}];
+  /* ---- the northern lights ----
+     Each curtain is a long sheet of light hanging in the sky, seen from below and to one side. Its lower edge is a sharp, bright yellow-green hem; light
+     streams up from it in fine rays that are green low down and turn rose and crimson toward the top as they fade. The sheet folds back and forth as it
+     goes: wherever a fold turns edge-on to us the rays crowd together into a brighter, thinner band, and where we look at it face-on they spread out and
+     dim. The folds drift, ripples run slowly along the hem, and the rays brighten and fade on their own. Drawn at half size and laid down twice, once
+     softly blurred for the glow and once sharp for the rays. */
+  const AU_SPR=(()=>{ const mk=(stops,fringe)=>{ const c=document.createElement("canvas"); c.width=16; c.height=256; const x=c.getContext("2d"), g=x.createLinearGradient(0,256,0,0);
+      stops.forEach(([p,col])=>g.addColorStop(p,col)); x.fillStyle=g; x.fillRect(0,0,16,256);
+      if(fringe){ const f=x.createLinearGradient(0,256,0,232); f.addColorStop(0,"rgba(255,70,150,0)"); f.addColorStop(.3,"rgba(255,80,160,.55)"); f.addColorStop(1,"rgba(255,80,160,0)"); x.globalCompositeOperation="lighter"; x.fillStyle=f; x.fillRect(0,232,16,24); }   /* the pink lower fringe of a strong display */
+      const h=x.createLinearGradient(0,0,16,0); h.addColorStop(0,"rgba(0,0,0,0)"); h.addColorStop(.5,"#000"); h.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=h; x.fillRect(0,0,16,256); return c; };
+    return [mk([[0,"rgba(180,255,140,0)"],[.015,"rgba(210,255,170,1)"],[.06,"rgba(120,255,150,.95)"],[.2,"rgba(60,240,140,.62)"],[.42,"rgba(40,200,140,.3)"],[.62,"rgba(70,140,170,.12)"],[1,"rgba(80,100,200,0)"]]),
+      mk([[0,"rgba(180,255,140,0)"],[.015,"rgba(220,255,180,1)"],[.07,"rgba(110,255,150,.9)"],[.24,"rgba(60,230,140,.55)"],[.42,"rgba(150,170,150,.32)"],[.6,"rgba(240,60,120,.34)"],[.8,"rgba(200,40,140,.18)"],[1,"rgba(150,40,160,0)"]]),
+      mk([[0,"rgba(180,255,140,0)"],[.02,"rgba(200,255,170,.95)"],[.08,"rgba(100,255,150,.85)"],[.26,"rgba(60,220,150,.5)"],[.46,"rgba(220,70,140,.38)"],[.7,"rgba(190,50,160,.2)"],[1,"rgba(140,50,180,0)"]],true)]; })();
+  const AUR=[  /* hem path across the sky (x as a fraction of the width, y as a fraction of the way down to the ridge), how tall its rays stand, brightness, fold count */
+    {P:[[.36,.97],[.52,.46],[.74,.8],[1.04,.34]],h:.3,amp:1.25,folds:5,ph:0,sp:1},
+    {P:[[.5,1],[.64,.82],[.84,.92],[1.06,.7]],h:.18,amp:.95,folds:7,ph:2.3,sp:.8},
+    {P:[[.58,.6],[.7,.3],[.86,.4],[1.05,.12]],h:.2,amp:.75,folds:4,ph:4.1,sp:1.15}];
+  AUR.forEach(R=>{ R.rnd=Array.from({length:900},()=>[Math.random(),Math.random(),Math.random()]); });
   function drawAurora(a){ if(a<=.01) return; const q=2, cw=Math.ceil(W/q), ch=Math.ceil(IY(.5)/q); if(auC.width!==cw||auC.height!==ch){ auC.width=cw; auC.height=ch; }
-    const x=auX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch); x.globalCompositeOperation="lighter"; x.setTransform(1/q,0,0,1/q,0,0);
-    const hz=ridgeY(SKYL.far,.75), Sx=W, Sy=hz;
-    for(const R of AUR){ const P=R.P.map(([px,py],i)=>[px*Sx+Math.sin(t*.07*R.sp+i*1.7+R.ph)*W*.02, py*Sy+Math.sin(t*.09*R.sp+i*2.3+R.ph)*Sy*.04]);
-      const at=u=>{ const v=1-u, rp=Math.sin(u*11-t*.35*R.sp+R.ph)*H*.018+Math.sin(u*23+t*.22*R.sp)*H*.007, rx=Math.sin(u*7-t*.18*R.sp+R.ph)*W*.012;   /* slow ripples rolling along the ribbon */
-        return [v*v*v*P[0][0]+3*v*v*u*P[1][0]+3*v*u*u*P[2][0]+u*u*u*P[3][0]+rx, v*v*v*P[0][1]+3*v*v*u*P[1][1]+3*v*u*u*P[2][1]+u*u*u*P[3][1]+rp]; };
-      const N=MOBILE()? 160 : 300;
-      /* the soft glow of the ribbon itself */
-      x.lineCap="round"; x.lineJoin="round"; x.beginPath(); for(let i=0;i<=40;i++){ const p=at(i/40); i? x.lineTo(p[0],p[1]) : x.moveTo(p[0],p[1]); }
-      x.strokeStyle=`rgba(90,240,150,${(.09*R.amp).toFixed(3)})`; x.lineWidth=H*.06; x.stroke(); x.strokeStyle=`rgba(140,255,180,${(.12*R.amp).toFixed(3)})`; x.lineWidth=H*.016; x.stroke();
-      for(let i=0;i<N;i++){ const u=(i+.5)/N, p=at(u), depth=.55+.45*(1-u), edge=Math.sin(Math.PI*u)**.6;
-        const flow=.55+.3*Math.sin(u*19-t*.3*R.sp+R.ph)+.2*Math.sin(u*47+t*.5*R.sp+R.ph*2)+.12*Math.sin(u*113-t*.9);   /* brightness ripples travelling along the curtain */
-        const I=Math.max(0,flow)*edge*R.amp; if(I<.04) continue;
-        const h=H*R.h*depth*(.55+.6*Math.max(0,.5+.5*Math.sin(u*9+t*.12*R.sp+R.ph))), w=Math.max(2,W*.004*depth), tilt=(p[0]-W*.7)/W*.25;   /* rays lean a little toward the zenith */
-        x.save(); x.translate(p[0],p[1]+h*.03); x.rotate(tilt); x.globalAlpha=Math.min(1,I*.42); x.drawImage(auRay,-w*1.5,-h,w*3,h); x.restore(); } }
+    const x=auX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.globalAlpha=1; x.clearRect(0,0,cw,ch); x.globalCompositeOperation="lighter"; x.setTransform(1/q,0,0,1/q,0,0);
+    const hz=ridgeY(SKYL.far,.75), mob=MOBILE(), T=t;
+    for(const R of AUR){ const P=R.P.map(([px,py],i)=>[px*W+Math.sin(T*.05*R.sp+i*1.7+R.ph)*W*.025, py*hz+Math.sin(T*.06*R.sp+i*2.3+R.ph)*hz*.05]);
+      const base=u=>{ const v=1-u; return [v*v*v*P[0][0]+3*v*v*u*P[1][0]+3*v*u*u*P[2][0]+u*u*u*P[3][0], v*v*v*P[0][1]+3*v*v*u*P[1][1]+3*v*u*u*P[2][1]+u*u*u*P[3][1]]; };
+      const N=mob? 600 : 1300, len=W*.75, foldA=len/R.folds*.07;
+      let px=null;
+      for(let i=0;i<N;i++){ const u=i/(N-1), rr=R.rnd[i%900], b=base(u);
+        /* the folds: the sheet swings toward and away from us, so along the screen it runs back on itself and the rays bunch up at each turn */
+        const fph=u*R.folds*6.283+T*.05*R.sp+R.ph, fold=Math.sin(fph), dfold=Math.cos(fph);
+        const sx=b[0]+fold*foldA, sy=b[1]+Math.sin(u*9-T*.22*R.sp+R.ph)*hz*.02+Math.sin(u*31+T*.13)*hz*.006+fold*hz*.012;   /* ripples rolling slowly along the hem */
+        const bunch=Math.min(1.7,1/(.55+.45*Math.abs(1+dfold*R.folds*6.283*foldA/len)));   /* brighter where the sheet is edge-on */
+        const edge=Math.pow(Math.sin(Math.PI*Math.min(1,Math.max(0,u))),.55);
+        const pulse=.55+.3*Math.sin(u*17-T*.25*R.sp+R.ph)+.2*Math.sin(u*53+T*.4*R.sp+R.ph*2)+.15*Math.sin(u*140-T*.7+rr[0]*6);   /* the rays brighten and fade on their own */
+        const I=Math.max(0,pulse)*edge*R.amp*bunch*(.65+.35*rr[1]); if(I<.04) continue;
+        const depth=.62+.38*(1-u)*(.7+.3*(fold*.5+.5));   /* nearer folds taller */
+        const h=H*R.h*depth*(.55+.45*Math.max(0,.5+.5*Math.sin(u*7+T*.08*R.sp+R.ph))+.2*rr[2]);
+        const w=Math.max(1.4,W*.0026*(.6+rr[0]*1.2)*(1.3-.5*Math.min(1,bunch)));
+        const tilt=(sx-W*.72)/W*.3+Math.sin(u*5+T*.03)*.04;   /* rays lean a little, converging toward the zenith */
+        const spr=AU_SPR[rr[2]<.45? 0 : rr[2]<.9? 1 : 2];
+        x.save(); x.translate(sx,sy); x.rotate(tilt); x.globalAlpha=Math.min(1,I*.13); x.drawImage(spr,-w,-h,w*2,h*1.02); x.restore(); } }
     ctx.save(); skyClip(); ctx.globalCompositeOperation="screen"; ctx.imageSmoothingEnabled=true;
-    ctx.globalAlpha=Math.min(1,a*1.15); if("filter" in ctx) ctx.filter="blur(6px)"; ctx.drawImage(auC,0,0,cw*q,ch*q); ctx.filter="none";
-    ctx.globalAlpha=a*.85; ctx.drawImage(auC,0,0,cw*q,ch*q); ctx.restore(); }   /* a wide soft glow, with the finer rays over it */
+    if("filter" in ctx){ ctx.globalAlpha=Math.min(1,a*1.3); ctx.filter="blur(12px)"; ctx.drawImage(auC,0,0,cw*q,ch*q); ctx.globalAlpha=a*.9; ctx.filter="blur(3px)"; ctx.drawImage(auC,0,0,cw*q,ch*q); ctx.filter="none"; }   /* the wide glow, then the softened body */
+    ctx.globalAlpha=a*.6; ctx.drawImage(auC,0,0,cw*q,ch*q);   /* and the fine rays */
+    ctx.restore(); }
+
   function drawNight(){
     if(nA<=.005) return; const sp=sun(), hz=Math.ceil(IY(.56));
     /* the land under the moon: the sunset colour drains to a cool blue-grey but the shapes all stay (nothing is just painted over), and distance shows
@@ -896,9 +946,9 @@ const ambient=(function(){
     { const g=x.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,W*.3); g.addColorStop(0,"rgba(4,6,16,.9)"); g.addColorStop(1,"rgba(4,6,16,0)"); x.fillStyle=g; x.fillRect(sp.x-W*.3,sp.y-W*.3,W*.6,W*.6); }   /* the sun's glow put out */
     { const k=W+"x"+hz; if(k!==sfKey){ sfKey=k; sfC.width=Math.ceil(W); sfC.height=Math.max(1,hz); const y=sfX; y.clearRect(0,0,sfC.width,sfC.height);
         for(let i=0;i<W*hz/(MOBILE()? 1500 : 1100);i++){ const r=Math.random()<.05? rnd(.8,1.25) : rnd(.3,.7); y.fillStyle=`rgba(${pick(["236,240,255","255,244,226","226,234,255"])},${rnd(.35,.95).toFixed(2)})`; y.beginPath(); y.arc(Math.random()*sfC.width,Math.random()*sfC.height,r,0,6.283); y.fill(); } }
-      x.globalCompositeOperation="lighter"; x.globalAlpha=.8+.06*Math.sin(t*.9); x.drawImage(sfC,0,0); x.globalAlpha=1; }
+      x.save(); if(moonAt){ x.beginPath(); x.rect(0,0,nsC.width,nsC.height); x.arc(moonAt[0],moonAt[1],moonAt[2]*1.03,0,6.283); x.clip("evenodd"); }   /* the moon's disc hides the stars behind it, though its dark side is just more night sky */
+      x.globalCompositeOperation="lighter"; x.globalAlpha=.8+.06*Math.sin(t*.9); x.drawImage(sfC,0,0); x.restore(); x.globalAlpha=1; }
     x.globalCompositeOperation="destination-in"; x.filter="blur(2px)"; x.fillStyle="#000"; ridgePath(x,SKYL.far,2.5); x.fill(); x.filter="none";
-    if(moonAt){ x.globalCompositeOperation="source-over"; x.fillStyle="rgba(4,6,18,1)"; x.beginPath(); x.arc(moonAt[0],moonAt[1],moonAt[2]*1.02,0,6.283); x.fill(); }   /* the whole disc of the moon blots out the stars behind it, its dark side too */
     x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=nA; ctx.drawImage(nsC,0,0); ctx.restore(); }
   function drawScene(dark){
