@@ -296,7 +296,7 @@ var natureSfx=(function(){
     tone(at,1500,1550,.13,vv*.7,out); tone(at+.3,1650,3300,.28,vv,out); tone(at+.3,3300,6600,.24,vv*.08,out); }
   function honk(xFrac,near,spread){
     if(!ctx||!live) return; const now=ctx.currentTime+.02, base=Math.max(-1,Math.min(1,(xFrac*2-1)*1.4)), sp=Math.max(.35,spread||.5);
-    const v=.014+.05*Math.min(1.4,near); let at=now; const n=1+Math.floor(Math.random()*2);   /* a goose or two calling, not the whole skein */
+    const v=.016+.06*Math.min(1.4,near); let at=now; const n=1+Math.floor(Math.random()*3);   /* a goose or two calling, not the whole skein */
     for(let i=0;i<n;i++){ const pan=Math.max(-1,Math.min(1,base+R(-sp,sp))); gooseCall(at,pan,v*R(.6,1),near); if(Math.random()<.35) gooseCall(at+R(.28,.36),pan,v*R(.5,.8),near); at+=R(.18,.45); }   /* overlapping voices, some geese honking twice */
   }
   function apply(){
@@ -512,16 +512,16 @@ const ambient=(function(){
     const birds=[]; for(let i=0;i<n;i++){ const k=Math.ceil(i/2), side=i%2?1:-1, kk=lop&&side>0? k*1.3 : k;
       const wob=n>20? rnd(-.35,.35)*Math.sqrt(k) : 0; birds.push({b:-kk*gap*rnd(.92,1.08)+wob*.4, s:side*kk*gap*.62*rnd(.9,1.1)+wob*.25, y:rnd(-.06,.06)+(n>20?Math.sin(k*.4)*.08:0), ph:rnd(0,6.28), f:rnd(4.4,5.4)}); }
     const v=vanish(), edge=dir>0? -80 : W+80, X0=(edge-v[0])*Z/FOC()-dir*(n*gap*.6);
-    return {tier:ti, X:X0, Y, Z, hx, hz, px, pz, sp, birds, bob:rnd(0,6.28), honk:rnd(2.5,5)};
+    return {tier:ti, X:X0, Y, Z, hx, hz, px, pz, sp, birds, bob:rnd(0,6.28), honk:rnd(1,2.5)};
   }
   function drawGeese(dt,dark){
-    nextFlock-=(lull>0?0:dt); if(nextFlock<=0 && !flocks.length){ flocks.push(newFlock()); nextFlock=rnd(90,200); }   /* geese now and then, one skein at a time */
+    nextFlock-=(lull>0?0:dt); if(nextFlock<=0 && !flocks.length){ flocks.push(newFlock()); nextFlock=rnd(50,110); }   /* geese now and then, one skein at a time */
     const sun0=sun();
     for(const f of flocks){
       f.X+=f.hx*f.sp*dt; f.Z+=f.hz*f.sp*dt; f.bob+=dt*.5;
       if(f.Z<4) f.done=true;
       const haze=Math.max(0,Math.min(.85,(f.Z-8)/50)); let any=false;
-      f.honk-=dt; if(f.honk<=0){ f.honk=rnd(3.5,8); const c=w2s(f.X,f.Y,f.Z); if(c.x>W*.06&&c.x<W*.94&&c.y>0&&c.y<H*.7&&Math.random()<.7&&typeof natureSfx!=="undefined") natureSfx.honk(c.x/W,Math.min(1.8,Math.pow(10/f.Z,1.4)),Math.min(.9,Math.max(.35,40/f.Z)));   /* louder the closer and bigger they are */ }
+      f.honk-=dt; if(f.honk<=0){ f.honk=rnd(1.8,4.2); const c=w2s(f.X,f.Y,f.Z); if(c.x>W*.06&&c.x<W*.94&&c.y>-H*.05&&c.y<H*.75&&Math.random()<.85&&typeof natureSfx!=="undefined") natureSfx.honk(c.x/W,Math.min(1.8,Math.pow(10/f.Z,1.4)),Math.min(.9,Math.max(.35,40/f.Z)));   /* louder the closer and bigger they are */ }
       ctx.save(); ctx.lineCap="round"; ctx.lineJoin="round";
       for(const bd of f.birds){ bd.ph+=dt*bd.f;
         const X=f.X+f.hx*bd.b+f.px*bd.s, Z=f.Z+f.hz*bd.b+f.pz*bd.s, Y=f.Y+bd.y+Math.sin(f.bob+bd.b)*.04;
