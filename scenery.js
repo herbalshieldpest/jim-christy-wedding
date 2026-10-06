@@ -1930,24 +1930,26 @@ const ambient=(function(){
   }
   /* the tom himself, drawn in his own 3D: x forward, y up, z to his left */
   function drawTom(x,V,m,P,sunS){
-    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, Lt=nrm([sunS*.55,-.8,-.4]), Hl=nrm([Lt[0],Lt[1],Lt[2]-1]), mob=MOBILE();
+    const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, Lt=nrm([sunS*.6,-.55,.55]), Hl=nrm([Lt[0],Lt[1],Lt[2]-1]), mob=MOBILE(), GC=P.g||[120,110,60], WARM=[255,198,122];   /* lit like the photo: the low sun behind and to the side, so he stands mostly in soft shade with a warm rim of light, the grass bouncing a little green up under him */
     const pu=m.puff, fanA=m.fan, wd=m.wing, q=m.ph*Math.PI*2, mv=m.mv, vib=m.drum>0? Math.sin(m.drum*60)*m.drum*.35 : 0;
     const bob=mv&&pu<.5? Math.abs(Math.sin(q))*.6 : 0;
     const RX=12.6+pu*1.2, RY=7.6+pu*3.8, RZ=7.4+pu*3.4, C=[0+vib*.3,RY+7.6-pu*.6+bob,0];   /* puffed up he is nearly round */
     const items=[]; const add=(d,fn)=>items.push({d,fn});
     const PJ=p=>V(p[0],p[1],p[2]), VZ=n=>V(n[0],n[1],n[2]);
-    const lit=(n,c,spec,amb)=>{ const v=VZ(n), lam=Math.max(0,v[0]*Lt[0]+v[1]*Lt[1]+v[2]*Lt[2]), sp=Math.pow(Math.max(0,v[0]*Hl[0]+v[1]*Hl[1]+v[2]*Hl[2]),18)*(spec||0), k=(amb??.42)+(1-(amb??.42))*1.05*lam;
-      return [Math.min(255,c[0]*k+sp*220),Math.min(255,c[1]*k+sp*200),Math.min(255,c[2]*k+sp*170)]; };
-    const quad=(pr,col,stroke)=>{ x.fillStyle=col; x.beginPath(); x.moveTo(pr[0][0],pr[0][1]); for(let i=1;i<pr.length;i++) x.lineTo(pr[i][0],pr[i][1]); x.closePath(); x.fill(); if(stroke!==false){ x.strokeStyle=col; x.lineWidth=.06; x.stroke(); } };
+    const lit=(n,c,spec,amb)=>{ const v=VZ(n), lam=Math.max(0,v[0]*Lt[0]+v[1]*Lt[1]+v[2]*Lt[2]), sp=Math.pow(Math.max(0,v[0]*Hl[0]+v[1]*Hl[1]+v[2]*Hl[2]),14)*(spec||0)*.7, a0=Math.max(.5,amb??.5), k=a0+(1-a0)*.85*lam;
+      const rim=Math.pow(1-Math.abs(v[2]),2.4)*Math.max(0,v[0]*sunS*.8-v[1]*.45+.1)*.7, bo=Math.max(0,v[1])*.12;
+      return [Math.min(255,c[0]*k+(sp*.8+rim)*WARM[0]*.55+bo*GC[0]*.5),Math.min(255,c[1]*k+(sp*.8+rim)*WARM[1]*.55+bo*GC[1]*.5),Math.min(255,c[2]*k+(sp*.8+rim)*WARM[2]*.55+bo*GC[2]*.5)]; };
+    /* each patch is grown a touch about its middle so neighbours overlap and no seams show between them */
+    const quad=(pr,col,stroke)=>{ const n=pr.length, cx=pr.reduce((s2,p)=>s2+p[0],0)/n, cy=pr.reduce((s2,p)=>s2+p[1],0)/n, e=stroke===false? 1.04 : 1.1; x.fillStyle=col; x.beginPath(); x.moveTo(cx+(pr[0][0]-cx)*e,cy+(pr[0][1]-cy)*e); for(let i=1;i<n;i++) x.lineTo(cx+(pr[i][0]-cx)*e,cy+(pr[i][1]-cy)*e); x.closePath(); x.fill(); };
     const avgZ=pr=>pr.reduce((s,p)=>s+p[2],0)/pr.length;
     const H=(a,i)=>{ const v=Math.sin(a*12.9898+i*78.233)*43758.5453; return v-Math.floor(v); };   /* steady per-feather noise */
     /* ---- the body: a lat-long shell of feathers ---- */
     const NL=mob? 16 : 22, NA=mob? 10 : 13;
-    const surf=(lon,lat)=>{ const cl=Math.cos(lat), d=[cl*Math.cos(lon),Math.sin(lat),cl*Math.sin(lon)]; const fr=d[0]>0? 1+pu*.12*Math.max(0,-d[1]+.3) : 1;   /* the breast swells forward and down */
-      const bt=(1-pu)*.2, cb=Math.cos(bt), sb=Math.sin(bt), lx=d[0]*RX*fr, ly=d[1]*RY*(d[1]<0? .92 : 1), n0=[d[0]/RX,d[1]/RY,d[2]/RZ];   /* walking, he carries his breast high and his back sloping to the tail */
+    const surf=(lon,lat)=>{ const cl=Math.cos(lat), d=[cl*Math.cos(lon),Math.sin(lat),cl*Math.sin(lon)]; const fr=(d[0]>0? 1+pu*.16*Math.max(0,-d[1]+.35)*d[0] : 1-.06*(-d[0])*Math.max(0,d[1]))*(1+(pu*.045+.012)*(Math.sin(lon*9.3+lat*5.1)*.6+Math.sin(lon*17+lat*11.7)*.4));   /* the breast swells forward and down, the back falls away into the fan, and the puffed feathers break the outline */
+      const bt=(1-pu)*.2, cb=Math.cos(bt), sb=Math.sin(bt), lx=d[0]*RX*fr, ly=d[1]*RY*(d[1]<0? .9 : 1-.12*pu*Math.max(0,-d[0]))*(d[0]>0&&d[1]<0? 1+.06*pu : 1), n0=[d[0]/RX,d[1]/RY,d[2]/RZ];   /* walking, he carries his breast high and his back sloping to the tail */
       const p=[C[0]+lx*cb-ly*sb,C[1]+lx*sb+ly*cb,C[2]+d[2]*RZ]; const n=nrm([n0[0]*cb-n0[1]*sb,n0[0]*sb+n0[1]*cb,n0[2]]); return {p,n,d}; };
-    const pxu=Math.hypot(x.getTransform().a,x.getTransform().b), tipA=Math.max(.3,Math.min(1,(pxu-1.6)/4));   /* far off, the feather edges blend into a soft sheen instead of stripes */
-    const IRC=[176,96,42], IRG=[80,104,52], IRB=[132,94,44];
+    const pxu=Math.hypot(x.getTransform().a,x.getTransform().b), tipA=Math.max(.12,Math.min(1,(pxu-3)/6));   /* far off, the feather edges blend into a soft sheen instead of stripes */
+    const IRC=[170,98,46], IRG=[96,92,50], IRB=[124,88,44];
     for(let j=0;j<NA;j++){ const la0=-Math.PI/2+Math.PI*j/NA, la1=-Math.PI/2+Math.PI*(j+1)/NA;
       for(let i=0;i<NL;i++){ const off=(j%2)*.5, lo0=2*Math.PI*(i+off)/NL, lo1=2*Math.PI*(i+1+off)/NL;
         const A=surf(lo0,la1), B=surf(lo1,la1), Cc=surf(lo1,la0), D=surf(lo0,la0), mid=surf((lo0+lo1)/2,(la0+la1)/2), vn=VZ(mid.n);
@@ -1956,12 +1958,12 @@ const ambient=(function(){
         /* which feathers: breast and sides bronze; the back bronze-green; the rump dark with chestnut edges; the belly dull */
         const rump=d[0]<-.55&&d[1]>-.2, belly=d[1]<-.55;
         const irid=.5+.5*Math.sin(vn[0]*3.1+vn[1]*2.3+h*1.4), base=belly? [46,38,32] : rump? [48,36,28] : mixv(mixv(IRC,IRG,irid*.7),IRB,.35);
-        const fc=mulv(base,.42+.22*h), tip=rump? [150,98,54] : belly? [60,50,42] : [12,10,8];
+        const fc=mulv(base,.3+.16*h), tip=rump? [150,98,54] : belly? [60,50,42] : [12,10,8];
         add(avgZ(pr),()=>{ quad(pr,rgb(lit(mid.n,fc,belly? .05 : .35,.4)));
           /* the feather's black (or chestnut) tip: a scalloped edge along its lower side, with the copper glint just above it */
           const jv=H(j,i*3)*.45, a0=pr[3], b0=pr[2], a=[lerp(a0[0],pr[0][0],jv),lerp(a0[1],pr[0][1],jv)], b=[lerp(b0[0],pr[1][0],jv),lerp(b0[1],pr[1][1],jv)], c0=[(a[0]+b[0])/2,(a[1]+b[1])/2], up=[(pr[0][0]+pr[1][0])/2-c0[0],(pr[0][1]+pr[1][1])/2-c0[1]];
           x.fillStyle=rgb(lit(mid.n,tip,.5,.45),tipA); x.beginPath(); const tw=.3+h*.25, sg=.35+h*.4; x.moveTo(a[0],a[1]); x.quadraticCurveTo(c0[0]-up[0]*sg,c0[1]-up[1]*sg,b[0],b[1]); x.lineTo(b[0]+up[0]*tw,b[1]+up[1]*tw); x.quadraticCurveTo(c0[0]-up[0]*(sg-tw-.15),c0[1]-up[1]*(sg-tw-.15),a[0]+up[0]*tw,a[1]+up[1]*tw); x.closePath(); x.fill();
-          if(!belly&&!rump){ x.strokeStyle=rgb(lit(mid.n,mixv(IRC,IRG,irid),.8,.3),.32); x.lineWidth=.26; x.beginPath(); x.moveTo(a[0]+up[0]*.5,a[1]+up[1]*.5); x.quadraticCurveTo(c0[0]+up[0]*.05,c0[1]+up[1]*.05,b[0]+up[0]*.5,b[1]+up[1]*.5); x.stroke(); } }); } }
+          if(!belly&&!rump&&pxu>6){ x.strokeStyle=rgb(lit(mid.n,mixv(IRC,IRG,irid),.8,.3),.32); x.lineWidth=.26; x.beginPath(); x.moveTo(a[0]+up[0]*.5,a[1]+up[1]*.5); x.quadraticCurveTo(c0[0]+up[0]*.05,c0[1]+up[1]*.05,b[0]+up[0]*.5,b[1]+up[1]*.5); x.stroke(); } }); } }
     /* ---- the tail: a raised fan in strut, folded and trailing when he walks ---- */
     const NF=mob? 14 : 18, tilt=.28-.1*fanA, root=[C[0]-RX*.78,C[1]+RY*.25,0];
     for(let i=0;i<NF;i++){ const u0=(i+.5)/NF*2-1, spread=lerp(.16,1.5,fanA), a=u0*spread, lift=lerp(-.55,1,fanA);   /* angle across the fan, and how far it is raised */
@@ -1976,7 +1978,8 @@ const ambient=(function(){
             col= u>.885? [176,112,60] : u>.75? [22,18,15] : ((u*15+Math.sin(u*9+i*.4)*.12)%1)<.38? [38,27,20] : [122,76,42]; if(u>.885) col=mixv(col,[214,170,112],(u-.885)*3); }
           else col= u>.88? [196,170,140] : ((u*12)%1)<.35? [78,66,56] : [120,106,92];   /* the underside: greyer, barred, pale tipped */
           col=mulv(col,.92+ph*.14);
-          const a=pr[k], b=pr[k+1]; quad([a[0],a[1],b[1],b[0]],rgb(lit(front? fn : mulv(fn,-1),col,front? .4 : .1,.5)),k%3===0); }
+          if(front&&u>.78) col=mixv(col,[255,176,96],Math.max(0,VZ(fn)[2]*-1)*.0+.18*(u-.78)/.22);   /* the low sun shining through the thin tips of the fan */
+          const a=pr[k], b=pr[k+1]; quad([a[0],a[1],b[1],b[0]],rgb(lit(front? fn : mulv(fn,-1),col,front? .4 : .1,.5)),true); }
         /* the shaft, and the dark edge between neighbouring feathers */
         x.strokeStyle="rgba(10,8,6,.35)"; x.lineWidth=.12; x.beginPath(); pr.forEach((p,k)=>{ k? x.lineTo(p[0][0],p[0][1]) : x.moveTo(p[0][0],p[0][1]); }); x.stroke();
         x.strokeStyle=front? "rgba(230,200,160,.22)" : "rgba(240,230,220,.2)"; x.lineWidth=.14; x.beginPath(); pr.forEach((p,k)=>{ const c=[(p[0][0]+p[1][0])/2,(p[0][1]+p[1][1])/2]; k? x.lineTo(c[0],c[1]) : x.moveTo(c[0],c[1]); }); x.stroke(); }); }
@@ -1990,12 +1993,12 @@ const ambient=(function(){
       const NPr=mob? 6 : 9, NSe=mob? 5 : 8, N=NPr+NSe;
       for(let k=N-1;k>=0;k--){ const u=k/(N-1), prim=k<NPr, jit=H(k,sd*3)-.5;
         const bS=[lerp(C[0]+RX*.25,C[0]-RX*.6,u),lerp(C[1]-RY*.1,C[1]+RY*.12,u),sd*RZ*1.0], bF=[lerp(C[0]+RX*.35,C[0]-RX*.3,u),C[1]+RY*(.12+.12*u),sd*RZ*.97];
-        const tS=[lerp(C[0]+RX*.62,C[0]-RX*.95,Math.pow(u,.9))+jit*.6,lerp(.9,C[1]-RY*.7,u*u),sd*(RZ*1.0+3.2*(1-u*.6))], tF=[C[0]-RX*(1.0+.08*(1-u))+jit*.4,C[1]-RY*(.32-.1*u),sd*RZ*.92];
+        const tS=[lerp(C[0]+RX*.7,C[0]-RX*.95,Math.pow(u,.9))+jit*.6,lerp(.9,C[1]-RY*.7,u*u),sd*(RZ*1.0+5.5*(1-u*.7))], tF=[C[0]-RX*(1.0+.08*(1-u))+jit*.4,C[1]-RY*(.32-.1*u),sd*RZ*.92];
         const base=[lerp(bF[0],bS[0],wd),lerp(bF[1],bS[1],wd),lerp(bF[2],bS[2],wd)], tip=[lerp(tF[0],tS[0],wd),lerp(tF[1],tS[1],wd),lerp(tF[2],tS[2],wd)];
-        const dv=[tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]], dn=nrm(dv), sv=nrm([dn[1],-dn[0],0]), M=mob? 7 : 10, fw=prim? 1.5 : 1.9;
-        const strip=[]; for(let j=0;j<=M;j++){ const v=j/M, w=fw*(v<.8? .75+.25*v/.8 : Math.sqrt(Math.max(0,1-(v-.8)/.2)))+.08, c=[base[0]+dv[0]*v,base[1]+dv[1]*v,base[2]+dv[2]*v+sd*.04*k]; strip.push([PJ([c[0]-sv[0]*w,c[1]-sv[1]*w,c[2]]),PJ([c[0]+sv[0]*w,c[1]+sv[1]*w,c[2]])]); }
+        const dv=[tip[0]-base[0],tip[1]-base[1],tip[2]-base[2]], dn=nrm(dv), s0=nrm([dn[1],-dn[0],0]), s1=nrm([-dn[2],0,dn[0]]), sv=nrm([lerp(s0[0],s1[0],.55*wd),lerp(s0[1],s1[1],.55*wd),lerp(s0[2],s1[2],.55*wd)]), M=mob? 7 : 10, fw=(prim? 1.5 : 1.9)*lerp(.75,1.15,wd);   /* lowered, the wing opens and tilts out like a skirt, so it shows from the front too */
+        const strip=[]; for(let j=0;j<=M;j++){ const v=j/M, w=fw*(v<.8? .75+.25*v/.8 : Math.sqrt(Math.max(0,1-(v-.8)/.2)))+.08, c=[base[0]+dv[0]*v,base[1]+dv[1]*v,base[2]+dv[2]*v+sd*.04*k]; strip.push([PJ([c[0]-sv[0]*w,c[1]-sv[1]*w,c[2]-sv[2]*w]),PJ([c[0]+sv[0]*w,c[1]+sv[1]*w,c[2]+sv[2]*w])]); }
         add(avgZ(strip.map(s2=>s2[0]))-.8-(prim? 0 : .15)-k*.01,()=>{ for(let j=0;j<M;j++){ const v=(j+.5)/M, bar=((v*(prim? 7.5 : 6)+(prim? 0 : .5))%1)<(prim? .42 : .34);
-            const col= prim? (bar? [208,202,188] : [32,27,23]) : (bar? [214,206,188] : mixv([92,68,42],[58,66,36],.35)); const a=strip[j], b=strip[j+1]; quad([a[0],a[1],b[1],b[0]],rgb(lit(fn,mulv(col,.9+.1*Math.sin(j+k)),.25,.5)),false); }
+            const fb=.35+.65*wd, col= prim? (bar? mixv([40,34,28],[208,202,188],fb) : [32,27,23]) : (bar? mixv([70,56,40],[214,206,188],fb) : mixv([92,68,42],[58,66,36],.35));   /* folded, the white barring mostly tucks out of sight */ const a=strip[j], b=strip[j+1]; quad([a[0],a[1],b[1],b[0]],rgb(lit(fn,mulv(col,.9+.1*Math.sin(j+k)),.25,.5)),false); }
           x.strokeStyle="rgba(8,6,4,.45)"; x.lineWidth=.12; x.beginPath(); strip.forEach((s2,j)=>{ j? x.lineTo(s2[1][0],s2[1][1]) : x.moveTo(s2[1][0],s2[1][1]); }); x.stroke(); }); }
       /* the coverts over the top of the wing: a glossy bronze shield, each feather tipped black */
       for(let r=0;r<3;r++) for(let k=0;k<6;k++){ const u=k/5, v=r/2, c=[lerp(C[0]+RX*.3,C[0]-RX*.55,u),lerp(C[1]+RY*.25,lerp(C[1]+RY*.05,C[1]-RY*.2,wd),v)-u*.5,sd*(RZ*lerp(.99,1.04,wd)+.25)], w=2.0+H(k,r)*.4;
@@ -2020,8 +2023,12 @@ const ambient=(function(){
       const nm=[lerp(nb[0],hdp[0],.5)+(pu>.5? -1 : .6),lerp(nb[1],hdp[1],.55),hdp[2]*.5];
       const chain=[[...nb,lerp(2.2,2.6,pu)],[...nm,lerp(1.3,1.8,pu)],[...hdp,lerp(1.1,1.5,pu)]].map(p=>{ const v=PJ(p); return [v[0],v[1],v[2],p[3]]; });
       const HP=(u,v,w)=>headPt(hdp,0,hyaw,u,v,w), hr=lerp(2.1,2.5,pu);
+      /* the ruff of body feathers where the bare neck comes out of the breast */
+      for(let i=0;i<14;i++){ const a=i/14*6.283, r0=lerp(2,2.8,pu), c=[nb[0]-.6+Math.cos(a)*.6,nb[1]-.4+Math.sin(a)*r0*.5,Math.sin(a)*r0], out=nrm([.35,Math.cos(a)*.4-.5,Math.sin(a)]), L2=2.4+H(i,2)*1.2, side=nrm([0,Math.sin(a),-Math.cos(a)]), w=1.1;
+        const pr=[PJ([c[0]-side[0]*w,c[1]-side[1]*w,c[2]-side[2]*w]),PJ([c[0]+out[0]*L2,c[1]+out[1]*L2,c[2]+out[2]*L2]),PJ([c[0]+side[0]*w,c[1]+side[1]*w,c[2]+side[2]*w])], nn=nrm([out[0]+.4,out[1],out[2]]);
+        if(VZ(nn)[2]>.4) continue; add(avgZ(pr)-1.2,()=>{ x.fillStyle=rgb(lit(nn,mulv(mixv(IRC,IRG,H(i,8)),.42),.4,.5)); x.beginPath(); x.moveTo(pr[0][0],pr[0][1]); x.quadraticCurveTo(pr[1][0],pr[1][1],pr[2][0],pr[2][1]); x.closePath(); x.fill(); x.strokeStyle="rgba(12,9,7,.6)"; x.lineWidth=.25; x.beginPath(); x.moveTo(pr[0][0],pr[0][1]); x.quadraticCurveTo(pr[1][0],pr[1][1],pr[2][0],pr[2][1]); x.stroke(); }); }
       add(Math.min(chain[1][2],chain[2][2])-2,()=>{
-        x.fillStyle=rgb(lit([1,0,0],mixv([150,96,110],[198,60,58],pu),.2,.6)); x.beginPath(); tubePath(x,chain); x.fill();
+        x.fillStyle=rgb(lit([1,0,0],mixv([112,84,96],[186,58,56],pu),.2,.6)); x.beginPath(); tubePath(x,chain); x.fill();
         /* the caruncles: knobbly red bumps down the front of the throat */
         for(let i=0;i<9;i++){ const u=i/8, c=[lerp(hdp[0]+.6,nb[0]+1.6,u),lerp(hdp[1]-1.4,nb[1]+.6,u),hdp[2]*(1-u)+(H(i,9)-.5)*1.2], p=PJ(c); x.fillStyle=rgb(lit([1,-.2,0],[206,52,50],.6,.55)); x.beginPath(); x.arc(p[0],p[1],(.55+H(i,4)*.35)*(.45+.55*pu)+pu*.15,0,6.283); x.fill(); }
         /* the head: blue cheeks, the white crown of a tom in strut */
@@ -2036,15 +2043,24 @@ const ambient=(function(){
           const sp2=pts2.map((p,i)=>{ const v=PJ(p); return [v[0],v[1],v[2],lerp(.55,.42,i/8)+(i===8? .1 : 0)]; }); x.fillStyle=rgb(lit([1,0,0],[198,48,52],.7,.55)); x.beginPath(); tubePath(x,sp2); x.fill(); }
         /* the eye: dark brown with a pale ring and a spark of light */
         for(const sd of [-1,1]){ const e=PJ(HP(.6,.5,sd*1.55)), ez=VZ(headPt([0,0,0],0,hyaw,0,0,sd))[2]; if(ez>.3) continue; x.fillStyle="rgba(220,200,170,.8)"; x.beginPath(); x.arc(e[0],e[1],.55,0,6.283); x.fill(); x.fillStyle="#1a110c"; x.beginPath(); x.arc(e[0],e[1],.4,0,6.283); x.fill(); x.fillStyle="rgba(255,255,255,.8)"; x.beginPath(); x.arc(e[0]-.12,e[1]-.14,.12,0,6.283); x.fill(); } }); }
+    /* his shadow on the grass: soft, spread wide under the fan and dragging wings, thrown toward you and away from the sun */
+    add(1e6,()=>{ const pts=[]; for(let i=0;i<24;i++){ const a=i/24*6.283; pts.push(PJ([C[0]-2+Math.cos(a)*(RX*1.15+pu*6),0,Math.sin(a)*(RZ*1.25+pu*5)])); } const cx=pts.reduce((s2,p)=>s2+p[0],0)/24, cy=pts.reduce((s2,p)=>s2+p[1],0)/24;
+      x.save(); x.translate(-sunS*3,1.2); const sh=x.createRadialGradient(cx,cy,0,cx,cy,RX*1.6+pu*6); sh.addColorStop(0,rgb(mulv(GC,.25),.42)); sh.addColorStop(.6,rgb(mulv(GC,.3),.2)); sh.addColorStop(1,rgb(mulv(GC,.35),0)); x.fillStyle=sh; x.beginPath(); pts.forEach((p,i)=>i? x.lineTo(p[0],p[1]) : x.moveTo(p[0],p[1])); x.closePath(); x.fill(); x.restore(); });
     items.sort((a,b)=>b.d-a.d); x.lineJoin="round"; x.lineCap="round"; for(const it of items) it.fn();
+    /* graded into the photograph: the evening's warm haze over the top, the grass colour in the shadows, the contrast eased to match the picture */
+    x.save(); x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop"; const cw=x.canvas.width, chh=x.canvas.height, gg=x.createLinearGradient(0,0,0,chh);
+    gg.addColorStop(0,"rgba(255,206,140,.1)"); gg.addColorStop(.55,"rgba(140,120,90,.05)"); gg.addColorStop(1,rgb(mulv(GC,.45),.14)); x.fillStyle=gg; x.fillRect(0,0,cw,chh);
+    x.fillStyle="rgba(96,84,66,.1)"; x.fillRect(0,0,cw,chh); x.restore();
   }
   function tomQueue(dt,dark,list){
     if(!tom) return;
     stepTom(dt); if(!tom) return; const m=tom, s=toScreen(m.Xw,m.Dw); if(s.x<-260||s.x>W+260) return;
     m.ct=(m.ct||0)-dt; if(m.ct<=0||!m.pal){ m.ct=2; m.pal={...groundPal(s,dark)}; }
     m.sunS=Math.sign(sun().x-s.x)||1; m.post=(x,V)=>drawTom(x,V,m,m.pal,m.sunS); m.pitch=null;
+    if(!m.air||m.ct===2){ const ip=toImg(s.x,s.y-s.g*.25), sc=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,120]; m.air={c:mixv(sc,[255,214,170],.35),a:(dark? .04 : .06)+Math.max(0,1-s.g/380)*.22,blur:.45}; }   /* the air between him and you, picked up from the photo around him */
+    if(!m.blades) m.blades=Array.from({length:34},()=>({ox:rnd(-34,34),h:rnd(2,5.5),lean:rnd(-.5,.5),c:Math.random()}));   /* grass in front of his toes */
     if(m.zy==null||Math.abs(s.y-m.zy)>3) m.zy=s.y;
-    list.push({y:m.zy,fn:()=>{ const k=.16*s.g/26*1.12; critterBlit(tomCv,tomCx,m,s,k,m.pal,[],m.yaw,96,104,20,null,m.alpha*(dark? 1 : 1),.5); }});
+    list.push({y:m.zy,fn:()=>{ const k=.16*s.g/26*1.12; critterBlit(tomCv,tomCx,m,s,k,m.pal,[],m.yaw,96,104,.01,m.blades,m.alpha*(dark? 1 : 1),.5); }});
   }
   /* ---- a black bear cub: ambles out of the field, noses about, plops down, wanders, then heads back ---- */
   let cub=null, nextCub=110;
