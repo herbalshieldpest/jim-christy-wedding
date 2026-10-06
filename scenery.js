@@ -5607,8 +5607,8 @@ const ambient=(function(){
     const cyc=(b.t+(b.lead?0:.18))%6.2, row=cyc<4.6; b.wph=(b.wph||0)+dt*(row||Math.cos(b.wph||0)<.97? Math.PI*2*2.1 : 0); b.amp=(b.amp||0)+((row? .5 : .04)-(b.amp||0))*Math.min(1,dt*(row?4:2)); b.curl=row? .25 : .4;   /* steady, deliberate rowing, the pair nearly in step, then a short glide on slightly bowed wings */
     const y0=b.Y; b.hy=Math.sin(b.t*.7+b.ph)*.4;
     let bank=Math.sin(b.t*.45+b.ph)*.12;
-    if(b.lead&&b.t>p.rollAt){ p.rollAt=b.t+rnd(16,28); b.roll={t:0,dur:rnd(.7,.95),turns:.5,flip:true,dir:Math.random()<.5?1:-1}; if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,"knock"); }
-    if(!b.lead&&b.t>p.tumbleAt){ p.tumbleAt=b.t+rnd(24,40); b.roll={t:0,dur:.9,turns:.5,flip:true,dir:-1,drop:.25}; }     /* the follower tumbles and drops, then catches up */
+    if(false&&b.lead&&b.t>p.rollAt){ p.rollAt=b.t+rnd(16,28); b.roll={t:0,dur:rnd(.7,.95),turns:.5,flip:true,dir:Math.random()<.5?1:-1}; if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,"knock"); }
+    if(false&&!b.lead&&b.t>p.tumbleAt){ p.tumbleAt=b.t+rnd(24,40); b.roll={t:0,dur:.9,turns:.5,flip:true,dir:-1,drop:.25}; }     /* the follower tumbles and drops, then catches up */
     if(b.roll){ const r=b.roll; r.t+=dt; const u=Math.min(1,r.t/r.dur), e=u<.5? 2*u*u : 1-2*(1-u)*(1-u); bank+=r.flip? r.dir*Math.sin(u*Math.PI)*Math.PI : r.dir*e*Math.PI*2*r.turns; b.amp*=.85; b.curl=.9;   /* a quick flip onto its back and straight back over */ if(r.drop) b.dropY=-Math.sin(u*Math.PI)*r.drop*.6; if(u>=1) b.roll=null; }   /* flipped right over onto its back, wings folding, and out again */
     b.bank=bank; b.vy=(b.Y-y0)/Math.max(dt,1e-3);
     if(b.lead&&b.t>p.callAt){ p.callAt=b.t+rnd(2.5,6); if(typeof natureSfx!=="undefined"&&natureSfx.raven) natureSfx.raven(b._pan||0,Math.random()<.75?"croak":"knock"); }
@@ -6336,7 +6336,7 @@ const viewInfo=(function(){
     back.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); close(); }
       if(e.key==="Tab"){ const f=[...back.querySelectorAll("button,a")], a=f[0], z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } } }); }
   /* the trail map, if the page has one (data-view-map on the button), with the cabin pinned where Jim marked it (window.HOUSE_PIN, as fractions across and down) */
-  function mapPin(){ if(!back) return; const pm=back.querySelector(".vi-pinmark"), p=window.HOUSE_PIN; pm.hidden=!(p&&typeof p.x==="number"); if(pm.hidden) return; pm.style.left=(p.x*100)+"%"; pm.style.top=(p.y*100)+"%"; pm.classList.toggle("left",p.x>.78); }
+  function mapPin(){ if(!back) return; const pm=back.querySelector(".vi-pinmark"), p=window.HOUSE_PIN; pm.hidden=!(p&&typeof p.x==="number"); if(pm.hidden) return; pm.style.left=(p.x*100)+"%"; pm.style.top=(p.y*100)+"%"; pm.classList.toggle("left",p.x>.58); }
   if(typeof window!=="undefined") window.addEventListener("housepin",mapPin);
   function open(btn){ if(!back) build(); last=btn||document.activeElement; back.hidden=false; document.documentElement.style.overflow="hidden";
     { const src=btn&&btn.getAttribute&&btn.getAttribute("data-view-map"), fig=back.querySelector(".vi-map"); fig.hidden=!src; back.querySelector(".vi-panel").classList.toggle("has-map",!!src); if(src){ const a=fig.querySelector("a"), im=fig.querySelector("img"); a.href=src; if(im.getAttribute("src")!==src) im.src=src; mapPin(); } }
@@ -6389,15 +6389,18 @@ const viewBird=(function(){
 .vb-say:hover{background:rgba(19,38,26,.92);border-color:rgba(255,250,242,.7)}
 @media (max-width:640px){.vb-say{font-size:16px;padding:8px 12px 8px 11px}}`;
   const VINE=`<svg viewBox="0 0 26 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"><path d="M1 6C6 3 10 8 15 5S22 2 25 4"/><path d="M7 4.6C7.6 2.4 9.6 1.4 11 1.8C10.4 3.6 9 4.6 7 4.6Z"/><path d="M17 4.6C17.6 6.8 19.4 7.8 21 7.4C20.4 5.6 19 4.6 17 4.6Z"/></svg>`;
-  let el=null, say=null, st=null, raf=0, nextT=0; const LP=(a,b,u)=>a+(b-a)*u;
+  let el=null, say=null, st=null, raf=0, nextT=0, visits=0, lastSel=null, cur=null; const LP=(a,b,u)=>a+(b-a)*u;
+  /* where it might land, and what it says there: the view first, then now and then one of the other buttons */
+  const SPOTS=[{sel:"[data-view-info]",text:"Learn about our view!"},{sel:"[data-call-critter]",text:"Call a critter to visit!"},{sel:"[data-sound-toggle]",text:"Hear the mountain sounds!",ok:()=>{ try{ return !natureSfx.playing; }catch(e){ return false; } }}];
   function build(){ const s=D.createElement("style"); s.textContent=CSS; D.head.append(s);
     el=D.createElement("div"); el.className="vb"; el.setAttribute("aria-hidden","true"); el.innerHTML=`<svg viewBox="0 0 46 62">${PERCH}${FLY}</svg>`; D.body.append(el);
-    say=D.createElement("button"); say.type="button"; say.className="vb-say"; say.innerHTML=`${VINE}<span>Learn about our view!</span>`; say.hidden=true; D.body.append(say);
-    const go=()=>{ const b=D.querySelector("[data-view-info]"); leave(); if(b&&typeof viewInfo!=="undefined"&&viewInfo) viewInfo.open(b); };
+    say=D.createElement("button"); say.type="button"; say.className="vb-say"; say.innerHTML=`${VINE}<span></span>`; say.hidden=true; D.body.append(say);
+    const go=()=>{ const sp=cur, b=sp&&D.querySelector(sp.sel); leave(); if(!b) return; if(sp.sel==="[data-view-info]"&&typeof viewInfo!=="undefined"&&viewInfo) viewInfo.open(b); else b.click(); };
     say.addEventListener("click",go); el.addEventListener("click",go); }
-  const btn=()=>{ const b=D.querySelector("[data-view-info]"); if(!b) return null; const r=b.getBoundingClientRect(); return r.width&&getComputedStyle(b).visibility!=="hidden"&&getComputedStyle(b).opacity!=="0"? r : null; };
+  const btn=()=>{ const b=cur&&D.querySelector(cur.sel); if(!b) return null; const r=b.getBoundingClientRect(); return r.width&&getComputedStyle(b).visibility!=="hidden"&&getComputedStyle(b).opacity!=="0"? r : null; };
   const busy=()=>D.hidden||!!D.querySelector(".vi-back.on,.cc-back.on")||[...D.querySelectorAll(".panel")].some(p=>!p.hidden&&getComputedStyle(p).display!=="none");
-  function start(){ const r=btn(); if(!r||busy()){ nextT=performance.now()+20000; return; } if(!el) build();
+  function start(){ const opts=SPOTS.filter(p=>D.querySelector(p.sel)&&(!p.ok||p.ok())); cur= !visits? SPOTS[0] : (opts.filter(p=>p.sel!==lastSel)[Math.floor(Math.random()*Math.max(1,opts.filter(p=>p.sel!==lastSel).length))]||SPOTS[0]);
+    const r=btn(); if(!r||busy()){ nextT=performance.now()+20000; return; } if(!el) build(); visits++; lastSel=cur.sel; say.querySelector("span").textContent=cur.text;
     const mob=innerWidth<=640, sc=mob? .82 : 1, px=r.left-31*sc, py=r.top+r.height/2-34*sc;
     st={t0:performance.now(),ph:"fly",sc,P:[px,py],S:[-70,Math.max(10,py+(mob? -140 : 110))],dur:Math.min(3.2,Math.max(1.8,(px+70)/620)),taps:0};
     el.querySelector(".vb-perch").style.display="none"; el.querySelector(".vb-fly").style.display=""; el.style.display=""; el.classList.remove("on"); cancelAnimationFrame(raf); raf=requestAnimationFrame(tick); }
@@ -6414,12 +6417,12 @@ const viewBird=(function(){
         if(n>s.taps&&n<=3){ s.taps=n; try{ natureSfx.peck&&natureSfx.peck(x/innerWidth); }catch(e){} } if(k>.22*3.4){ perchG.removeAttribute("transform"); s.ph="say"; s.ts=now; say.hidden=false; el.classList.add("on"); requestAnimationFrame(()=>say.classList.add("on")); } }
       if(s.ph==="say"){ const k=(now-s.ts)/1000; perchG.setAttribute("transform",`rotate(${(Math.sin(k*2.2)*2).toFixed(2)} 22 40)`); if(k>9) leave(); } }
     if(s.ph==="away"){ const k=(now-s.ta)/1000; if(k<.25){ x=s.P[0]; y=s.P[1]; } else { if(perchG.style.display!=="none"){ perchG.style.display="none"; flyG.style.display=""; } const u=(k-.25)/1.6; x=s.P[0]-u*u*innerWidth*.9; y=s.P[1]-u*180+Math.sin(u*Math.PI*4)*12; flip=true; rot=-8;
-        const fl=Math.sin(now/1000*Math.PI*2*13); wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); if(u>=1){ el.style.display="none"; st=null; nextT=performance.now()+(200+Math.random()*120)*1000; return; } } }
+        const fl=Math.sin(now/1000*Math.PI*2*13); wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); if(u>=1){ el.style.display="none"; st=null; nextT=performance.now()+(110+Math.random()*120)*1000; return; } } }
     if(s.ph==="say"){ const sr=el.getBoundingClientRect(); say.style.left=""; say.style.right=(innerWidth-sr.left+4)+"px"; say.style.top=(sr.top+sr.height*.42-say.offsetHeight/2)+"px"; }
     el.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${(flip?-1:1)*s.sc},${s.sc}) rotate(${rot}deg)`; raf=requestAnimationFrame(tick); }
   function loop(){ const now=performance.now(); if(!st&&now>nextT&&nextT>0) start(); setTimeout(loop,1000); }
-  D.addEventListener("mouseover",e=>{ if(st&&st.ph==="say"&&e.target.closest&&e.target.closest("[data-view-info]")) leave(); });
-  D.addEventListener("click",e=>{ if(st&&e.target.closest&&e.target.closest("[data-view-info]")) leave(); },true);
+  D.addEventListener("mouseover",e=>{ if(st&&cur&&st.ph==="say"&&e.target.closest&&e.target.closest(cur.sel)) leave(); });
+  D.addEventListener("click",e=>{ if(st&&cur&&e.target.closest&&e.target.closest(cur.sel)&&!e.target.closest(".vb-say")) leave(); },true);
   const begin=()=>{ if(!D.querySelector("[data-view-info]")) return; if(reduce()){ return; } nextT=performance.now()+6500; loop(); };
   if(D.readyState==="loading") D.addEventListener("DOMContentLoaded",begin); else begin();
   return {start};
