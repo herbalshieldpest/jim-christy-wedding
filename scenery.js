@@ -466,7 +466,7 @@ const ambient=(function(){
     else { for(let i=0;i<6;i++){ const yy=-.65+i*.28, w=(l.kind==="oak"?.36:.5)*Math.sqrt(Math.max(0,1-yy*yy)); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(w*.5,yy-.02,w,yy-.14); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(-w*.5,yy-.02,-w,yy-.14); } }
     ctx.stroke(); ctx.restore();
     { const b0=l.kind==="maple"? .3 : .92; ctx.strokeStyle=rgb(mulv(lc,.7)); ctx.lineWidth=1.6/S; ctx.beginPath(); ctx.moveTo(0,b0); ctx.lineTo(0,b0+.3); ctx.stroke(); }   /* a short stem */
-    ctx.strokeStyle="rgba(60,28,8,.5)"; ctx.lineWidth=1.2/S; ctx.stroke(p);                                                   /* the curled, darker rim */
+    ctx.save(); ctx.clip(p); ctx.strokeStyle=rgb(mulv(lc,.55),.22); ctx.lineWidth=1.1/S; ctx.stroke(p); ctx.restore();                                                   /* the curled, darker rim */
     if(lit>.2&&!back){ ctx.save(); ctx.clip(p); ctx.globalCompositeOperation="screen"; const g3=ctx.createLinearGradient(Math.cos(toSun-l.rot)*-1,Math.sin(toSun-l.rot)*-1,Math.cos(toSun-l.rot),Math.sin(toSun-l.rot)); g3.addColorStop(.55,"rgba(255,170,70,0)"); g3.addColorStop(1,`rgba(255,180,80,${(.3*lit).toFixed(2)})`); ctx.fillStyle=g3; ctx.fillRect(-1.5,-1.5,3,3); ctx.restore(); }   /* the sun glowing through its edge */
     { const am=.06+mist; ctx.save(); ctx.clip(p); ctx.fillStyle=`rgba(214,188,150,${am.toFixed(2)})`; ctx.fillRect(-1.5,-1.5,3,3); ctx.restore(); }                    /* the evening air between us and it */
     ctx.globalCompositeOperation="source-atop";
@@ -3398,7 +3398,7 @@ const ambient=(function(){
       const O=[M[0]+r*Math.cos(hE),M[1]-r*Math.sin(hE)], last=pts[pts.length-1], aIn=Math.max(-1.52,hE-1.45);
       for(let i=0;i<=8;i++){ const h=lerp(aIn,hE,i/8); pts.push([O[0]-r*Math.cos(h),O[1]+r*Math.sin(h),lerp(last[2],M[2],.4+.6*i/8)]); } }   /* a right-hand bend */
     /* and away down the trail: past the mouth the ground falls away over a crest, so it tips nose-down and sinks out of sight below the brow of the hill as it goes */
-    for(let i=1;i<=8;i++){ const k=i*.32, Z=M[1]+Math.cos(hE)*k, e=Math.pow(i/8,1.4); pts.push([M[0]+Math.sin(hE)*k,Z,1-(1-M[2])*Z/M[1]-.45*e]); }
+    for(let i=1;i<=8;i++){ const k=i*.32, Z=M[1]+Math.cos(hE)*k, e=Math.pow(i/8,1.4); pts.push([M[0]+Math.sin(hE)*k,Z,M[2]-.3*(1-M[2])*(Z/M[1]-1)-.1*e]); }
     const cr=(a,b,c,d,t)=>{ const t2=t*t, t3=t2*t; return .5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t2+(-a+3*b-3*c+d)*t3); }, P=[];
     for(let i=0;i<pts.length-1;i++){ const a=pts[Math.max(0,i-1)], b=pts[i], c=pts[i+1], d=pts[Math.min(pts.length-1,i+2)]; for(let k=0;k<20;k++){ const t=k/20; P.push([0,1,2].map(j=>cr(a[j],b[j],c[j],d[j],t))); } }
     P.push(pts[pts.length-1]); if(rev) P.reverse(); const cum=[0]; let iM=0, bM=1e9; P.forEach((q,i)=>{ const dd=Math.hypot(q[0]-M[0],q[1]-M[1]); if(dd<bM){ bM=dd; iM=i; } }); for(let i=1;i<P.length;i++) cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1],P[i][2]-P[i-1][2]));
@@ -3424,7 +3424,7 @@ const ambient=(function(){
     if(u.yaw==null) u.yaw=hd; let dy=hd-u.yaw; while(dy>Math.PI) dy-=6.283; while(dy<-Math.PI) dy+=6.283; u.yaw+=dy; const yr=dy/Math.max(dt,1e-3); u.yr=(u.yr||0)+(yr-(u.yr||0))*Math.min(1,dt*5);
     { const ca0=Math.cos(u.yaw), sa0=Math.sin(u.yaw), bump=(X,Z)=>.008*Math.sin(X*15.7+Z*6.1)+.005*Math.sin(X*9.3-Z*21.4+1.3)+.003*Math.sin(X*41+Z*33+.7);   /* the field isn't a billiard table */
       u.wh=[[-.44,.58],[.44,.58],[-.44,-.56],[.44,-.56]].map(([wx,wz])=>bump(p[0]+(wx*ca0+wz*sa0)*S,p[1]+(-wx*sa0+wz*ca0)*S));
-      const [fl,fr,rl,rr]=u.wh, hT=(fl+fr+rl+rr)/4, pT=Math.max(-.2,Math.min(.2,slope*.85))+((fl+fr)-(rl+rr))/2/(1.14*S)+Math.max(-.05,Math.min(.05,(u.acc||0)/V0*.06)), rT=((fr+rr)-(fl+fl*0+rl))/2/(.88*S)+Math.max(-.07,Math.min(.07,-(u.yr||0)*u.v/V0*.05));
+      const [fl,fr,rl,rr]=u.wh, hT=(fl+fr+rl+rr)/4, pT=Math.max(-.12,Math.min(.12,slope*.85))+((fl+fr)-(rl+rr))/2/(1.14*S)+Math.max(-.05,Math.min(.05,(u.acc||0)/V0*.06)), rT=((fr+rr)-(fl+fl*0+rl))/2/(.88*S)+Math.max(-.07,Math.min(.07,-(u.yr||0)*u.v/V0*.05));
       const spring=(k,tg)=>{ const w=11, z=.32, a=w*w*(tg-u[k])-2*z*w*(u[k+'V']||0); u[k+'V']=(u[k+'V']||0)+a*dt; u[k]+=u[k+'V']*dt; };
       if(u.hv==null){ u.hv=hT; u.pitch=pT; u.roll=rT; } const st=Math.min(dt,.04); const dt0=dt; dt=st; spring('hv',hT); spring('pitch',pT); spring('roll',rT); dt=dt0; }   /* follows the lie of the ground, with small bumps */                                                                /* bumps in the field */
     u.wr+=u.v*dt/(.17*S);
@@ -3458,7 +3458,7 @@ const ambient=(function(){
     const both={both:1};
     /* big knobby tyres on black wheels */
     for(const [wi,[wx,wz]] of [[-.44,.58],[.44,.58],[-.44,-.56],[.44,-.56]].entries()){ const R0=.215, w2=.075, N=16, sd=Math.sign(wx);
-      const R=R0+Math.max(-.07,Math.min(.07,((u.wh?u.wh[wi]:0)+Math.max(-.2,Math.min(.2,slope*.85))*wz*S-u.hv-wx*S*u.roll-wz*S*u.pitch)/S));   /* where the tyre meets the ground, whatever the body is doing */
+      const R=R0+Math.max(-.07,Math.min(.07,((u.wh?u.wh[wi]:0)+Math.max(-.12,Math.min(.12,slope*.85))*wz*S-u.hv-wx*S*u.roll-wz*S*u.pitch)/S));   /* where the tyre meets the ground, whatever the body is doing */
       const ring=(x,r)=>Array.from({length:N},(_,i)=>{ const a=i/N*6.283+u.wr; return [x,R+Math.sin(a)*r,wz+Math.cos(a)*r]; });
       const outer=ring(wx+sd*w2,R), inner=ring(wx-sd*w2,R), lug=ring(wx+sd*w2,R*.97);
       for(let i=0;i<N;i++){ const j=(i+1)%N, a=(i+.5)/N*6.283+u.wr; poly([outer[i],outer[j],inner[j],inner[i]],i%2?[26,25,23]:[44,42,38],[0,Math.sin(a),Math.cos(a)]); }   /* the tread blocks */
