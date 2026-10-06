@@ -6128,8 +6128,8 @@ const viewInfo=(function(){
     ["County","Garrett County, Maryland"],
     ["Mountain system","Appalachian Mountains"],
     ["Range","Allegheny Mountains, on the Appalachian Plateau"],
-    ["Our ridge","Meadow Mountain, summit 3,022 ft"],
-    ["Also in view","Red Ridge, about 2,660 ft, some 4&frac12; miles off"]];
+    ["You&rsquo;re standing on","Red Ridge, on Meadow Mountain"],
+    ["Meadow Mountain","A long Allegheny ridge, summit 3,022 ft"]];
   const CSS=`.vi-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vh,32px) 16px;background:rgba(8,14,10,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
 .vi-back[hidden]{display:none}.vi-back.on{opacity:1}
 .vi-panel{position:relative;box-sizing:border-box;width:min(800px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;background:rgba(19,38,26,.84);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(20px,3.4vh,34px) clamp(20px,3.4vw,40px) clamp(18px,3vh,30px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
@@ -6154,8 +6154,8 @@ const viewInfo=(function(){
     back=document.createElement("div"); back.className="vi-back"; back.hidden=true; back.setAttribute("data-no-scenery","");
     back.innerHTML=`<div class="vi-panel" role="dialog" aria-modal="true" aria-labelledby="vi-title"><button type="button" class="vi-x" aria-label="Close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
       <span class="vi-pin">${PIN}</span><h2 class="vi-title" id="vi-title">The View</h2><p class="vi-sub">From the front yard, where we&rsquo;ll say &ldquo;I do&rdquo;</p>
-      <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the spot where the ceremony will take place. We&rsquo;re about 2,800 feet up on the side of <em>Meadow Mountain</em>, one of the long, parallel ridges of the <em>Allegheny Mountains</em>, the high, rugged western section of the <em>Appalachians</em>, here in the far western corner of Maryland.</p>
-      <p class="vi-text">Ridge after wooded ridge folds away toward the horizon, <em>Red Ridge</em> among them. Meadows of goldenrod and tall grass run down to the tree line, and in the evening the sun sinks behind the mountains in exactly the light you see here.</p>
+      <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the spot where the ceremony will take place. We&rsquo;re standing about 2,800 feet up on <em>Red Ridge</em>, on <em>Meadow Mountain</em>, one of the long, parallel ridges of the <em>Allegheny Mountains</em>, the high, rugged western section of the <em>Appalachians</em>, here in the far western corner of Maryland.</p>
+      <p class="vi-text">Ridge after wooded ridge folds away toward the horizon. Meadows of goldenrod and tall grass run down to the tree line, and in the evening the sun sinks behind the mountains in exactly the light you see here.</p>
       <dl class="vi-facts">${FACTS.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>`;
     document.body.append(back);
     back.addEventListener("click",e=>{ if(e.target===back||e.target.closest(".vi-x")) close(); });
@@ -6170,4 +6170,26 @@ const viewInfo=(function(){
   const fill=()=>document.querySelectorAll("[data-view-info]").forEach(b=>{ if(!b.innerHTML.trim()) b.innerHTML=PIN; });
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",fill); else fill();
   return {open,close,pin:PIN};
+})();
+/* ---- Full screen: any button with data-fullscreen takes the page full screen and, where the phone allows it, turns it to landscape for the whole view.
+   iPhones don't let a web page do either, so there it shows a gentle "turn your phone sideways" note instead ---- */
+const fullView=(function(){
+  if(typeof document==="undefined") return null;
+  const D=document, EXP='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+    SHR='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+  const fsEl=()=>D.fullscreenElement||D.webkitFullscreenElement, can=()=>!!(D.documentElement.requestFullscreen||D.documentElement.webkitRequestFullscreen);
+  let note=null, noteT=null;
+  function hint(){ if(!note){ const st=D.createElement("style"); st.textContent=`.fv-note{position:fixed;left:50%;top:50%;z-index:62;transform:translate(-50%,-46%);display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 26px 20px;max-width:min(300px,calc(100vw - 48px));color:#f6efe2;background:rgba(19,38,26,.86);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);text-align:center;font:400 17px/1.4 "Cormorant Garamond",Georgia,serif;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}.fv-note.on{opacity:1;transform:translate(-50%,-50%)}.fv-note svg{width:54px;height:54px;animation:fvTurn 2.4s ease-in-out infinite}@keyframes fvTurn{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}@media (prefers-reduced-motion:reduce){.fv-note svg{animation:none}}`; D.head.append(st);
+      note=D.createElement("div"); note.className="fv-note"; note.setAttribute("role","status"); note.innerHTML='<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="15" y="5" width="18" height="38" rx="3.5"/><path d="M21.5 38.5h5"/></svg><div>Turn your phone sideways for the full view</div>'; D.body.append(note); }
+    note.classList.add("on"); clearTimeout(noteT); noteT=setTimeout(()=>note.classList.remove("on"),3200); }
+  async function toggle(){
+    if(fsEl()){ try{ (D.exitFullscreen||D.webkitExitFullscreen).call(D); }catch(e){} return; }
+    if(!can()){ if(innerHeight>innerWidth) hint(); return; }
+    try{ const el=D.documentElement, rq=el.requestFullscreen||el.webkitRequestFullscreen; await rq.call(el,{navigationUI:"hide"}); }catch(e){ if(innerHeight>innerWidth) hint(); return; }
+    try{ if(screen.orientation&&screen.orientation.lock) await screen.orientation.lock("landscape"); }catch(e){ if(innerHeight>innerWidth) hint(); } }
+  const paint=()=>D.querySelectorAll("[data-fullscreen]").forEach(b=>{ const on=!!fsEl(); b.innerHTML=on? SHR : EXP; const l=on? "Exit full screen" : "Full screen"; b.setAttribute("aria-label",l); b.title=l; });
+  D.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-fullscreen]"); if(b){ e.preventDefault(); toggle(); } });
+  D.addEventListener("fullscreenchange",paint); D.addEventListener("webkitfullscreenchange",paint);
+  if(D.readyState==="loading") D.addEventListener("DOMContentLoaded",paint); else paint();
+  return {toggle};
 })();
