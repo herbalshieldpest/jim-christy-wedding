@@ -1185,7 +1185,15 @@ const ambient=(function(){
     fox={Xw:p.Xw,Dw:p.Dw,state:"run",t:rnd(.8,1.4),cycles:3+Math.floor(Math.random()*3),head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,face:1,fore:1,alpha:1};
     const q=toGround(W*rnd(.2,.4),gnd().vy+g); fox.tX=q.Xw; fox.tD=q.Dw; fox.ang=0; arrive(-60,fox);
   }
+  /* vary how an animal arrives, so they are not all walking across in profile: out of the tall grass straight toward you, or a long diagonal from near to far or far to near */
+  function varyEntry(f){ if(f===mom) return; const b=foxBounds(), s0=toScreen(f.Xw,f.Dw), left=s0.x<W/2, r=Math.random();
+    if(r<.45){ const sx=W*rnd(.15,.85), lo=lawnMinG(sx), p=toGround(sx,gnd().vy+lo+3); f.Xw=p.Xw; f.Dw=p.Dw; f.alpha=0; f.fadeIn=true;
+      const tx=Math.max(W*.08,Math.min(W*.92,sx+W*rnd(-.12,.12))), q=toGround(tx,gnd().vy+rnd(lerp(lo,b.gmax,.55),b.gmax-15)); f.tX=q.Xw; f.tD=q.Dw; f.ang=null; f.yaw=Math.atan2(trueZ(q.Dw)-trueZ(p.Dw),q.Xw-p.Xw); f.pw=null; }   /* steps out of the reeds and comes toward you */
+    else if(r<.85){ const farStart=Math.random()<.5, lo=lawnMinG(left?W*.06:W*.94)+12, gS=farStart? rnd(lo,lo+40) : rnd(b.gmax-70,b.gmax-15), p=toGround(left?-60:W+60,gnd().vy+gS); f.Xw=p.Xw; f.Dw=p.Dw;
+      const tx=W*(left?rnd(.3,.55):rnd(.45,.7)), lo2=lawnMinG(tx), gT=farStart? rnd(b.gmax-90,b.gmax-15) : rnd(lo2+6,lo2+50), q=toGround(tx,gnd().vy+gT); f.tX=q.Xw; f.tD=q.Dw; f.ang=null; f.pw=null; } }   /* a long diagonal across the lawn */
   function foxStep(f,dt){
+    if(!f.entryDone){ f.entryDone=true; varyEntry(f); }
+    if(f.fadeIn){ f.alpha=Math.min(1,(f.alpha||0)+dt*1.2); if(f.alpha>=1) f.fadeIn=false; }
     if(f.state==="run"||f.state==="leave"){
       const sp=(f.state==="leave"?1.0:.85)*(f.spd||1), dX=f.tX-f.Xw, dD=f.tD-f.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
       const stepX=dX/dist*sp*dt, stepD=dD/dist*sp*dt*4;                 /* depth runs a little quicker so it really comes toward you or heads off */
@@ -1200,7 +1208,7 @@ const ambient=(function(){
       f.ph+=dt*6.2*(f.cad||1); f.head+=(-.1-f.head)*Math.min(1,dt*10); f.turn+=(0-f.turn)*Math.min(1,dt*10);
       f.t-=dt;
       const arrived=f.Xw===f.tX&&f.Dw===f.tD;
-      if(f.state==="leave"){ const s=toScreen(f.Xw,f.Dw); if(arrived||s.x<-80||s.x>W+80){ f.alpha-=dt*3; if(f.alpha<=0) f.gone=true; } return; }
+      if(f.state==="leave"){ const s=toScreen(f.Xw,f.Dw); if(arrived||s.x<-80||s.x>W+80){ f.alpha-=dt*(f.toBrush?1.4:3); if(f.alpha<=0) f.gone=true; } return; }   /* walking into the reeds, it fades as the grass closes round it */
       if(arrived||f.t<=0){ f.state="sniff"; f.t=rnd(1.2,2.6); f.sniff=0; f.idleYaw=idleYawFor(f.yaw||0); }
       return;
     }
@@ -1211,7 +1219,9 @@ const ambient=(function(){
       f.jerk-=dt; if(f.jerk<=0){ f.jerk=rnd(.22,.6); f.headT=pick([-.45,-.3,-.15,-.5]); { const cy=camYaw(f.yaw||0); f.turnT=pick([0,-.7,.7,cy,cy,cy*.5]); } }
       f.head+=(f.headT-f.head)*Math.min(1,dt*28); f.turn+=(f.turnT-f.turn)*Math.min(1,dt*28); f.t-=dt;
       if(f.t<=0){ f.cycles--;
-        if(f.cycles<=0){ f.state="leave"; const g=toScreen(f.Xw,f.Dw).g; const side=Math.random(); const p= side<.5? toGround(-120,gnd().vy+g) : toGround(W+120,gnd().vy+g); f.tX=p.Xw; f.tD=p.Dw; f.ang=null; }
+        if(f.cycles<=0){ f.state="leave"; const cs=toScreen(f.Xw,f.Dw), b=foxBounds();
+          if(f!==mom&&Math.random()<.5){ const sx=Math.max(W*.05,Math.min(W*.95,cs.x+W*rnd(-.15,.15))), q=toGround(sx,gnd().vy+lawnMinG(sx)+2); f.tX=q.Xw; f.tD=q.Dw; f.toBrush=true; }   /* away from you, back into the tall grass */
+          else { const g2=Math.max(b.gmin,Math.min(b.gmax,cs.g+rnd(-140,140))), p=toGround(Math.random()<.5? -120 : W+120,gnd().vy+g2); f.tX=p.Xw; f.tD=p.Dw; } f.ang=null; }
         else { f.state="run"; f.t=rnd(.7,1.5); foxTarget(f); } }
     }
   }
@@ -3026,7 +3036,7 @@ const ambient=(function(){
   }
   /* ---- a red eft: the land-going young of the eastern newt, bright orange with a row of black-ringed red spots, creeping over the grass right in front of you ---- */
   let eft=null, nextEft=rnd(110,220);
-  function startEft(){ const dir=Math.random()<.5?1:-1, b=foxBounds(); eft={dir,g:b.gmax-rnd(2,10),sx:W*(dir>0? rnd(.15,.35) : rnd(.65,.85)),ph:0,state:"walk",st:0,dur:rnd(2.5,4),alpha:0,yaw:dir>0?0:Math.PI,life:rnd(26,36),age:0}; const p=toGround(eft.sx,gnd().vy+eft.g); eft.Xw=p.Xw; eft.Dw=p.Dw; }
+  function startEft(){ const dir=Math.random()<.5?1:-1, b=foxBounds(); eft={dir,g:Math.min(b.gmax-30,H*rnd(.8,.86)-gnd().vy),sx:W*(dir>0? rnd(.15,.35) : rnd(.65,.85)),ph:0,state:"walk",st:0,dur:rnd(2.5,4),alpha:0,yaw:dir>0?0:Math.PI,life:rnd(26,36),age:0}; const p=toGround(eft.sx,gnd().vy+eft.g); eft.Xw=p.Xw; eft.Dw=p.Dw; }
   function eftParts(e,P){ const parts=[], yaw=e.yaw, far=z=>z*Math.cos(yaw)>0, q=e.ph, mv=e.state==="walk", wig=mv? 1 : .25;
     const spine=x0=>Math.sin(q*1.0-x0*.45)*.55*wig;                                                                   /* the body swings side to side as the legs step */
     const pts=[]; for(let i=0;i<=12;i++){ const x0=4.2-i*1.25, r2=i<2? .95-i*.05 : i<6? 1.0-(i-2)*.03 : Math.max(.12,.9-(i-6)*.13); pts.push([x0,.95-(i>6?(i-6)*.04:0),spine(x0),r2]); }
@@ -3039,11 +3049,10 @@ const ambient=(function(){
   function drawEft(dt,dark){
     if(!eft){ nextEft-=(lull>0?0:dt); if(nextEft<=0) startEft(); return; }
     const e=eft; e.st+=dt; e.age+=dt;
-    if(e.state==="walk"){ e.ph+=dt*5; e.sx+=e.dir*dt*W*.009; if(e.st>e.dur){ e.state="rest"; e.st=0; e.dur=rnd(1.5,3.5); } } else if(e.st>e.dur){ e.state="walk"; e.st=0; e.dur=rnd(2.5,4.5); if(Math.random()<.25){ e.dir*=-1; } }
-    e.yaw=angTo(e.yaw,e.dir>0?Math.sin(e.age*.3)*.4:Math.PI+Math.sin(e.age*.3)*.4,dt*2);
-    const p=toGround(e.sx,gnd().vy+e.g); e.Xw=p.Xw; e.Dw=p.Dw; e.alpha= e.age>e.life? Math.max(0,e.alpha-dt) : Math.min(1,e.alpha+dt);
+    if(e.state==="walk"){ e.ph+=dt*5; if(e.dg==null||Math.random()<dt*.2) e.dg=rnd(-1,1); e.g=Math.max(lawnMinG(e.sx)+60,Math.min(Math.min(foxBounds().gmax-30,H*.88-gnd().vy),e.g+e.dg*dt*10)); e.sx+=e.dir*dt*W*.009*(1-Math.abs(e.dg)*.5); if(e.st>e.dur){ e.state="rest"; e.st=0; e.dur=rnd(1.5,3.5); } } else if(e.st>e.dur){ e.state="walk"; e.st=0; e.dur=rnd(2.5,4.5); if(Math.random()<.25){ e.dir*=-1; } }
+    const p=toGround(e.sx,gnd().vy+e.g); if(e.Xw!=null&&e.state==="walk"){ const dX=p.Xw-e.Xw, dZ=trueZ(p.Dw)-trueZ(e.Dw); if(Math.hypot(dX,dZ)>1e-7) e.yaw=angTo(e.yaw,Math.atan2(dZ,dX),dt*2.5); } e.Xw=p.Xw; e.Dw=p.Dw; e.alpha= e.age>e.life? Math.max(0,e.alpha-dt) : Math.min(1,e.alpha+dt);
     if((e.age>e.life&&e.alpha<=0)||e.sx<-30||e.sx>W+30){ eft=null; nextEft=rnd(180,320); return; }
-    const s=toScreen(e.Xw,e.Dw), k=.16*s.g/26*3;
+    const s=toScreen(e.Xw,e.Dw), k=.16*s.g/26*1.35;
     e.ct=(e.ct||0)-dt; if(e.ct<=0||!e.pal){ e.ct=1.5; const G=groundPal(s,dark), lit=dark?.5:.75; e.pal={...G, body:mulv([238,112,32],lit), spot:mulv([214,42,26],lit)}; }
     if(!e.blades) e.blades=Array.from({length:8},()=>({ox:rnd(-10,10),h:rnd(1.5,3),lean:rnd(-.5,.5),c:Math.random()}));
     e.res=1.4; critterBlit(null,null,e,s,k,e.pal,()=>eftParts(e,e.pal),e.yaw,6,22,6,e.blades,e.alpha,.2);
@@ -3228,9 +3237,9 @@ const ambient=(function(){
     const dogs=[dog,lab].filter(d=>d&&!d.gone&&!d.hidden); for(const d of dogs){ const s0=toScreen(d.Xw,d.Dw); if(Math.hypot(s0.x-tu.sx,(s0.y-toScreen(tu.Xw,tu.Dw).y)*1.6)<W*.16){ tu.scared=3; } }
     tu.scared=Math.max(0,(tu.scared||0)-dt); const wantHide=tu.scared>0? 1 : tu.state==="rest"? .35 : 0; tu.hide+=(wantHide-tu.hide)*Math.min(1,dt*(wantHide>tu.hide?7:1.2));   /* snaps in fast, eases back out */
     if(tu.scared>0){ tu.state="rest"; tu.st=0; tu.dur=rnd(2,4); }
-    if(tu.state==="walk"){ tu.ph+=dt*2.6; tu.sx+=tu.dir*dt*W*.016; tu.hd=Math.sin(tu.ph*.5)*.3; if(tu.st>tu.dur){ tu.state="rest"; tu.st=0; tu.dur=rnd(2,5); } }
+    if(tu.state==="walk"){ tu.ph+=dt*2.6; const b0=foxBounds(), lo0=lawnMinG(tu.sx)+30; if(tu.dg==null||Math.random()<dt*.15) tu.dg=rnd(-1,1); tu.g=Math.max(lo0,Math.min(b0.gmax-12,tu.g+tu.dg*dt*14)); tu.sx+=tu.dir*dt*W*.016*(1-Math.abs(tu.dg)*.55); tu.hd=Math.sin(tu.ph*.5)*.3; if(tu.st>tu.dur){ tu.state="rest"; tu.st=0; tu.dur=rnd(2,5); } }
     else if(tu.st>tu.dur&&tu.scared<=0){ tu.state="walk"; tu.st=0; tu.dur=rnd(5,9); }
-    const p=toGround(tu.sx,gnd().vy+tu.g); tu.Xw=p.Xw; tu.Dw=p.Dw;
+    const p=toGround(tu.sx,gnd().vy+tu.g); if(tu.Xw!=null&&tu.state==="walk"){ const dX=p.Xw-tu.Xw, dZ=trueZ(p.Dw)-trueZ(tu.Dw); if(Math.hypot(dX,dZ)>1e-6) tu.yaw=angTo(tu.yaw,Math.atan2(dZ,dX),dt*2); } tu.Xw=p.Xw; tu.Dw=p.Dw;   /* it angles toward you or away as it plods, and turns to face that way */
     const edge=Math.min(tu.sx-W*.02,W*.98-tu.sx); tu.alpha=Math.max(0,Math.min(1,edge/(W*.04)));
     if((tu.dir>0&&tu.sx>W*.98)||(tu.dir<0&&tu.sx<W*.02)){ turtle=null; nextTurtle=rnd(160,300); return; }
     const s=toScreen(tu.Xw,tu.Dw), k=.16*s.g/26*1.9;
