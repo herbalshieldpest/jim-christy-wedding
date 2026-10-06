@@ -1263,7 +1263,7 @@ const ambient=(function(){
   let fox=null, nextFox=45;
   const fsp=document.createElement("canvas"), fsx=fsp.getContext("2d");
   const FOX_G=[255,560];
-  function foxBounds(){ return {gmin:FOX_G[0],gmax:Math.max(FOX_G[0]+40,Math.min(FOX_G[1],(H-gnd().vy)*.74))}; }   /* nothing crawls along the very bottom edge, where it's hard to see */
+  function foxBounds(){ return {gmin:FOX_G[0],gmax:Math.max(FOX_G[0]+60,Math.min(FOX_G[1],(H-gnd().vy)*.8))}; }   /* nothing crawls along the very bottom edge, where it's hard to see */
   /* where the lawn meets the tall reeds, traced from the photo (x, y as fractions of the picture) */
   const LAWN=[[0,.676],[.285,.663],[.45,.684],[.65,.71],[.85,.752],[1,.797]];
   function lawnMinG(sx){ const ip=toImg(sx,0); const ix=ip?Math.max(0,Math.min(1,ip[0])):sx/W; let i=0; while(i<LAWN.length-2&&ix>LAWN[i+1][0]) i++;
@@ -1276,7 +1276,7 @@ const ambient=(function(){
   function foxTarget(f){
     const b=foxBounds(); let tries=0, Xw, Dw, ang;
     const cur=toScreen(f.Xw,f.Dw), mid=(b.gmin+b.gmax)/2, nearNow=cur.g>mid;
-    do{ const sx=Math.max(W*.08,Math.min(W*.92,cur.x+W*rnd(-.16,.16))), lo=Math.max(b.gmin,lawnMinG(sx)), md=Math.max(lo+20,mid), g=nearNow? rnd(lo,lerp(lo,md,.7)) : rnd(lerp(md,b.gmax,.3),b.gmax), p=toGround(sx,gnd().vy+g); Xw=p.Xw; Dw=p.Dw;
+    do{ const sx=Math.max(W*.08,Math.min(W*.92,cur.x+W*rnd(-.16,.16))), lo=Math.max(b.gmin,lawnMinG(sx)+16), md=Math.max(lo+20,mid), g=nearNow? rnd(lo,lerp(lo,md,.7)) : rnd(lerp(md,b.gmax,.3),b.gmax), p=toGround(sx,gnd().vy+g); Xw=p.Xw; Dw=p.Dw;
         ang=Math.atan2(Dw-f.Dw,Xw-f.Xw); tries++; }
     while(tries<12 && (Math.hypot(Xw-f.Xw,(Dw-f.Dw)*.25)<.35 || (f.ang!=null && Math.abs(Math.atan2(Math.sin(ang-f.ang),Math.cos(ang-f.ang)))<.8)));
     f.tX=Xw; f.tD=Dw; f.ang=ang;
@@ -1914,7 +1914,8 @@ const ambient=(function(){
   function dogResume(d){ d.state="run"; d.rear=0; d.hop=0; if(d.romp>0) rompTarget(d); else dogTarget(d); }
   const clods=[], holes=[];
   function stepDog(d,dt){
-    d.t+=dt; if(d.state!=="roll"&&d.rollA) d.rollA=Math.max(0,d.rollA-dt*5); d.sitA=(d.sitA||0)+((d.state==="sit"?1:0)-(d.sitA||0))*Math.min(1,dt*5);
+    d.t+=dt; if(d.state!=="roll"&&d.rollA) d.rollA=Math.max(0,d.rollA-dt*5);
+    if(d.state!=="leap"){ if(d.rear) d.rear=Math.max(0,d.rear-dt*5); if(d.state!=="pounce"&&d.hop) d.hop=Math.max(0,d.hop-dt*8); }   /* never left up on her hind legs if something interrupts a leap */ d.sitA=(d.sitA||0)+((d.state==="sit"?1:0)-(d.sitA||0))*Math.min(1,dt*5);
     const wasChase=d.chase; d.chase=!d.flee&&d.state!=="leave"&&d.state!=="greet"&&!d.toViewer&&dogWantsChase(d,dt);
     if(d.chase){ chaseTarget(d); if(d.state!=="run") { d.state="run"; d.scratching=false; } }
     else if(wasChase&&d.state==="run"){ if(d.romp>0) rompTarget(d); else dogTarget(d); }
@@ -2553,7 +2554,7 @@ const ambient=(function(){
     const B=ban; B.t+=dt; const u=B.t/B.dur; if(u>=1){ ban=null; nextBan=rnd(200,360); return; }
     let text=""; try{ text=String(host.banner()||""); }catch(e){} if(!text){ ban=null; nextBan=rnd(200,360); return; }
     const F=H*.5, cx=W/2, cy=H*.52, proj=(X,Y,Z)=>[cx+X*F/Math.max(.05,Z),cy+Y*F/Math.max(.05,Z)];
-    const z=B.z0+Math.sin(u*Math.PI)*-.15, span=Math.min(.38,Math.max(.2,330/W))*W*z/F, Kw=.012*Math.max(.8,Math.min(1.25,W/1200));   /* the ribbon spans about a third of a wide screen, more of a narrow one */
+    const z=B.z0+Math.sin(u*Math.PI)*-.15, span=Math.min(.46,Math.max(.24,430/W))*W*z/F, Kw=.012*Math.max(.8,Math.min(1.25,W/1200));   /* the ribbon spans about a third of a wide screen, more of a narrow one */
     const mg=Math.max(160,W*.12), xL=(-cx-mg)*z/F-(B.dir>0? 0 : span), xR=(W-cx+mg)*z/F+(B.dir>0? span : 0);   /* starts and ends fully off the screen, tails and wings and all */
     const lead=B.dir>0? lerp(xL,xR,u) : lerp(xR,xL,u), Y0=(B.fy*H-cy)*z/F;
     /* the silk is heavy for two bluebirds: each one tires and sinks, then beats furiously and claws back up, nose high, never resting */
@@ -2742,7 +2743,7 @@ const ambient=(function(){
       if(p.st>2.6){ if(p.hops<=0){ p.state="leave3"; p.st=0; p.lx0=p.x; p.ly0=p.y; p.ltx=rnd(W*.02,W*.14); p.lty=gnd().vy-rnd(30,90); p.fl=0; } else if(p.hops>0){ p.hops--; p.state="hop"; p.st=0; p.h0=p.tgt; p.tgt=Math.min(.95,p.tgt+rnd(.12,.22)); p.drummed=false; } else { p.state="leave"; p.lx=-60; p.ly=p.y-rnd(80,160); p.fl=0; } } }
     else if(p.state==="hop"){ const u=Math.min(1,p.st/.35); const q=at(lerp(p.h0,p.tgt,u)); p.x=q[0]; p.y=q[1]-Math.sin(u*Math.PI)*2*sc; p.wing=null; if(u>=1){ p.state="cling"; p.st=0; } }
     /* paint: a big black crow-sized bird, flaming red crest, white stripe down the neck */
-    const k=sc*1.9*p.m, lt=dark?.5:.74, C=c=>rgb(mulv(c,lt)), R2=Math.min(2,900/(40*k)), sz=Math.ceil(40*k*R2);
+    const k=sc*1.9*p.m, lt=dark?.5:.74, C=c=>rgb(mulv(c,lt)), BOX=p.three&&p.P3? 90 : 40, R2=Math.min(2,1100/(BOX*k)), sz=Math.ceil(BOX*k*R2);   /* room for the full spread of its wings in flight */
     if(pcv.width<sz||pcv.height<sz){ pcv.width=pcv.height=sz; } const x=pcx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,pcv.width,pcv.height);
     if(p.three&&p.P3){ const F=H*.5, cx=W/2, cy=H*.52, P=p.P3, V=p.pp3? [P[0]-p.pp3[0],P[1]-p.pp3[1],P[2]-p.pp3[2]] : [0,0,1]; p.pp3=P;
       if(Math.hypot(...V)>1e-7) p.V3=p.V3? p.V3.map((v,i)=>lerp(v,V[i],.2)) : V;
@@ -3112,7 +3113,7 @@ const ambient=(function(){
   const WAD={racc:{get:()=>racc,set:v=>racc=v,next:rnd(150,260)},beaver:{get:()=>beaver,set:v=>beaver=v,next:rnd(200,340)},hog:{get:()=>hog,set:v=>hog=v,next:rnd(120,260)},possum:{get:()=>possum,set:v=>possum=v,next:rnd(180,320)},otter:{get:()=>otter,set:v=>otter=v,next:rnd(220,380)},porc:{get:()=>porc,set:v=>porc=v,next:rnd(260,420)}};
   function startWaddler(kind){ if(false) return; const b=foxBounds(), g=rnd(b.gmin+40,b.gmax-10), side=Math.random()<.5, p=toGround(side? W+60 : -60, gnd().vy+g);
     const o={kind,Xw:p.Xw,Dw:p.Dw,state:"run",t:rnd(2,3.5),cycles:2+Math.floor(Math.random()*2),head:0,headT:0,turn:0,turnT:0,jerk:0,ph:0,sniff:0,alpha:1,spd:kind==="beaver"? .2 : kind==="possum"? .26 : kind==="hog"? .3 : kind==="otter"? .42 : kind==="porc"? .14 : .34,cad:kind==="beaver"? .5 : kind==="possum"? .55 : kind==="otter"? .75 : kind==="porc"? .42 : .6,yaw:side?Math.PI:0,fur:{len:kind==="beaver"? .7 : .95,nap:.32,sheen:kind==="beaver"? .12 : .05}};
-    const q=toGround(W*(side?rnd(.55,.8):rnd(.2,.45)),gnd().vy+(Math.random()<.5? rnd(b.gmin+30,lerp(b.gmin,b.gmax,.5)) : rnd(lerp(b.gmin,b.gmax,.45),b.gmax))); o.tX=q.Xw; o.tD=q.Dw;   /* angled across the lawn, never just straight along it */ o.ang=null; arrive(side?W+60:-60,o); return o; }
+    const q=toGround(W*(side?rnd(.55,.8):rnd(.2,.45)),gnd().vy+(Math.random()<.5? rnd(Math.max(b.gmin+30,lawnMinG(W*.5)+20),lerp(b.gmin,b.gmax,.6)) : rnd(lerp(b.gmin,b.gmax,.45),b.gmax))); o.tX=q.Xw; o.tD=q.Dw;   /* angled across the lawn, never just straight along it */ o.ang=null; arrive(side?W+60:-60,o); return o; }
   function raccoonParts(f,P,walking){
     const q=f.ph*Math.PI*1.3, yaw=f.yaw, far=z=>z*Math.cos(yaw)>0, parts=[];
     const fur=rgb(P.fur), furF=rgb(mulv(P.fur,.74)), dk=rgb(P.dark), dkF=rgb(mulv(P.dark,.8)), pale=rgb(P.pale), sh=[rgb(mulv(P.fur,.55)),rgb(mixv(P.fur,[255,210,150],.22))];
@@ -6453,7 +6454,7 @@ const viewBird=(function(){
         if(n>s.taps&&n<=3){ s.taps=n; try{ natureSfx.peck&&natureSfx.peck(x/innerWidth); }catch(e){} } if(k>.22*3.4){ perchG.removeAttribute("transform"); s.ph="say"; s.ts=now; say.hidden=false; el.classList.add("on"); requestAnimationFrame(()=>say.classList.add("on")); } }
       if(s.ph==="say"){ const k=(now-s.ts)/1000; perchG.setAttribute("transform",`rotate(${(Math.sin(k*2.2)*2).toFixed(2)} 22 40)`); if(k>9) leave(); } }
     if(s.ph==="away"){ const k=(now-s.ta)/1000; if(k<.25){ x=s.P[0]; y=s.P[1]; } else { if(perchG.style.display!=="none"){ perchG.style.display="none"; flyG.style.display=""; } const u=(k-.25)/1.6; x=s.P[0]-u*u*innerWidth*.9; y=s.P[1]-u*180+Math.sin(u*Math.PI*4)*12; flip=true; rot=-8;
-        const fl=Math.sin(now/1000*Math.PI*2*13); wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); if(u>=1){ el.style.display="none"; st=null; nextT=performance.now()+(110+Math.random()*120)*1000; return; } } }
+        const fl=Math.sin(now/1000*Math.PI*2*13); wing.setAttribute("transform",`translate(0 31.4) scale(1 ${fl.toFixed(2)}) translate(0 -31.4)`); if(u>=1){ el.style.display="none"; st=null; nextT=performance.now()+(35+Math.random()*40)*1000; return; } } }
     if(s.ph==="say"){ const sr=el.getBoundingClientRect(); say.style.left=""; say.style.right=(innerWidth-sr.left+4)+"px"; say.style.top=(sr.top+sr.height*.42-say.offsetHeight/2)+"px"; }
     el.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${(flip?-1:1)*s.sc},${s.sc}) rotate(${rot}deg)`; raf=requestAnimationFrame(tick); }
   function loop(){ const now=performance.now(); if(!st&&now>nextT&&nextT>0) start(); setTimeout(loop,1000); }
