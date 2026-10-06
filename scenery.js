@@ -6118,3 +6118,56 @@ const critterMenu=(function(){
   document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-call-critter]"); if(b){ e.preventDefault(); open(b); } });
   return {open,close,list:LIST,svg:critterSVG};
 })();
+/* ---- About this view: any button with data-view-info opens a card about the real view behind the page, from the front yard of Hagen Cabin ---- */
+const viewInfo=(function(){
+  if(typeof document==="undefined") return null;
+  const F='"Cormorant Garamond",Georgia,"Times New Roman",serif', MAP="https://www.google.com/maps/search/?api=1&query=39.6325435%2C-79.1129743";
+  const FACTS=[["Where","Hagen Cabin on Meadow Mountain<br>239 Moonridge Lane<br>Grantsville, MD 21536"],
+    ["Coordinates",`<a href="${MAP}" target="_blank" rel="noopener">39.6325&deg; N<br>79.1130&deg; W</a>`],
+    ["Elevation","About 2,800 ft (850 m)"],
+    ["County","Garrett County, Maryland"],
+    ["Mountain system","Appalachian Mountains"],
+    ["Range","Allegheny Mountains, on the Appalachian Plateau"],
+    ["Our ridge","Meadow Mountain, summit 3,022 ft"],
+    ["Also in view","Red Ridge, about 2,660 ft, some 4&frac12; miles off"]];
+  const CSS=`.vi-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vh,32px) 16px;background:rgba(8,14,10,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
+.vi-back[hidden]{display:none}.vi-back.on{opacity:1}
+.vi-panel{position:relative;box-sizing:border-box;width:min(800px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;background:rgba(19,38,26,.84);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(20px,3.4vh,34px) clamp(20px,3.4vw,40px) clamp(18px,3vh,30px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
+.vi-back.on .vi-panel{transform:none}
+.vi-pin{display:block;width:30px;height:38px;margin:0 auto 6px;color:#f6efe2;opacity:.9}
+.vi-title{margin:0;text-align:center;font:italic 500 clamp(30px,5vh,42px)/1.05 ${F};text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.vi-sub{margin:8px 0 0;text-align:center;font:600 11.5px/1.5 ${F};letter-spacing:.26em;text-transform:uppercase;color:rgba(246,239,226,.72)}
+.vi-text{margin:clamp(12px,2vh,18px) 0 0;font:400 17.5px/1.5 ${F};color:rgba(250,245,236,.94)}
+.vi-text em{font-style:italic}
+.vi-facts{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:10px 16px;margin:clamp(16px,2.6vh,24px) 0 0;padding:clamp(14px,2.2vh,20px) 0 0;border-top:1px solid rgba(255,250,242,.22)}
+.vi-facts dt{font:600 10.5px/1.9 ${F};letter-spacing:.22em;text-transform:uppercase;color:rgba(246,239,226,.66);white-space:nowrap}
+.vi-facts dd{margin:0;font:400 16px/1.4 ${F};color:#f6efe2}
+.vi-facts a{color:inherit;text-decoration:underline;text-decoration-color:rgba(255,250,242,.45);text-underline-offset:3px}
+.vi-facts a:hover{text-decoration-color:#f6efe2}
+.vi-x{position:absolute;right:10px;top:10px;width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid transparent;border-radius:2px;color:#f6efe2;cursor:pointer}
+.vi-x:hover,.vi-x:focus-visible{background:rgba(255,250,242,.08);border-color:rgba(255,250,242,.3);outline:none}.vi-x svg{width:18px;height:18px}
+@media (max-width:720px){.vi-facts{grid-template-columns:auto 1fr}}@media (max-width:560px){.vi-facts{grid-template-columns:1fr;gap:2px}.vi-facts dd{margin-bottom:10px}.vi-text{font-size:17px}}
+@media (prefers-reduced-motion:reduce){.vi-back,.vi-panel{transition:none}}`;
+  const PIN=`<svg viewBox="0 0 30 38" aria-hidden="true"><path d="M15 1.5C7.6 1.5 1.8 7.2 1.8 14.4c0 9.6 11.1 20.3 12.3 21.5.5.5 1.3.5 1.8 0 1.2-1.2 12.3-11.9 12.3-21.5C28.2 7.2 22.4 1.5 15 1.5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14.2" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="15" cy="10.7" r="1.15" fill="currentColor"/><path d="M15 13.2v5.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+  let back=null, last=null;
+  function build(){ const st=document.createElement("style"); st.textContent=CSS; document.head.append(st);
+    back=document.createElement("div"); back.className="vi-back"; back.hidden=true; back.setAttribute("data-no-scenery","");
+    back.innerHTML=`<div class="vi-panel" role="dialog" aria-modal="true" aria-labelledby="vi-title"><button type="button" class="vi-x" aria-label="Close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
+      <span class="vi-pin">${PIN}</span><h2 class="vi-title" id="vi-title">The View</h2><p class="vi-sub">From the front yard, where we&rsquo;ll say &ldquo;I do&rdquo;</p>
+      <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the spot where the ceremony will take place. We&rsquo;re about 2,800 feet up on the side of <em>Meadow Mountain</em>, one of the long, parallel ridges of the <em>Allegheny Mountains</em>, the high, rugged western section of the <em>Appalachians</em>, here in the far western corner of Maryland.</p>
+      <p class="vi-text">Ridge after wooded ridge folds away toward the horizon, <em>Red Ridge</em> among them. Meadows of goldenrod and tall grass run down to the tree line, and in the evening the sun sinks behind the mountains in exactly the light you see here.</p>
+      <dl class="vi-facts">${FACTS.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>`;
+    document.body.append(back);
+    back.addEventListener("click",e=>{ if(e.target===back||e.target.closest(".vi-x")) close(); });
+    back.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); close(); }
+      if(e.key==="Tab"){ const f=[...back.querySelectorAll("button,a")], a=f[0], z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } } }); }
+  function open(btn){ if(!back) build(); last=btn||document.activeElement; back.hidden=false; document.documentElement.style.overflow="hidden";
+    requestAnimationFrame(()=>requestAnimationFrame(()=>back.classList.add("on"))); setTimeout(()=>{ const x=back.querySelector(".vi-x"); x&&x.focus({preventScroll:true}); },60); }
+  function close(){ if(!back||back.hidden) return; back.classList.remove("on"); document.documentElement.style.overflow="";
+    setTimeout(()=>{ if(!back.classList.contains("on")) back.hidden=true; },320); if(last&&last.focus) last.focus({preventScroll:true}); }
+  document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-view-info]"); if(b){ e.preventDefault(); open(b); } });
+  /* fill any empty data-view-info button with the pin icon */
+  const fill=()=>document.querySelectorAll("[data-view-info]").forEach(b=>{ if(!b.innerHTML.trim()) b.innerHTML=PIN; });
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",fill); else fill();
+  return {open,close,pin:PIN};
+})();
