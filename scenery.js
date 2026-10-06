@@ -568,7 +568,7 @@ const ambient=(function(){
       for(let y=0;y<top;y++){ const wy=Math.max(0,Math.min(1,(.47-y/h)/.12)); if(wy<=0) continue;
         for(let xx=0;xx<w;xx++){ const i=(y*w+xx)*4, r=a[i]/255, g=a[i+1]/255, b=a[i+2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, dlt=mx-mn; if(dlt<.004||b<r) continue;
           let hue=mx===b? 4+(r-g)/dlt : mx===g? 2+(b-r)/dlt : (g-b)/dlt; hue*=60; if(hue<0) hue+=360; const hw=Math.max(0,1-Math.abs(hue-215)/45); if(hw<=0) continue;
-          let sat=l>.5? dlt/(2-mx-mn) : dlt/(mx+mn); const lg=Math.max(0,Math.min(1,(l-.3)/.2)), k=wy*hw*lg; if(k<=.01) continue; const s2=Math.min(1,sat*(1+1.9*k)+.1*k), l2=l*(1-.12*k);
+          let sat=l>.5? dlt/(2-mx-mn) : dlt/(mx+mn); const lg=Math.max(0,Math.min(1,(l-.3)/.2))*Math.max(0,Math.min(1,(.86-l)/.12)), k=wy*hw*lg; if(k<=.01) continue; const s2=Math.min(1,sat*(1+1.9*k)+.1*k), l2=l*(1-.12*k);
           const q=l2<.5? l2*(1+s2) : l2+s2-l2*s2, p2=2*l2-q, hh=hue/360, f=tt=>{ tt<0&&(tt+=1); tt>1&&(tt-=1); return tt<1/6? p2+(q-p2)*6*tt : tt<.5? q : tt<2/3? p2+(q-p2)*(2/3-tt)*6 : p2; };
           a[i]=f(hh+1/3)*255; a[i+1]=f(hh)*255; a[i+2]=f(hh-1/3)*255; } }
       x.putImageData(id,0,0); c.naturalWidth=w; c.naturalHeight=h; return c; }catch(e){ return im; } }
@@ -6143,7 +6143,9 @@ const viewInfo=(function(){
   const ORN=`<svg class="vi-orn" viewBox="0 0 220 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M4 7h84M132 7h84" opacity=".55"/><path d="M110 2.5l4.5 4.5-4.5 4.5-4.5-4.5z"/><circle cx="96" cy="7" r="1.4" fill="currentColor" stroke="none"/><circle cx="124" cy="7" r="1.4" fill="currentColor" stroke="none"/></svg>`;
   const CSS=`.vi-back{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vh,32px) 16px;background:rgba(8,14,10,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s ease}
 .vi-back[hidden]{display:none}.vi-back.on{opacity:1}
-.vi-panel{position:relative;box-sizing:border-box;width:min(700px,100%);max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;text-align:center;background:rgba(19,38,26,.86);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(18px,3vh,30px) clamp(22px,4.6vw,52px) clamp(20px,3.2vh,32px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
+.vi-panel{position:relative;box-sizing:border-box;width:min(700px,100%);}
+.vi-panel.has-map{width:min(980px,100%)}
+.vi-panel{max-height:100%;overflow:auto;overscroll-behavior:contain;color:#f6efe2;text-align:center;background:rgba(19,38,26,.86);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;padding:clamp(18px,3vh,30px) clamp(22px,4.6vw,52px) clamp(20px,3.2vh,32px);box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:translateY(12px) scale(.985);transition:transform .38s cubic-bezier(.2,.7,.2,1);scrollbar-width:thin;scrollbar-color:rgba(255,250,242,.3) transparent}
 .vi-back.on .vi-panel{transform:none}
 .vi-art{display:block;width:min(250px,64%,30vh);height:auto;margin:0 auto;color:#f6efe2;filter:drop-shadow(0 2px 10px rgba(0,0,0,.35))}
 .vi-title{margin:clamp(8px,1.6vh,16px) 0 0;font:400 clamp(40px,6.6vh,58px)/1 var(--script,"Pinyon Script","Great Vibes",cursive);text-shadow:0 2px 14px rgba(0,0,0,.4)}
@@ -6158,21 +6160,39 @@ const viewInfo=(function(){
 .vi-fact a{color:inherit;text-decoration:underline;text-decoration-color:rgba(255,250,242,.45);text-underline-offset:3px}.vi-fact a:hover{text-decoration-color:#f6efe2}
 .vi-x{position:absolute;right:10px;top:10px;width:40px;height:40px;display:grid;place-items:center;padding:0;background:none;border:1px solid transparent;border-radius:2px;color:#f6efe2;cursor:pointer}
 .vi-x:hover,.vi-x:focus-visible{background:rgba(255,250,242,.08);border-color:rgba(255,250,242,.3);outline:none}.vi-x svg{width:18px;height:18px}
+.vi-body{display:grid;grid-template-columns:1fr;gap:0}
+.has-map .vi-body{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(18px,3vw,36px);align-items:start;margin-top:clamp(12px,2vh,18px)}
+.has-map .vi-facts{grid-template-columns:1fr 1fr;column-gap:22px;margin:-6px 0 0}.has-map .vi-fact{padding:clamp(6px,1vh,9px) 0}.has-map .vi-fact dd{font-size:15.5px;margin-top:3px}.has-map .vi-art{width:min(200px,50%,24vh)}.has-map .vi-text{max-width:44em}
+.vi-map{margin:0;text-align:left}
+.vi-map a{position:relative;display:block;border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:3px;border-radius:2px;overflow:hidden;line-height:0;background:#e9e4d6}
+.vi-map img{display:block;width:100%;height:auto}
+.vi-map figcaption{margin-top:9px;font:600 10.5px/1.4 ${F};letter-spacing:.24em;text-transform:uppercase;color:rgba(246,239,226,.66);text-align:center}
+.vi-pinmark{position:absolute;width:0;height:0}.vi-pinmark i{position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:#fffaf2;box-shadow:0 0 0 2px #7a2318,0 1px 6px rgba(0,0,0,.55)}
+.vi-pinmark i::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(122,35,24,.85);animation:viPulse 2.2s ease-out infinite}
+.vi-pinmark b{position:absolute;left:11px;top:-10px;white-space:nowrap;font:600 11px/1 ${F};letter-spacing:.14em;text-transform:uppercase;color:#fffaf2;background:rgba(122,35,24,.92);padding:5px 7px 4px;border-radius:2px;line-height:1}
+.vi-pinmark.left b{left:auto;right:11px}
+@keyframes viPulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.6);opacity:0}}
+@media (max-width:760px){.has-map .vi-body{grid-template-columns:1fr}.has-map .vi-facts{margin-top:8px}}@media (max-width:560px){.has-map .vi-facts{grid-template-columns:1fr}.has-map .vi-fact:nth-last-child(2){border-bottom:1px solid rgba(255,250,242,.16)}}
 @media (max-width:560px){.vi-facts{grid-template-columns:1fr}.vi-fact:nth-last-child(2){border-bottom:1px solid rgba(255,250,242,.16)}.vi-text{font-size:17px}}
-@media (max-height:720px) and (min-width:561px){.vi-art{width:170px}.vi-title{font-size:42px}.vi-text{font-size:16.5px;line-height:1.45}.vi-fact dd{font-size:16px}}
-@media (prefers-reduced-motion:reduce){.vi-back,.vi-panel{transition:none}}`;
+@media (max-height:720px) and (min-width:561px){.vi-art,.has-map .vi-art{width:150px}.vi-sub{margin-top:8px}.has-map .vi-fact{padding:5px 0}.vi-orn{margin-top:10px}.has-map .vi-text{font-size:16px}.vi-title{font-size:42px}.vi-text{font-size:16.5px;line-height:1.45}.vi-fact dd{font-size:16px}}
+@media (prefers-reduced-motion:reduce){.vi-back,.vi-panel{transition:none}.vi-pinmark i::after{animation:none}}`;
   let back=null, last=null;
   function build(){ const st=document.createElement("style"); st.textContent=CSS; document.head.append(st);
     back=document.createElement("div"); back.className="vi-back"; back.hidden=true; back.setAttribute("data-no-scenery","");
     back.innerHTML=`<div class="vi-panel" role="dialog" aria-modal="true" aria-labelledby="vi-title"><button type="button" class="vi-x" aria-label="Close"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></button>
       ${ART}<h2 class="vi-title" id="vi-title">The View</h2><p class="vi-sub">From the front yard, where we&rsquo;ll say &ldquo;I do&rdquo;</p>
       <p class="vi-text">This is the real view from the front yard of Hagen Cabin, the very spot where we&rsquo;ll be married. We&rsquo;re standing about 2,800 feet up on Red Ridge, on Meadow Mountain, one of the long, parallel ridges of the Allegheny Mountains. Wooded ridges fold away to the horizon, the meadows run gold with goldenrod, and in the evening the sun sets behind the mountains in exactly this light.</p>
-      ${ORN}<dl class="vi-facts">${FACTS.map(([k,v])=>`<div class="vi-fact"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl></div>`;
+      ${ORN}<div class="vi-body"><figure class="vi-map" hidden><a target="_blank" rel="noopener" aria-label="Open the New Germany State Park trail map full size"><img alt="Trail map of New Germany State Park, with Hagen Cabin marked" loading="lazy"><span class="vi-pinmark" hidden><i></i><b>Hagen Cabin</b></span></a><figcaption>New Germany State Park trails</figcaption></figure>
+      <dl class="vi-facts">${FACTS.map(([k,v])=>`<div class="vi-fact"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl></div></div>`;
     document.body.append(back);
     back.addEventListener("click",e=>{ if(e.target===back||e.target.closest(".vi-x")) close(); });
     back.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); close(); }
       if(e.key==="Tab"){ const f=[...back.querySelectorAll("button,a")], a=f[0], z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } } }); }
+  /* the trail map, if the page has one (data-view-map on the button), with the cabin pinned where Jim marked it (window.HOUSE_PIN, as fractions across and down) */
+  function mapPin(){ if(!back) return; const pm=back.querySelector(".vi-pinmark"), p=window.HOUSE_PIN; pm.hidden=!(p&&typeof p.x==="number"); if(pm.hidden) return; pm.style.left=(p.x*100)+"%"; pm.style.top=(p.y*100)+"%"; pm.classList.toggle("left",p.x>.78); }
+  if(typeof window!=="undefined") window.addEventListener("housepin",mapPin);
   function open(btn){ if(!back) build(); last=btn||document.activeElement; back.hidden=false; document.documentElement.style.overflow="hidden";
+    { const src=btn&&btn.getAttribute&&btn.getAttribute("data-view-map"), fig=back.querySelector(".vi-map"); fig.hidden=!src; back.querySelector(".vi-panel").classList.toggle("has-map",!!src); if(src){ const a=fig.querySelector("a"), im=fig.querySelector("img"); a.href=src; if(im.getAttribute("src")!==src) im.src=src; mapPin(); } }
     requestAnimationFrame(()=>requestAnimationFrame(()=>back.classList.add("on"))); setTimeout(()=>{ const x=back.querySelector(".vi-x"); x&&x.focus({preventScroll:true}); },60); }
   function close(){ if(!back||back.hidden) return; back.classList.remove("on"); document.documentElement.style.overflow="";
     setTimeout(()=>{ if(!back.classList.contains("on")) back.hidden=true; },320); if(last&&last.focus) last.focus({preventScroll:true}); }
@@ -6181,26 +6201,4 @@ const viewInfo=(function(){
   const fill=()=>document.querySelectorAll("[data-view-info]").forEach(b=>{ if(!b.innerHTML.trim()) b.innerHTML=PIN; });
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",fill); else fill();
   return {open,close,pin:PIN};
-})();
-/* ---- Full screen: any button with data-fullscreen takes the page full screen and, where the phone allows it, turns it to landscape for the whole view.
-   iPhones don't let a web page do either, so there it shows a gentle "turn your phone sideways" note instead ---- */
-const fullView=(function(){
-  if(typeof document==="undefined") return null;
-  const D=document, EXP='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
-    SHR='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
-  const fsEl=()=>D.fullscreenElement||D.webkitFullscreenElement, can=()=>!!(D.documentElement.requestFullscreen||D.documentElement.webkitRequestFullscreen);
-  let note=null, noteT=null;
-  function hint(){ if(!note){ const st=D.createElement("style"); st.textContent=`.fv-note{position:fixed;left:50%;top:50%;z-index:62;transform:translate(-50%,-46%);display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 26px 20px;max-width:min(300px,calc(100vw - 48px));color:#f6efe2;background:rgba(19,38,26,.86);border:1px solid rgba(255,250,242,.38);outline:1px solid rgba(255,250,242,.14);outline-offset:4px;border-radius:2px;box-shadow:0 30px 90px -20px rgba(0,0,0,.75);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);text-align:center;font:400 17px/1.4 "Cormorant Garamond",Georgia,serif;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}.fv-note.on{opacity:1;transform:translate(-50%,-50%)}.fv-note svg{width:54px;height:54px;animation:fvTurn 2.4s ease-in-out infinite}@keyframes fvTurn{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}@media (prefers-reduced-motion:reduce){.fv-note svg{animation:none}}`; D.head.append(st);
-      note=D.createElement("div"); note.className="fv-note"; note.setAttribute("role","status"); note.innerHTML='<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="15" y="5" width="18" height="38" rx="3.5"/><path d="M21.5 38.5h5"/></svg><div>Turn your phone sideways for the full view</div>'; D.body.append(note); }
-    note.classList.add("on"); clearTimeout(noteT); noteT=setTimeout(()=>note.classList.remove("on"),3200); }
-  async function toggle(){
-    if(fsEl()){ try{ (D.exitFullscreen||D.webkitExitFullscreen).call(D); }catch(e){} return; }
-    if(!can()){ if(innerHeight>innerWidth) hint(); return; }
-    try{ const el=D.documentElement, rq=el.requestFullscreen||el.webkitRequestFullscreen; await rq.call(el,{navigationUI:"hide"}); }catch(e){ if(innerHeight>innerWidth) hint(); return; }
-    try{ if(screen.orientation&&screen.orientation.lock) await screen.orientation.lock("landscape"); }catch(e){ if(innerHeight>innerWidth) hint(); } }
-  const paint=()=>D.querySelectorAll("[data-fullscreen]").forEach(b=>{ const on=!!fsEl(); b.innerHTML=on? SHR : EXP; const l=on? "Exit full screen" : "Full screen"; b.setAttribute("aria-label",l); b.title=l; });
-  D.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-fullscreen]"); if(b){ e.preventDefault(); toggle(); } });
-  D.addEventListener("fullscreenchange",paint); D.addEventListener("webkitfullscreenchange",paint);
-  if(D.readyState==="loading") D.addEventListener("DOMContentLoaded",paint); else paint();
-  return {toggle};
 })();
