@@ -3373,15 +3373,18 @@ const ambient=(function(){
   const UTV_PATH2=[[1.25,.835],[1.05,.81],[.88,.764],[.7,.722],[.52,.697],[.4,.68],[.32,.664],[.292,.654],[.278,.647],[.285,.642],[.297,.639],[.312,.636]];
   let utvRoute=Math.random()<.5? 0 : 1;
   function startUtv(){ utvRoute=1;
-    const v=gnd(), f=FOC();
-    /* the brush line on the right is a hillside sloping down toward the camera, so the path is placed at a believable, steady distance along it,
-       with the ground's height falling away; then it turns smoothly into the trail's mouth and away up the trail into the shade */
-    const route=[[1.25,.84,3.0],[1.05,.815,3.15],[.88,.772,3.3],[.72,.735,3.45],[.56,.709,3.6],[.44,.692,3.72],[.37,.683,3.8],[.33,.676,3.88],[.302,.67,3.94],[.284,.664,4.02],[.275,.658,4.22],[.277,.652,4.5],[.287,.647,4.85],[.3,.642,5.25],[.316,.638,5.7]];
-    const pts=route.map(([ix,iy,Z])=>{ const s0=scr(ix,iy), X=(s0[0]-v.vx)*Z/f, Y=1-(s0[1]-v.vy)*Z/f; return [X,Z,Y]; });
+    /* in from the left along the mown trail, behind the apple tree, then a real corner: it rounds the bend at the mouth of the trail on a tight, steady arc
+       (about the radius a side-by-side can actually turn) and heads straight away from us up the trail, between the brush, into the shade */
+    const v=gnd(), f=FOC(), wp=(ix,iy,Z)=>{ const s0=scr(ix,iy); return [(s0[0]-v.vx)*Z/f,Z,1-(s0[1]-v.vy)*Z/f]; };   /* a spot in the photo at a given distance */
+    const pts=[[-.14,.692,5.3],[-.04,.687,5.35],[.04,.683,5.4],[.1,.68,5.45],[.15,.68,5.5],[.19,.677,5.55],[.222,.672,5.62]].map(([ix,iy,Z])=>wp(ix,iy,Z));
+    const M=wp(.279,.652,5.95), hE=Math.atan2(M[0],M[1])+.12, r=.36, O=[M[0]-r*Math.cos(hE),M[1]+r*Math.sin(hE)];
+    const last=pts[pts.length-1], aIn=Math.min(1.52,hE+1.45);
+    for(let i=0;i<=8;i++){ const h=lerp(aIn,hE,i/8); pts.push([O[0]+r*Math.cos(h),O[1]-r*Math.sin(h),lerp(last[2],M[2],.4+.6*i/8)]); }   /* the bend itself */
+    for(let i=1;i<=6;i++){ const k=i*.32; pts.push([M[0]+Math.sin(hE)*k,M[1]+Math.cos(hE)*k,M[2]]); }                       /* and away up the trail */
     const cr=(a,b,c,d,t)=>{ const t2=t*t, t3=t2*t; return .5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t2+(-a+3*b-3*c+d)*t3); }, P=[];
     for(let i=0;i<pts.length-1;i++){ const a=pts[Math.max(0,i-1)], b=pts[i], c=pts[i+1], d=pts[Math.min(pts.length-1,i+2)]; for(let k=0;k<20;k++){ const t=k/20; P.push([0,1,2].map(j=>cr(a[j],b[j],c[j],d[j],t))); } }
     P.push(pts[pts.length-1]); const cum=[0]; for(let i=1;i<P.length;i++) cum.push(cum[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1],P[i][2]-P[i-1][2]));
-    utv={P,cum,len:cum[cum.length-1],d:0,v:.3,t:2,away:true,yaw:null,roll:0,pitch:0,wr:0,dust:[],col:pick([[52,72,50],[52,72,50],[96,34,28],[66,70,64]])};
+    utv={P,cum,len:cum[cum.length-1],d:0,v:.5,t:2,away:true,yaw:null,roll:0,pitch:0,wr:0,dust:[],col:pick([[52,72,50],[52,72,50],[96,34,28],[66,70,64]])};
   }
   function utvAt(u,d){ const c=u.cum; let lo=0, hi=c.length-1; d=Math.max(0,Math.min(u.len,d)); while(hi-lo>1){ const m=(lo+hi)>>1; if(c[m]<d) lo=m; else hi=m; }
     const k=(d-c[lo])/Math.max(1e-6,c[hi]-c[lo]); return [0,1,2].map(j=>lerp(u.P[lo][j],u.P[hi][j],k)); }
@@ -3398,7 +3401,7 @@ const ambient=(function(){
     if(!utv){ nextUtv-=dt; if(nextUtv<=0){ if(((groundBusy&&groundBusy())||stageBusy())&&!utvFirst) nextUtv=20; else { utvFirst=false; startUtv(); } } if(typeof natureSfx!=="undefined"&&natureSfx.utv) natureSfx.utv(0,0,0); return; }
     const u=utv; u.t+=dt;
     /* speed: idles out of the gap, rolls down the trail, slows for the turn, then accelerates away across the field */
-    const frac=u.d/u.len, V0=u.len/16, target= u.away? (()=>{ const h=d=>{ const a=utvAt(u,d), b=utvAt(u,d+.2); return Math.atan2(b[0]-a[0],b[1]-a[1]); }; let dh=h(u.d+.5)-h(u.d); dh=Math.abs(Math.atan2(Math.sin(dh),Math.cos(dh))); return V0*1.15/(1+dh*2.2); })() : frac<.2? V0*.45 : frac<.45? V0 : frac<.62? V0*.7 : V0*1.7;   /* sized to the scene: the whole run takes ten or twelve seconds */ { const dv=Math.max(-V0*.9*dt,Math.min(V0*.45*dt,target-u.v)); u.acc=(u.acc||0)+((dv/Math.max(dt,1e-3))-(u.acc||0))*Math.min(1,dt*6); u.v+=dv; }   /* it can only speed up or brake so hard */ u.d+=u.v*dt;
+    const frac=u.d/u.len, V0=.5, target= u.away? (()=>{ const h=d=>{ const a=utvAt(u,d), b=utvAt(u,d+.2); return Math.atan2(b[0]-a[0],b[1]-a[1]); }; let dh=h(u.d+.4)-h(u.d); dh=Math.abs(Math.atan2(Math.sin(dh),Math.cos(dh))); return V0*1.1/(1+dh*1.8); })() : frac<.2? V0*.45 : frac<.45? V0 : frac<.62? V0*.7 : V0*1.7;   /* sized to the scene: the whole run takes ten or twelve seconds */ { const dv=Math.max(-V0*.9*dt,Math.min(V0*.45*dt,target-u.v)); u.acc=(u.acc||0)+((dv/Math.max(dt,1e-3))-(u.acc||0))*Math.min(1,dt*6); u.v+=dv; }   /* it can only speed up or brake so hard */ u.d+=u.v*dt;
     const S=.47, fA=utvAt(u,u.d+.58*S), rA=utvAt(u,u.d-.56*S), p=[(fA[0]+rA[0])/2,(fA[1]+rA[1])/2,(fA[2]+rA[2])/2], hd=Math.atan2(fA[0]-rA[0],fA[1]-rA[1]), slope=(fA[2]-rA[2])/Math.max(1e-4,Math.hypot(fA[0]-rA[0],fA[1]-rA[1]));
     if(u.yaw==null) u.yaw=hd; let dy=hd-u.yaw; while(dy>Math.PI) dy-=6.283; while(dy<-Math.PI) dy+=6.283; u.yaw+=dy; const yr=dy/Math.max(dt,1e-3); u.yr=(u.yr||0)+(yr-(u.yr||0))*Math.min(1,dt*5);
     { const ca0=Math.cos(u.yaw), sa0=Math.sin(u.yaw), bump=(X,Z)=>.008*Math.sin(X*15.7+Z*6.1)+.005*Math.sin(X*9.3-Z*21.4+1.3)+.003*Math.sin(X*41+Z*33+.7);   /* the field isn't a billiard table */
@@ -3408,7 +3411,7 @@ const ambient=(function(){
       if(u.hv==null){ u.hv=hT; u.pitch=pT; u.roll=rT; } const st=Math.min(dt,.04); const dt0=dt; dt=st; spring('hv',hT); spring('pitch',pT); spring('roll',rT); dt=dt0; }   /* follows the lie of the ground, with small bumps */                                                                /* bumps in the field */
     u.wr+=u.v*dt/(.17*S);
     const sp=sun(), G=gnd(), f=FOC(), proj=(X,Y,Z)=>{ const g=f/Math.max(.2,Z); return [G.vx+X*g, G.vy+(1-Y)*g]; };
-    const scrP=proj(p[0],p[2],p[1]); if(u.d>=u.len||scrP[0]<-W*.25){ utv=null; nextUtv=rnd(240,480); if(natureSfx.utv) natureSfx.utv(0,0,0); return; }
+    const scrP=proj(p[0],p[2],p[1]); if(u.d>=u.len){ utv=null; nextUtv=rnd(240,480); if(natureSfx.utv) natureSfx.utv(0,0,0); return; }
     /* sound: the engine's putter, louder and brighter as it comes near, panned with it, revving as it pulls away */
     if(typeof natureSfx!=="undefined"&&natureSfx.utv){ const near=Math.min(1,Math.pow(2.2/Math.max(1,p[1]),1.5)); natureSfx.utv(Math.min(1,u.t/1.5)*(.25+.75*near),Math.max(-1,Math.min(1,scrP[0]/W*2-1)),Math.min(1,u.v/(V0*1.7))); }
     /* dust thrown up behind the back wheels, glowing in the low sun */
@@ -3539,7 +3542,7 @@ const ambient=(function(){
     const dustDraw=front=>{ if(!u.ip||(u.ipT=(u.ipT||0)-1)<=0){ u.ipT=10; const ip=toImg(c0[0],proj(p[0],p[2],p[1])[1]); u.dC=(ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[150,120,70]; u.ip=1; }
       for(const d of u.dust){ if((d.Z<p[1])!==front) continue; const c=proj(d.X,d.Y,d.Z), r=d.r*f/d.Z, a=Math.sin(Math.PI*d.t/d.life)*.09*(dark?.5:1); if(r<.5) continue;
         const g=ctx.createRadialGradient(c[0],c[1],0,c[0],c[1],r); const dc=mixv(u.dC,[255,206,140],.45); g.addColorStop(0,rgb(dc,a)); g.addColorStop(1,rgb(dc,0)); ctx.fillStyle=g; ctx.fillRect(c[0]-r,c[1]-r,r*2,r*2); } };
-    const behind=p[1]>4.45; if(behind) utvMaskGrab();
+    const behind=u.d>u.len-1.9*.96; if(behind) utvMaskGrab();
     ctx.save(); dustDraw(false); ctx.restore();
     blitRegion(utcv,c0[0],c0[1],rad,.75+Math.max(0,p[1]-10)*.04,Math.min(1,(u.len-u.d)/(u.len*.14)));
     if(behind) utvMaskPaint(); /* still up the trail behind the brush: the brush stays in front of it, softly, and it shows only through the gap */
