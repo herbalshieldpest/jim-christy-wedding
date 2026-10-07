@@ -831,7 +831,7 @@ const ambient=(function(){
       return; }
     if(!on||skyActive()||lull>0) return;
     tl.next-=dt; if(tl.next>0) return;
-    if(tl.n<tl.max){ const k=pick(DAY_EV.concat(["sundogs"]).filter(e=>e!==tl.last));   /* sun dogs come up about twice as often as the others */ tl.last=k; tl.n++; tl.next=rnd(35,70); skyStart(k); }
+    if(tl.n<tl.max){ const k=pick(DAY_EV.filter(e=>e!==tl.last)); tl.last=k; tl.n++; tl.next=rnd(35,70); skyStart(k); }
     else beginNight(); }
   /* the menu: the called event runs its spell; a night one called by day hands the day back after, a day one ends any night */
   function skyMenu(k){ if(NIGHT_EV.includes(k)){ if(tl.ph==="night") tl.q=tl.q.filter(e=>e!==k); skyStart(k,false); } else { if(tl.ph==="night") tl=newDay(); else tl.next=Math.max(tl.next,40); tl.last=k; skyStart(k,k==="rainbow"); } }
@@ -865,7 +865,7 @@ const ambient=(function(){
     drawRain(a*.4,.1,95,[.08,.6]);
     /* the bow is a ring about the same centre as the sun dogs' halo, only much wider: here we see just its left side, standing in the shower over the far ridge
        and climbing out of the top of the frame; a smooth spectrum, red on the outside, with the faint second bow beyond it, its colours reversed */
-    const sp=sun(), cxr=sp.x, cyr=sp.y, R=sdDist()*1.36, bw=R*.2;
+    const sp=sun(), cxr=sp.x, cyr=sp.y, R=sdDist()*1.16, bw=R*.28;
     const cw=Math.ceil(W), ch=Math.ceil(Math.max(10,IY(.56))); if(rbC.width!==cw||rbC.height!==ch){ rbC.width=cw; rbC.height=ch; }
     const x=rbX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,cw,ch);
     const ring=(r0,r1,stops,al)=>{ r0=Math.max(0,r0); r1=Math.max(r0+1,r1); const g=x.createRadialGradient(cxr,cyr,r0,cxr,cyr,r1);   /* (a negative radius throws, which stopped the whole scene) */ stops.forEach(([p,c,k])=>g.addColorStop(p,rgb(c,k*al))); x.fillStyle=g; x.beginPath(); x.arc(cxr,cyr,r1,0,6.283); x.arc(cxr,cyr,r0,6.283,0,true); x.fill(); };
@@ -4237,7 +4237,7 @@ const ambient=(function(){
     if(Math.sin(o.t*5)>.6){ const tq=[h[0]+ux*2.6,h[1]-.1,h[2]+uz*2.6]; parts.push({p:[[h[0]+ux*1.7,h[1]-.1,h[2]+uz*1.7,.07],[...tq,.06],[tq[0]+ux*.5-uz*.3,tq[1],tq[2]+uz*.5+ux*.3,.04]],c:"rgba(190,40,40,.95)",bias:-.3},{p:[[...tq,.06],[tq[0]+ux*.5+uz*.3,tq[1],tq[2]+uz*.5-ux*.3,.04]],c:"rgba(190,40,40,.95)",bias:-.3}); }   /* the forked tongue, tasting the air */
     return parts; }
   function drawSmalls(dt,dark,Lst){
-    nextSmall-=(lull>0?0:dt); if(nextSmall<=0){ nextSmall=rnd(90,180); if(smalls.length<2) startSmall(pick(dark? ["peeper"] : ["skink","woolly","peeper","woolly"])); }
+    nextSmall-=(lull>0?0:dt); if(nextSmall<=0){ nextSmall=rnd(90,180); if(smalls.length<2) startSmall(pick(dark? ["peeper"] : ["skink","peeper","skink"])); }
     for(let i=smalls.length-1;i>=0;i--){ const o=smalls[i]; o.t+=dt; o.st+=dt; const D=SMALL[o.kind];
       const out=o.t>o.life; o.alpha= out? Math.max(0,o.alpha-dt*.8) : Math.min(1,o.alpha+dt*.8); if(out&&o.alpha<=0&&o.kind!=="snake"){ smalls.splice(i,1); continue; }
       const lo=lawnMinG(Math.max(0,Math.min(W,o.sx)))+50, hi=Math.min(foxBounds().gmax-14,H*.9-gnd().vy), mv=(spd,a)=>{ o.sx+=Math.cos(a)*spd*dt; o.g=Math.max(lo,Math.min(hi,o.g+Math.sin(a)*spd*.45*dt)); };
@@ -4269,45 +4269,108 @@ const ambient=(function(){
         o.res=1.5; o.pitch={peeper:.62,skink:.85,mantis:.42,katydid:.5,snake:.9,woolly:.66}[o.kind]; critterBlit(null,null,o,sc,k,o.pal,()=>({peeper:peeperParts,skink:skinkParts,mantis:mantisParts,katydid:katydidParts,snake:snakeParts,woolly:woollyParts})[o.kind](o,o.pal),o.yaw,D.h,D.w,o.kind==="snake"?14:4,o.blades,o.alpha,.2); }}); }
   }
 
-  /* ---- a golden garden spider on her orb web, strung between two grass stems just in front of you: the spokes flash where they turn to the sun,
-     dew beads along the spiral, the white zigzag stitched above and below the hub, and the spider hanging head-down with her legs held in pairs ---- */
-  let web=null, nextWeb=rnd(150,280);
-  function startWeb(){ const left=Math.random()<.5; web={sx:W*(left? rnd(.07,.2) : rnd(.8,.93)),sy:H*rnd(.74,.8),R:Math.min(W,H)*rnd(.1,.13),a:(left?1:-1)*rnd(.35,.7),t:0,life:rnd(45,60),alpha:0,
-    rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:70},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)])}; }
+  /* ---- a golden garden spider on her orb web, strung between two tall grass stems in a tuft of grass just in front of you.
+     The tuft is composed like a photograph: tall blades and seed heads rising into the lower corner, a few big blades right at the lens soft
+     and out of focus, the web hung in the clear space they frame. The spokes flash where they turn to the sun, dew beads along the spiral,
+     the white zigzag is stitched above and below the hub. She waits head-down at the hub, then walks out along her web \u2014 and after a few
+     seconds a bluebird drops in, snatches her off it and is gone, leaving the web torn and swinging ---- */
+  let web=null, nextWeb=rnd(150,280); const wbCv=document.createElement("canvas"), wbCx=wbCv.getContext("2d");
+  function startWeb(){ const left=Math.random()<.5, R=Math.min(W,H)*rnd(.1,.125);
+    web={left,sx:W*(left? rnd(.12,.2) : rnd(.8,.88)),sy:H*rnd(.7,.76),R,a:(left?1:-1)*rnd(.3,.6),t:0,life:rnd(46,58),alpha:0,ph:"hub",hubT:rnd(5,9),
+      rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:80},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)]),su:0,sv:0,sh:Math.PI/2,leg:0,jolt:0,tear:null};
+    buildTuft(web); }
+  /* the tuft, painted once: blades behind the web, and the big soft blades at the lens in front of it */
+  function buildTuft(w){ const R=w.R, sd=w.left? -1 : 1, x0=w.sx-R*3.2, x1=w.sx+R*3.2, y0=w.sy-R*2.6, bw=Math.ceil(x1-x0), bh=Math.ceil(H+10-y0);
+    const G=groundPal({x:w.sx,y:H*.95},false).g, sun0=sun(), sunS=Math.sign(sun0.x-w.sx)||1;
+    const col=k=>mixv(mixv(G,[104,124,44],.5),[222,196,104],k);
+    const blade=(x,b,L,lean,wid,k,al,seed)=>{ const tip=[b+lean*L*.55,H+8-L], mid=[b+lean*L*.15,H+8-L*.55]; x.save(); x.globalAlpha=al;
+      const g=x.createLinearGradient(b,H,tip[0],tip[1]); g.addColorStop(0,rgb(mulv(col(k),.55))); g.addColorStop(.6,rgb(col(k))); g.addColorStop(1,rgb(mixv(col(k),[236,214,140],.4))); x.fillStyle=g;
+      const nx=-(tip[1]-(H+8)), ny=tip[0]-b, nl=Math.hypot(nx,ny)||1, ux=nx/nl, uy=ny/nl;
+      x.beginPath(); x.moveTo(b-ux*wid,H+8-uy*wid); x.quadraticCurveTo(mid[0]-ux*wid*.7,mid[1]-uy*wid*.7,tip[0],tip[1]); x.quadraticCurveTo(mid[0]+ux*wid*.7,mid[1]+uy*wid*.7,b+ux*wid,H+8+uy*wid); x.closePath(); x.fill();
+      x.strokeStyle=`rgba(255,226,150,${(.5*al).toFixed(2)})`; x.lineWidth=Math.max(.6,wid*.22); x.beginPath(); x.moveTo(b+ux*wid*sunS*.8,H+8+uy*wid*sunS*.8); x.quadraticCurveTo(mid[0]+ux*wid*.55*sunS,mid[1]+uy*wid*.55*sunS,tip[0],tip[1]); x.stroke();   /* the edge the low sun catches */
+      if(seed){ const hl=L*.16; x.strokeStyle=rgb(mixv(col(.5),[190,160,100],.5)); x.lineWidth=wid*.6; x.beginPath(); x.moveTo(tip[0],tip[1]); x.lineTo(tip[0]+lean*hl*.3,tip[1]-hl); x.stroke();
+        for(let i=0;i<34;i++){ const u=i/33, cx2=tip[0]+lean*hl*.3*u, cy2=tip[1]-hl*u, a=(i%2? 1 : -1)*rnd(.4,1.1)-Math.PI/2; x.strokeStyle=`rgba(244,222,160,${(.55*al).toFixed(2)})`; x.lineWidth=.6; x.beginPath(); x.moveTo(cx2,cy2); x.lineTo(cx2+Math.cos(a)*wid*1.6,cy2+Math.sin(a)*wid*1.6); x.stroke(); } }   /* a foxtail's bristly head, glowing */
+      x.restore(); };
+    const mk=()=>{ const c=document.createElement("canvas"); c.width=bw; c.height=bh; const x=c.getContext("2d"); x.translate(-x0,-y0); return [c,x]; };
+    const [cB,xB]=mk(), [cF,xF]=mk();
+    /* behind: a loose fan of blades and a few seed stems, densest at the outer side, thinning toward the open middle of the frame */
+    for(let i=0;i<30;i++){ const outer=Math.random()<.74, b= outer? w.sx+sd*R*rnd(1.25,3.4) : w.sx-sd*R*rnd(1.35,2.5), L=R*rnd(1.0,2.8)+(H-w.sy)*.6; let lean=(outer? sd : -sd)*rnd(-.12,.32);
+      const tip=b+lean*L*.55; if(Math.abs(tip-w.sx)<R*1.15) lean=-lean;   /* the blades frame the web; none of them cross it */
+      blade(xB,b,L,lean,R*rnd(.018,.042),rnd(.15,.85),rnd(.6,.95),i%6===0); }
+    /* in front, right at the lens: three or four broad blades, soft and out of focus, leaning in from the outer corner */
+    xF.filter=`blur(${Math.max(3,R*.06).toFixed(1)}px)`; for(let i=0;i<4;i++){ const b=w.sx+sd*R*rnd(1.6,3.2), L=R*rnd(1.6,2.8)+(H-w.sy)*.4, lean=-sd*rnd(.15,.45); blade(xF,b,L,lean,R*rnd(.07,.11),rnd(.15,.5),.75,false); }
+    w.tB=cB; w.tF=cF; w.tx0=x0; w.ty0=y0; w.sunS=sunS; }
   function drawWeb(dt,dark){
-    if(!web) return;
+    if(!web){ nextWeb-=(lull>0?0:dt); if(nextWeb<=0&&nA<.3){ nextWeb=rnd(200,340); startWeb(); } return; }
     const w=web; w.t+=dt; const out=w.t>w.life; w.alpha= out? Math.max(0,w.alpha-dt*.5) : Math.min(1,w.alpha+dt*.5); if(out&&w.alpha<=0){ web=null; return; }
-    const sway=Math.sin(w.t*.9)*.05+Math.sin(w.t*2.3)*.015, a=w.a+sway, ca=Math.cos(a), sa=Math.sin(a), R=w.R;
-    const P=(u,v)=>{ const zz=u*sa*.45, f=1/(1+zz); return [w.sx+u*ca*R*f, w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01]; };   /* the web's plane, turned a little toward or away from you */
-    const sp=sun(), sunA=Math.atan2(-(sp.y-w.sy),(sp.x-w.sx)), lit=dark? .35 : 1, A=w.alpha;
-    const x=ctx; x.save(); x.globalAlpha=1; x.globalCompositeOperation="source-over"; x.filter="none"; x.lineCap="round";
-    /* the two grass stems it hangs between, and the guy lines */
+    w.jolt=Math.max(0,w.jolt-dt*.6);
+    const sway=Math.sin(w.t*.9)*.05+Math.sin(w.t*2.3)*.015+Math.sin(w.t*7)*w.jolt*.12, a=w.a+sway*.6, ca=Math.cos(a), sa=Math.sin(a), R=w.R, tilt=sway*.06;
+    const base=[w.sx+(w.left? -1 : 1)*R*.6,H+8], rot=(p)=>{ const dx=p[0]-base[0], dy=p[1]-base[1], c=Math.cos(tilt), s=Math.sin(tilt); return [base[0]+dx*c-dy*s, base[1]+dx*s+dy*c]; };
+    const P=(u,v)=>{ const zz=u*sa*.45, f=1/(1+zz); return rot([w.sx+u*ca*R*f, w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01]); };   /* the web's plane, turned a little toward or away from you */
+    const sp=sun(), sunA=Math.atan2(-(sp.y-w.sy),(sp.x-w.sx)), lit=dark? .35 : 1, A=w.alpha*(1-.6*nA);
+    const x=ctx; x.save(); x.globalAlpha=A; x.globalCompositeOperation="source-over"; x.filter="none"; x.lineCap="round";
+    const drawT=img=>{ x.save(); x.translate(base[0],base[1]); x.rotate(tilt); x.translate(-base[0],-base[1]); x.drawImage(img,w.tx0,w.ty0); x.restore(); };
+    drawT(w.tB);
+    /* the two tall stems it hangs between, and the guy lines */
     const sL=P(-1.35,-1.6), sR=P(1.3,-1.6), tL=P(-1.25,1.25), tR=P(1.2,1.1);
-    x.strokeStyle=`rgba(${dark?50:120},${dark?60:130},${dark?30:60},${(.85*A).toFixed(3)})`; x.lineWidth=Math.max(1,R*.018); x.beginPath(); x.moveTo(sL[0],H*1.02); x.quadraticCurveTo(sL[0]+R*.05,(sL[1]+tL[1])/2,tL[0],tL[1]-R*.15); x.moveTo(sR[0],H*1.02); x.quadraticCurveTo(sR[0]-R*.06,(sR[1]+tR[1])/2,tR[0],tR[1]-R*.2); x.stroke();
+    const stem=(b,top,lean)=>{ const g=x.createLinearGradient(0,H,0,top[1]); g.addColorStop(0,`rgba(${dark?40:80},${dark?50:92},${dark?24:40},${A})`); g.addColorStop(1,`rgba(${dark?70:178},${dark?70:160},${dark?40:96},${A})`); x.strokeStyle=g;
+      x.lineWidth=Math.max(1.2,R*.024); x.beginPath(); x.moveTo(b[0],H*1.02); x.quadraticCurveTo(b[0]+lean*R*.08,(b[1]+top[1])/2,top[0],top[1]); x.stroke();
+      x.lineWidth=Math.max(.8,R*.014); x.beginPath(); x.moveTo(top[0],top[1]); x.quadraticCurveTo(top[0]+lean*R*.1,top[1]-R*.25,top[0]+lean*R*.04,top[1]-R*.42); x.stroke();   /* running on up to a seed head */
+      const hx=top[0]+lean*R*.04, hy=top[1]-R*.42; x.fillStyle=`rgba(${Math.round(214*lit)},${Math.round(186*lit)},${Math.round(120*lit)},${(.9*A).toFixed(3)})`; x.beginPath(); x.ellipse(hx,hy-R*.1,R*.03,R*.12,lean*.15,0,6.283); x.fill();
+      x.strokeStyle=`rgba(255,232,170,${(.5*A*lit).toFixed(3)})`; x.lineWidth=.6; for(let i=0;i<14;i++){ const yy=hy-R*.2*i/13, s2=i%2? 1 : -1; x.beginPath(); x.moveTo(hx,yy); x.lineTo(hx+s2*R*.06,yy-R*.04); x.stroke(); } };
+    stem(sL,[tL[0],tL[1]-R*.15],.4); stem(sR,[tR[0],tR[1]-R*.2],-.4);
     const thread=(al)=>`rgba(${Math.round(255*lit)},${Math.round(242*lit)},${Math.round(214*lit)},${(al*A).toFixed(3)})`;
     x.lineWidth=Math.max(.5,R*.004); x.strokeStyle=thread(.35); x.beginPath(); const rimPt=i=>{ const th=i/30*6.283; return P(Math.cos(th)*w.rim[i],Math.sin(th)*w.rim[i]); };
     for(const [q,an] of [[tL,rimPt(11)],[tR,rimPt(3)],[sL,rimPt(19)],[sR,rimPt(25)]]){ x.moveTo(q[0],q[1]); x.lineTo(an[0],an[1]); } x.stroke();
+    const torn=(th,r)=>{ if(!w.tear) return false; const du=Math.cos(th)*r-w.tear[0], dv=Math.sin(th)*r-w.tear[1]; return du*du+dv*dv<.09; };   /* where the bird tore through */
     /* the spokes, each catching the sun at its own angle */
-    for(let i=0;i<30;i++){ const th=i/30*6.283, g=Math.pow(Math.max(0,Math.cos(th-sunA)),6), q0=P(Math.cos(th)*.05,Math.sin(th)*.05), q1=rimPt(i); x.strokeStyle=thread(.09+.55*g); x.beginPath(); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); x.stroke(); }
+    for(let i=0;i<30;i++){ const th=i/30*6.283, g=Math.pow(Math.max(0,Math.cos(th-sunA)),6), q0=P(Math.cos(th)*.05,Math.sin(th)*.05); let rEnd=w.rim[i]; if(w.tear){ for(let r=.1;r<rEnd;r+=.05) if(torn(th,r)){ rEnd=r; break; } }
+      const q1=P(Math.cos(th)*rEnd,Math.sin(th)*rEnd); x.strokeStyle=thread(.14+.55*g); x.beginPath(); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); x.stroke();
+      if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); x.beginPath(); x.moveTo(o[0],o[1]); x.quadraticCurveTo(back[0],back[1]+R*.1,back[0]-R*.02,back[1]+R*.2); x.stroke(); } }   /* broken spokes, their ends hanging */
     /* the capture spiral: straight runs from spoke to spoke, sagging a hair */
-    x.strokeStyle=thread(.15); x.beginPath(); let first=true;
-    for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30; const r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); first? x.moveTo(q[0],q[1]) : x.lineTo(q[0],q[1]); first=false; } x.stroke();
+    x.strokeStyle=thread(.22); x.beginPath(); let pen=false;
+    for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30; const r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); if(torn(th,r1)){ pen=false; continue; } pen? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); pen=true; } x.stroke();
     /* the stabilimentum: a white zigzag band above and below the hub */
     x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.55*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.008); x.beginPath();
     for(const sg of [1,-1]){ for(let j=0;j<=22;j++){ const v=sg*(.1+j*.019), u=(j%2? .022 : -.022)*(1-j/30), q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke();
     /* dew, sparkling now and then */
-    for(const [th,rr,ph] of w.dew){ const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),18); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
-    /* the spider: head down, the big yellow-and-black abdomen above, silver cephalothorax below, legs held in pairs like an X */
-    const c0=P(0,0), sc=R*.017, ang=Math.atan2(P(0,1)[1]-c0[1],P(0,1)[0]-c0[0])+Math.PI/2;
-    x.translate(c0[0],c0[1]); x.rotate(ang); x.scale(sc*Math.max(.55,Math.abs(ca)),sc);
-    x.strokeStyle=`rgba(${Math.round(40*lit)},${Math.round(30*lit)},${Math.round(20*lit)},${A.toFixed(3)})`; x.lineWidth=.9;
-    for(const sd of [-1,1]) for(const [a0,l1,l2] of [[-.5,6,7.6],[-.25,5,6.2],[.25,4.4,5.4],[.55,5.4,7]]){ const aa=(sd>0?0:Math.PI)+a0*sd, b1=[Math.cos(aa)*l1*sd*sd,Math.sin(aa)*l1+(a0<0?-1:1)*.6], b2=[b1[0]+Math.cos(aa+sd*(a0<0?.3:-.3))*l2,b1[1]+Math.sin(aa+sd*(a0<0?.3:-.3))*l2]; x.beginPath(); x.moveTo(0,a0<0?-1:1); x.lineTo(b1[0],b1[1]); x.lineTo(b2[0],b2[1]); x.stroke(); }
-    const ab=x.createRadialGradient(-1,-7,0,0,-6,5.5); ab.addColorStop(0,`rgba(${Math.round(250*lit)},${Math.round(214*lit)},${Math.round(70*lit)},${A})`); ab.addColorStop(1,`rgba(${Math.round(200*lit)},${Math.round(150*lit)},${Math.round(30*lit)},${A})`);
-    x.fillStyle=ab; x.beginPath(); x.ellipse(0,-6,3.6,5.4,0,0,6.283); x.fill();
-    x.fillStyle=`rgba(${Math.round(24*lit)},${Math.round(20*lit)},${Math.round(16*lit)},${(.95*A).toFixed(3)})`; x.beginPath(); x.ellipse(0,-6.2,1.1,4.6,0,0,6.283); x.fill(); for(const yy of [-9,-6.5,-4]){ x.beginPath(); x.ellipse(0,yy,3.2,.55,0,0,6.283); x.fill(); }   /* the black saddle and bands */
-    x.fillStyle=`rgba(${Math.round(214*lit)},${Math.round(210*lit)},${Math.round(200*lit)},${A})`; x.beginPath(); x.ellipse(0,1.4,2,2.4,0,0,6.283); x.fill();   /* the silvery front body */
-    x.restore(); web.sx2=c0[0]; web.sy2=c0[1];
+    for(const [th,rr,ph] of w.dew){ if(torn(th,rr)) continue; const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),18); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
+    /* ---- the spider: waits at the hub, then walks out along a spoke ---- */
+    if(w.ph==="hub"){ w.hubT-=dt; if(w.hubT<=0&&!out){ w.ph="walk"; const th=rnd(0,6.283), r=rnd(.45,.62); w.tu=Math.cos(th)*r; w.tv=Math.sin(th)*r; w.walkT=0; w.birdAt=rnd(3,4.5); } }
+    if(w.ph==="walk"){ w.walkT+=dt; const du=w.tu-w.su, dv=w.tv-w.sv, d=Math.hypot(du,dv); if(d>.01){ const st=Math.min(d,dt*.11*(1+.5*Math.sin(w.walkT*6))); w.su+=du/d*st; w.sv+=dv/d*st; w.sh=Math.atan2(dv,du); w.leg+=dt*9; }
+      else { w.leg+=dt*1.5; } if(w.walkT>w.birdAt&&!w.bird) startWebBird(w,P(w.su,w.sv)); }
+    if(w.ph!=="gone"){ const c0=P(w.su,w.sv), hd=P(w.su+Math.cos(w.sh)*.1,w.sv+Math.sin(w.sh)*.1), ang=Math.atan2(hd[1]-c0[1],hd[0]-c0[0])+Math.PI/2, sc=R*.017, g=Math.sin(w.leg);
+      x.save(); x.translate(c0[0],c0[1]); x.rotate(ang); x.scale(sc*Math.max(.55,Math.abs(ca)),sc);   /* (at the hub she hangs head-down; walking, she faces where she goes) */
+      x.strokeStyle=`rgba(${Math.round(40*lit)},${Math.round(30*lit)},${Math.round(20*lit)},${A.toFixed(3)})`; x.lineWidth=.9;
+      let li=0; for(const sd of [-1,1]) for(const [a0,l1,l2] of [[-.5,6,7.6],[-.25,5,6.2],[.25,4.4,5.4],[.55,5.4,7]]){ const st=(li++%2? 1 : -1)*g*.22*(w.ph==="walk"? 1 : .15), aa=(sd>0?0:Math.PI)+(a0+st)*sd, b1=[Math.cos(aa)*l1,Math.sin(aa)*l1+(a0<0?-1:1)*.6], b2=[b1[0]+Math.cos(aa+sd*(a0<0?.3:-.3))*l2,b1[1]+Math.sin(aa+sd*(a0<0?.3:-.3))*l2]; x.beginPath(); x.moveTo(0,a0<0?-1:1); x.lineTo(b1[0],b1[1]); x.lineTo(b2[0],b2[1]); x.stroke(); }
+      const ab=x.createRadialGradient(-1,-7,0,0,-6,5.5); ab.addColorStop(0,`rgba(${Math.round(250*lit)},${Math.round(214*lit)},${Math.round(70*lit)},${A})`); ab.addColorStop(1,`rgba(${Math.round(200*lit)},${Math.round(150*lit)},${Math.round(30*lit)},${A})`);
+      x.fillStyle=ab; x.beginPath(); x.ellipse(0,-6,3.6,5.4,0,0,6.283); x.fill();
+      x.fillStyle=`rgba(${Math.round(24*lit)},${Math.round(20*lit)},${Math.round(16*lit)},${(.95*A).toFixed(3)})`; x.beginPath(); x.ellipse(0,-6.2,1.1,4.6,0,0,6.283); x.fill(); for(const yy of [-9,-6.5,-4]){ x.beginPath(); x.ellipse(0,yy,3.2,.55,0,0,6.283); x.fill(); }   /* the black saddle and bands */
+      x.fillStyle=`rgba(${Math.round(214*lit)},${Math.round(210*lit)},${Math.round(200*lit)},${A})`; x.beginPath(); x.ellipse(0,1.4,2,2.4,0,0,6.283); x.fill();   /* the silvery front body */
+      x.restore(); web.sx2=c0[0]; web.sy2=c0[1]; }
+    drawT(w.tF);   /* the soft blades at the lens, in front of it all */
+    x.restore();
+    if(w.bird) drawWebBird(w,dt,P);
   }
+  /* the bluebird: drops in from above and to the side, snatches the spider off her web, and is away */
+  function startWebBird(w,q){ const F=H*.5, cx=W/2, cy=H*.52, Z=1.15, sd=w.left? 1 : -1, T=[(q[0]-cx)*Z/F,(q[1]-cy)*Z/F,Z];
+    w.bird={T,P:[T[0]+sd*1.4,T[1]-1.1,Z+1.6],V:[-sd*.8,1.2,-1],ph:0,st:"in",t:0}; }
+  function drawWebBird(w,dt,Pw){ const B=w.bird, F=H*.5, cx=W/2, cy=H*.52; B.t+=dt;
+    if(B.st==="in"){ const q=Pw(w.su,w.sv); B.T=[(q[0]-cx)*B.T[2]/F,(q[1]-cy)*B.T[2]/F,B.T[2]]; }
+    const T= B.st==="away"? [B.P[0]+(w.left? -1 : 1)*-3,B.P[1]-2.2,B.P[2]+3] : B.st==="grab"? [B.T[0],B.T[1]-.03,B.T[2]-.04] : [B.T[0],B.T[1]-.02,B.T[2]-.05];
+    const D=[T[0]-B.P[0],T[1]-B.P[1],T[2]-B.P[2]], dl=Math.hypot(...D)||1, spd=B.st==="away"? 2.6 : B.st==="grab"? .6 : Math.min(2.2,.6+dl*2.2);
+    for(let i=0;i<3;i++) B.V[i]+=(D[i]/dl*spd-B.V[i])*Math.min(1,dt*(B.st==="in"? 5 : 3)); B.P=B.P.map((v,i)=>v+B.V[i]*dt);
+    if(B.st==="in"&&dl<.07){ B.st="grab"; B.gt=0; w.ph="gone"; w.jolt=1; w.tear=[w.su,w.sv]; try{ natureSfx.bluebird&&natureSfx.bluebird(B.T[0]>0? .4 : -.4); }catch(e){} }   /* got her: the web jerks and tears */
+    if(B.st==="grab"){ B.gt+=dt; if(B.gt>.35) B.st="away"; }
+    if(B.st==="away"&&(B.P[2]>9||Math.abs(cx+B.P[0]*F/B.P[2]-W/2)>W*.9)){ w.bird=null; return; }
+    B.ph+=dt*Math.PI*2*(B.st==="grab"? 18 : 12);
+    const cw=Math.ceil(W*.6), ch=Math.ceil(H*.6); if(wbCv.width!==cw||wbCv.height!==ch){ wbCv.width=cw; wbCv.height=ch; }
+    const x=wbCx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(.6,0,0,.6,0,0);
+    const sp=sun(), sunL=(()=>{ const v=[(sp.x-cx)/F,(sp.y-cy)/F-.05,1], l=Math.hypot(...v); return v.map(c=>c/l); })();
+    const vl=Math.hypot(B.V[0],B.V[1]*.5,B.V[2])||1, f=B.st==="grab"? [w.left? -1 : 1,0,.2] : [B.V[0]/vl,B.V[1]*.5/vl,B.V[2]/vl];
+    blueBird3D(x,B.P,f,B.ph,false,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],.0105,sunL);
+    if(B.st!=="in"){ const hp=[B.P[0]+f[0]*.04,B.P[1]+f[1]*.04+.004,B.P[2]+f[2]*.04], hx=cx+hp[0]*F/hp[2], hy=cy+hp[1]*F/hp[2]; x.fillStyle="#c9a23a"; x.beginPath(); x.ellipse(hx,hy,2.4,3.2,.4,0,6.283); x.fill(); x.strokeStyle="#2a2018"; x.lineWidth=.6; for(let i=0;i<4;i++){ x.beginPath(); x.moveTo(hx,hy); x.lineTo(hx+Math.cos(i*1.6)*5,hy+Math.sin(i*1.6)*5); x.stroke(); } }   /* the spider in its bill, legs dangling */
+    ctx.save(); ctx.globalAlpha=1-.5*nA; ctx.drawImage(wbCv,0,0,cw,ch,0,0,W,H); ctx.restore(); }
   /* ---- an eastern box turtle plods across the grass close to you: high domed shell, dark with yellow-orange blotches; it stops now and then, and pulls in when a dog comes near ---- */
   let turtle=null, nextTurtle=75;
   function startTurtle(){ const dir=Math.random()<.5?1:-1, b=foxBounds(), g=rnd(Math.max(b.gmin+30,b.gmax-80),b.gmax-12);
@@ -5012,7 +5075,7 @@ const ambient=(function(){
     else { f.walking=false; f.yaw=angTo(f.yaw,d.yaw,dt*1.5); }
     f.hd+=((f.lag[0]?f.lag[0][0]:0)*(f.walking?.4:1)-f.hd)*Math.min(1,dt*3); f.hy=Math.sin(t*.7)*.3;
   }
-  function deerPose(o,scale,spots){ const s=toScreen(o.Xw,o.Dw); return {x:s.x,y:s.y,g:s.g*scale,Xw:o.Xw,Dw:o.Dw,lift:0,leapU:null,stand:!o.walking,walk:!!o.walking,antlers:false,hd:o.hd,hy:o.hy,q:o.q,spots}; }
+  function doePose(o,scale,spots){ const s=toScreen(o.Xw,o.Dw); return {x:s.x,y:s.y,g:s.g*scale,Xw:o.Xw,Dw:o.Dw,lift:0,leapU:null,stand:!o.walking,walk:!!o.walking,antlers:false,hd:o.hd,hy:o.hy,q:o.q,spots}; }
   /* ---- a ruby-throated hummingbird, in true 3D: it shoots in out of the evening toward you, stops dead and hovers an arm's length away,
      body tilted up, wings a blur, turning to look you over, then darts off back into the distance ---- */
   /* the close-up visitors take turns: only one at a time comes past the camera */
@@ -5543,7 +5606,7 @@ const ambient=(function(){
   }
   /* ---- a side-by-side (a farm UTV) coming out of the gap in the brush, down the mown trail toward us, then swinging off across the field to the left.
      Built in 3D from its panels, roll cage, seats, two riders and four turning wheels, lit by the low sun, kicking up golden dust, with haze by distance ---- */
-  let utv=null, utvFirst=false, nextUtv=rnd(140,220);   /* TESTING: comes right away (normally rnd(70,130) with utvFirst=false) */ const utcv=document.createElement("canvas"), utcx=utcv.getContext("2d");
+  let utv=null, utvFirst=false, nextUtv=rnd(70,110);   /* TESTING: comes right away (normally rnd(70,130) with utvFirst=false) */ const utcv=document.createElement("canvas"), utcx=utcv.getContext("2d");
   const UTV_PATH=[[.305,.637],[.292,.64],[.281,.644],[.273,.651],[.262,.659],[.24,.665],[.207,.668],[.177,.67],[.13,.674],[.08,.677],[.02,.68],[-.08,.683],[-.25,.686]];   /* out from behind the brush at the trail's mouth, swinging toward us down the mown path, then left along the foot of the brush behind the tree */   /* out of the gap and along the foot of the brush, behind the apple tree */
   /* the other way round: in from the right along the front of the brush, then up the trail into the gap and away from us behind the brush */
   const UTV_PATH2=[[1.25,.835],[1.05,.81],[.88,.764],[.7,.722],[.52,.697],[.4,.68],[.32,.664],[.292,.654],[.278,.647],[.285,.642],[.297,.639],[.312,.636]];
@@ -5587,7 +5650,7 @@ const ambient=(function(){
      Size, depth and how long it lasts go with the animal's weight; the little ones (rabbits, quail, songbirds, skunks, chipmunks) leave nothing ---- */
   const PRINTS=[], trk=new Map();
   /* kind: weight kg, print size, stride (both in the animals' own body scale), shape */
-  const TRK={deer:{wt:60,sz:2.1,st:13,sh:"hoof"},buck:{wt:90,sz:2.4,st:15,sh:"hoof"},bear:{wt:120,sz:3.4,st:14,sh:"paw"},cub:{wt:30,sz:2.2,st:9,sh:"paw"},dog:{wt:30,sz:2.0,st:10,sh:"paw"},
+  const TRK={deer:{wt:60,sz:2.1,st:13,sh:"hoof"},buck:{wt:90,sz:2.4,st:15,sh:"hoof"},bear:{wt:120,sz:3.4,st:14,sh:"paw"},cub:{wt:30,sz:2.2,st:9,sh:"paw"},dog:{wt:30,sz:2.0,st:14,sh:"paw"},
     coy:{wt:14,sz:1.6,st:10,sh:"paw"},bob:{wt:10,sz:1.5,st:8,sh:"paw"},fox:{wt:6,sz:1.2,st:8,sh:"paw"},turk:{wt:8,sz:1.5,st:7,sh:"bird"},tomk:{wt:11,sz:2.1,st:9,sh:"bird"},porc:{wt:10,sz:1.4,st:5,sh:"paw"},
     beaver:{wt:20,sz:1.8,st:6,sh:"drag"},racc:{wt:8,sz:1.2,st:6,sh:"paw"},otter:{wt:9,sz:1.3,st:7,sh:"paw"}};
   function trkSources(){ const o=[], add=(key,ob,kind,X,D,lift)=>{ if(ob&&X!=null&&D>0&&(ob.alpha==null||ob.alpha>.5)) o.push({key,ob,kind,X,D,lift:lift||0}); };
@@ -5607,21 +5670,20 @@ const ambient=(function(){
       if(d>1e-3) r.hd=Math.atan2(dy,dx); r.acc+=d; r.x=sc.x; r.y=sc.y;
       if(r.acc>=K.st&&s0.lift<.03){ r.acc=0; r.side=-r.side; if(sc.y<G.vy+lawnMinG(sc.x)+2) continue;   /* only on the mown lawn, not in the brush */
         const ox=-Math.sin(r.hd)*r.side*K.sz*.55*u, oy=Math.cos(r.hd)*r.side*K.sz*.55*u/3.2, q=toGround(sc.x+ox,sc.y+oy);
-        PRINTS.push({X:q.Xw,D:q.Dw,hd:r.hd,k:K,t0:t,life:Math.min(75,16+K.wt*.55),a:Math.min(.62,.2+K.wt/170)}); if(PRINTS.length>420) PRINTS.shift(); } }
+        PRINTS.push({X:q.Xw,D:q.Dw,hd:r.hd,k:K,t0:t,life:Math.min(110,30+K.wt*.8),a:Math.min(.7,.32+K.wt/120)}); if(PRINTS.length>420) PRINTS.shift(); } }
     for(const k of [...trk.keys()]) if(!seen.has(k)) trk.delete(k); }
   function drawTracks(dark){ stepTracks(); if(!PRINTS.length) return; while(PRINTS.length&&t-PRINTS[0].t0>PRINTS[0].life) PRINTS.shift();
     for(let i=0;i<PRINTS.length;i++){ const P=PRINTS[i]; if(t-P.t0>P.life) continue; const s=toScreen(P.X,P.D), u=s.g/44, age=(t-P.t0)/P.life;
-      const a=P.a*Math.pow(1-age,1.3)*Math.min(1,(t-P.t0)*4)*(dark?.75:1)*(1-.55*nA); if(a<.01) continue; const K=P.k, rx=Math.max(.7,K.sz*u*.5), ry=Math.max(.45,rx*.36), c=Math.cos(P.hd), sn=Math.sin(P.hd)/3.2, ang=Math.atan2(sn,c);
-      ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
-      /* the pressed blades: a dark bruise of shaded grass, with the bent tips catching a little light on the far side */
-      ctx.fillStyle=`rgba(22,28,10,${(a*.3).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(0,0,rx*1.25,ry*1.5,0,0,6.283); ctx.fill();   /* the flattened patch around it */
-      ctx.fillStyle=`rgba(20,25,9,${a.toFixed(3)})`;
-      if(K.sh==="hoof"){ ctx.beginPath(); ctx.ellipse(rx*.15,-ry*.42,rx*.62,ry*.42,0,0,6.283); ctx.ellipse(rx*.15,ry*.42,rx*.62,ry*.42,0,0,6.283); ctx.fill(); }   /* the two halves of a cloven hoof */
-      else if(K.sh==="bird"){ ctx.lineWidth=Math.max(.5,ry*.5); ctx.strokeStyle=ctx.fillStyle; ctx.beginPath(); ctx.moveTo(-rx*.5,0); ctx.lineTo(rx*.7,0); ctx.moveTo(0,0); ctx.lineTo(rx*.6,-ry*1.1); ctx.moveTo(0,0); ctx.lineTo(rx*.6,ry*1.1); ctx.stroke(); }   /* three toes and a spur */
-      else if(K.sh==="drag"){ ctx.beginPath(); ctx.ellipse(0,0,rx*1.6,ry*.55,0,0,6.283); ctx.fill(); }   /* the broad tail sweeping the grass flat */
-      else { ctx.beginPath(); ctx.ellipse(-rx*.12,0,rx*.55,ry*.7,0,0,6.283); ctx.fill(); ctx.globalAlpha=.8; for(const j of [-1,-.35,.35,1]){ ctx.beginPath(); ctx.ellipse(rx*.62,j*ry*.62,rx*.18,ry*.24,0,0,6.283); ctx.fill(); } ctx.globalAlpha=1; }   /* a pad and four toes */
-      if(age<.6){ ctx.fillStyle=`rgba(226,232,176,${(a*.35*(1-age/.6)*(1-nA)).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(0,-ry*.9,rx*.7,ry*.25,0,0,6.283); ctx.fill(); }
-      ctx.restore(); } }
+      const a=P.a*Math.pow(1-age,1.3)*Math.min(1,(t-P.t0)*4)*(dark?.75:1)*(1-.55*nA); if(a<.01) continue; const K=P.k, rx=Math.max(1,K.sz*u*.62), ry=Math.max(.6,rx*.4), c=Math.cos(P.hd), sn=Math.sin(P.hd)/3.2, ang=Math.atan2(sn,c);
+      const sp=trkSprite(K.sh); ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang); ctx.globalAlpha=Math.min(1,a*1.3); ctx.drawImage(sp,-rx*1.5,-ry*2,rx*3,ry*4); ctx.restore(); } }   /* a soft, dark bruise of pressed-down grass in the animal's shape */
+  const TRK_SPR={};
+  function trkSprite(sh){ if(TRK_SPR[sh]) return TRK_SPR[sh]; const c=document.createElement("canvas"); c.width=96; c.height=64; const x=c.getContext("2d"), rx=32, ry=16; x.translate(48,32); x.filter="blur(1.3px)";
+    x.fillStyle="rgba(16,22,8,.32)"; x.beginPath(); x.ellipse(0,0,rx*1.15,ry*1.25,0,0,6.283); x.fill(); x.fillStyle="rgba(14,20,6,.9)";
+    if(sh==="hoof"){ x.beginPath(); x.ellipse(rx*.12,-ry*.38,rx*.6,ry*.36,-.08,0,6.283); x.ellipse(rx*.12,ry*.38,rx*.6,ry*.36,.08,0,6.283); x.fill(); }
+    else if(sh==="bird"){ x.strokeStyle=x.fillStyle; x.lineWidth=ry*.32; x.lineCap="round"; x.beginPath(); x.moveTo(-rx*.45,0); x.lineTo(rx*.65,0); x.moveTo(0,0); x.lineTo(rx*.55,-ry*.85); x.moveTo(0,0); x.lineTo(rx*.55,ry*.85); x.stroke(); }
+    else if(sh==="drag"){ x.beginPath(); x.ellipse(0,0,rx*1.1,ry*.5,0,0,6.283); x.fill(); }
+    else { x.beginPath(); x.ellipse(-rx*.15,0,rx*.5,ry*.62,0,0,6.283); x.fill(); for(const j of [-1,-.35,.35,1]){ x.beginPath(); x.ellipse(rx*.55,j*ry*.6,rx*.17,ry*.22,0,0,6.283); x.fill(); } }
+    return TRK_SPR[sh]=c; }
   let utvCol=null;
   /* the lie of the land, read off the photo: the foot of the brush on the right (where the mown grass meets the goldenrod), measured column by column */
   const BRUSH_R=[[.29,.6691],[.34,.67],[.39,.6751],[.44,.6823],[.49,.6934],[.54,.7064],[.59,.7201],[.64,.7317],[.69,.7444],[.74,.7542],[.79,.765],[.84,.7749],[.89,.7864],[.94,.7941],[.99,.8084],[1.3,.885]];
@@ -5685,7 +5747,7 @@ const ambient=(function(){
       if(u.hv==null){ u.hv=hT; u.pitch=pT; u.roll=rT; } const st=Math.min(dt,.04); const dt0=dt; dt=st; spring('hv',hT); spring('pitch',pT); spring('roll',rT); dt=dt0; }   /* follows the lie of the ground, with small bumps */                                                                /* bumps in the field */
     u.wr+=u.v*dt/(.17*S);
     const sp=sun(), G=gnd(), f=FOC(), proj=(X,Y,Z)=>{ const g=f/Math.max(.2,Z); return [G.vx+X*g, G.vy+(1-Y)*g]; };
-    const scrP=proj(p[0],p[2],p[1]); if(u.d>=u.len){ utv=null; nextUtv=UTV_TEST? rnd(5,8) : u.away? rnd(150,260) : rnd(520,820); if(natureSfx.utv) natureSfx.utv(0,0,0); return; }
+    const scrP=proj(p[0],p[2],p[1]); if(u.d>=u.len){ utv=null; nextUtv=UTV_TEST? rnd(5,8) : u.away? rnd(75,130) : rnd(260,410); if(natureSfx.utv) natureSfx.utv(0,0,0); return; }
     /* sound: the engine's putter, louder and brighter as it comes near, panned with it, revving as it pulls away */
     if(typeof natureSfx!=="undefined"&&natureSfx.utv){ const near=Math.min(1,Math.pow(2.2/Math.max(1,p[1]),1.5)); natureSfx.utv(Math.min(1,u.t/1.5)*(.25+.75*near),Math.max(-1,Math.min(1,scrP[0]/W*2-1)),Math.min(1,u.v/(V0*1.7))); }
     /* dust thrown up behind the back wheels, glowing in the low sun */
@@ -5803,7 +5865,7 @@ const ambient=(function(){
           x.fillStyle=rgb(mulv(F.hat,.55)); x.beginPath(); x.ellipse(c[0]+fx*r*.85,c[1]-r*.44+fy*r*.2,r*(.35+.55*side),r*.16,Math.atan2(fy,fx)*.15,0,6.283); x.fill(); }   /* and its bill, pointing the way he faces */
         continue; }
       x.fillStyle=rgb(F.col); x.strokeStyle=rgb(F.col); x.lineWidth=.6; x.beginPath(); F.s.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.closePath(); x.fill(); x.stroke(); }
-    { const fc=-(sa*p[0]+ca*p[1])/Math.hypot(p[0],p[1]), hl=fc>.05? [-.25,.25].map(sx=>proj(...L2W(sx,.49,.89))) : []; x.save(); x.globalCompositeOperation="lighter"; x.globalAlpha=Math.min(1,fc*2.5); for(const h of hl){ const r=gS*.07, g=x.createRadialGradient(h[0],h[1],0,h[0],h[1],r*3); g.addColorStop(0,"rgba(255,244,214,.95)"); g.addColorStop(.2,"rgba(255,230,180,.45)"); g.addColorStop(1,"rgba(255,220,160,0)"); x.fillStyle=g; x.fillRect(h[0]-r*3,h[1]-r*3,r*6,r*6); } x.restore(); }   /* headlights on in the dusk */
+    { const fc=-(sa*p[0]+ca*p[1])/Math.hypot(p[0],p[1]), hl=fc>.05? [-.25,.25].map(sx=>proj(...L2W(sx,.49,.89))) : []; x.save(); x.globalCompositeOperation="lighter"; x.globalAlpha=Math.min(1,fc*2.5)*(.6+.8*(u.hlk||0)); for(const h of hl){ const r=gS*.07*(1+(u.hlk||0)*.8), g=x.createRadialGradient(h[0],h[1],0,h[0],h[1],r*3); g.addColorStop(0,"rgba(255,244,214,.95)"); g.addColorStop(.2,"rgba(255,230,180,.45)"); g.addColorStop(1,"rgba(255,220,160,0)"); x.fillStyle=g; x.fillRect(h[0]-r*3,h[1]-r*3,r*6,r*6); } x.restore(); }   /* headlights on in the dusk */
     /* light and air over the whole machine */
     const c0=proj(p[0],p[2]+.5*S,p[1]), rad=gS*1.6+30, RX=Math.max(0,(c0[0]-rad)*.6), RY=Math.max(0,(c0[1]-rad)*.6), RW=rad*1.2, RH=rad*1.2;
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop";
@@ -5825,6 +5887,14 @@ const ambient=(function(){
       for(const d of u.dust){ if((d.Z<p[1])!==front) continue; const c=proj(d.X,d.Y,d.Z), r=d.r*f/d.Z, a=Math.sin(Math.PI*d.t/d.life)*.09*(dark?.5:1); if(r<.5) continue;
         const g=ctx.createRadialGradient(c[0],c[1],0,c[0],c[1],r); const dc=mixv(u.dC,[255,206,140],.45); g.addColorStop(0,rgb(dc,a)); g.addColorStop(1,rgb(dc,0)); ctx.fillStyle=g; ctx.fillRect(c[0]-r,c[1]-r,r*2,r*2); } };
     const gIp=toImg(c0[0],proj(p[0],p[2],p[1])[1]), mT=gIp&&gIp[0]>.18&&gIp[0]<.42? Math.max(0,Math.min(1,(.6735-gIp[1])/.009)) : 0; u.mk=(u.mk??mT)+(mT-(u.mk??mT))*Math.min(1,dt*5); const behind=u.mk>.01; if(behind) utvMaskGrab();   /* farther off than the foot of the brush at the gap: the brush stands in front of it */
+    /* after dark its headlights throw two pools of light out ahead of it along the path, the grass and dust lit in them */
+    { const nk=Math.max(nA,Math.min(1,(duskV-.3)*1.6)); if(nk>.03&&!behind){ const gy=p[2], at=(rx,fz)=>proj(p[0]+(rx*ca+fz*sa)*S,gy,p[1]+(-rx*sa+fz*ca)*S);
+        ctx.save(); ctx.globalCompositeOperation="screen";
+        for(const sd of [-1,1]){ const L=6.5, pts=[at(sd*.25,.9)]; for(let i=0;i<=10;i++){ const u2=i/10, w2=(sd*.25+lerp(-1.1,1.1,u2)*1.4+sd*.4); pts.push(at(w2,.9+L*(1-.15*Math.abs(u2-.5)))); }
+          const a0=at(sd*.25,.9), a1=at(sd*.35,.9+L*.75), g=ctx.createLinearGradient(a0[0],a0[1],a1[0],a1[1]); g.addColorStop(0,`rgba(255,236,190,${(.42*nk).toFixed(3)})`); g.addColorStop(.35,`rgba(255,226,170,${(.2*nk).toFixed(3)})`); g.addColorStop(1,"rgba(255,220,160,0)");
+          ctx.fillStyle=g; ctx.beginPath(); pts.forEach((q,i)=>i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); ctx.closePath(); ctx.fill(); }
+        for(const d of u.dust){ const c=proj(d.X,d.Y,d.Z), r=d.r*f/d.Z*1.4; if(r<.5) continue; const dz=(d.X-p[0])*sa+(d.Z-p[1])*ca; if(dz<0) continue; ctx.fillStyle=`rgba(255,230,180,${(.12*nk*Math.sin(Math.PI*d.t/d.life)).toFixed(3)})`; ctx.beginPath(); ctx.arc(c[0],c[1],r,0,6.283); ctx.fill(); }   /* dust drifting through the beams */
+        ctx.restore(); u.hlk=nk; } else u.hlk=0; }
     ctx.save(); dustDraw(false); ctx.restore();
     utvPatches.length=0;
     { const near=[[-.44,.58],[.44,.58],[-.44,-.56],[.44,-.56]].map(([wx,wz],i)=>{ const gy=p[2]+(u.wh?u.wh[i]:0)+slope*wz*S+bank*wx*S; return proj(p[0]+(wx*ca+wz*sa)*S,gy,p[1]+(-wx*sa+wz*ca)*S); }).sort((a,b)=>b[1]-a[1]).slice(0,2);
@@ -6709,7 +6779,7 @@ const ambient=(function(){
       nextSq-=(lull>0?0:dt); if(nextSq<=0){ nextSq=rnd(30,60); if(sqs.length<(MOBILE()?2:4)) startSquirrels(); }
       for(let i=sqs.length-1;i>=0;i--) if(sqs[i].gone) sqs.splice(i,1);
       for(const q of sqs) L.push({y:toScreen(q.Xw,q.Dw).y,fn:()=>drawSquirrel(q,dt,dark)});
-      stepDoe(dt); if(doe){ const d=doe; L.push({y:toScreen(d.Xw,d.Dw).y,fn:()=>paintDeer(deerPose(d,1,false),dark,{yaw:d.yaw,alpha:d.alpha})}); L.push({y:toScreen(d.fawn.Xw,d.fawn.Dw).y,fn:()=>paintDeer(deerPose(d.fawn,.62,true),dark,{yaw:d.fawn.yaw,alpha:d.alpha})}); }
+      stepDoe(dt); if(doe){ const d=doe; L.push({y:toScreen(d.Xw,d.Dw).y,fn:()=>paintDeer(doePose(d,1,false),dark,{yaw:d.yaw,alpha:d.alpha})}); L.push({y:toScreen(d.fawn.Xw,d.fawn.Dw).y,fn:()=>paintDeer(doePose(d.fawn,.62,true),dark,{yaw:d.fawn.yaw,alpha:d.alpha})}); }
       drawHenAll(dt,dark,L);
       if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||hawkG.state==="lift")) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L); tomQueue(dt,dark,L);
@@ -7104,7 +7174,7 @@ const critterMenu=(function(){
   const LIST=[["Mammals",[["fox","fox","Red fox"],["grayfox","grayfox","Gray fox"],["coyote","coyote","Coyote"],["cub","bear","Black bears"],["bobcat","bobcat","Bobcat"],["raccoon","raccoon","Raccoon"],["skunk","skunk","Striped skunk"],["opossum","opossum","Opossum"],["groundhog","groundhog","Groundhog"],["beaver","beaver","Beaver"],
       ["otter","otter","River otter"],["porcupine","porcupine","Porcupine"],["flysquirrel","flysquirrel","Flying squirrel"],["squirrels","squirrel","Squirrels"],["cottontail","cottontail","Cottontails"],["buckLawn","buck","White-tailed buck"],["doe","doe","Doe & fawn"],["bats","bats","Little brown bats"],["romp","dogs","Willow & Tulip"],["utv","utv","Jim & Christy"]]],
     ["Butterflies & Moths",[["cmon","monarch","Monarch"],["bfly:tiger","tiger","Tiger swallowtail"],["bfly:spice","spice","Spicebush swallowtail"],["bfly:frit","frit","Great spangled fritillary"],["bfly:diana","diana","Diana fritillary"],["bfly:admiral","admiral","Red admiral"],["bfly:cloak","cloak","Mourning cloak"],["bfly:sulphur","sulphur","Clouded sulphur"],["moth","moth","Luna moth"],["bfly:rosy","rosy","Rosy maple moth"]]],
-    ["Small Wonders",[["turtle","turtle","Box turtle"],["eft","eft","Red eft"],["peeper","peeper","Spring peeper"],["skink","skink","Five-lined skink"],["woolly","woolly","Woolly bear"],["mantisfly","mantis","Praying mantis"],["katyfly","katydid","Katydid"],["fireflies","fireflies","Fireflies"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]],
+    ["Small Wonders",[["turtle","turtle","Box turtle"],["eft","eft","Red eft"],["peeper","peeper","Spring peeper"],["skink","skink","Five-lined skink"],["spider","spider","Garden spider"],["mantisfly","mantis","Praying mantis"],["katyfly","katydid","Katydid"],["fireflies","fireflies","Fireflies"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]],
     ["Birds of Prey & Big Birds",[["eagle","eagle","Bald eagle"],["goldeneagle","goldeneagle","Golden eagle"],["hawkg","redtail","Red-tailed hawk"],["falcon","falcon","Peregrine falcon"],["owl","owl","Barred owl"],["heron","heron","Great blue heron"],["ravens","ravens","Common ravens"],
       ["vultures","vultures","Turkey vultures"],["geese","geese","Canada geese"],["turkeys","turkeys","Wild turkeys"],["hen","hen","Hen & poults"],["pheasfront","pheasant","Ring-necked pheasant"],["grouse","grouse","Ruffed grouse"],["quail","quail","Bobwhite quail"]]],
     ["Woods & Fields",[["woodcock","woodcock","Woodcocks"],["killdeer","killdeer","Killdeer"],["whippoorwill","whippoorwill","Whip-poor-will"],["pecker","pecker","Pileated woodpecker"],["hum","hum","Hummingbird"],["jays","jays","Blue jays"],["waxwing","waxwing","Cedar waxwings"]]],
