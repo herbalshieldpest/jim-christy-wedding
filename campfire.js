@@ -845,7 +845,7 @@ function snd(kind,o){ if(!ac||!window.natureSfx||!natureSfx.playing||S.alpha<.05
       s.connect(g); g.connect(pickBus); g.connect(verbIn); s.start(t0+i*.012+rnd(0,.008)); s.stop(t0+4); }); return; }
   if(kind==="strum"){ const ns=o.down? o.notes : o.notes.slice().reverse(); const body=ac.createBiquadFilter(); body.type="lowpass"; body.frequency.value=o.down?3200:4200; const g=ac.createGain(); g.gain.value=.11*o.vel; body.connect(g).connect(out);
     ns.forEach((m,i)=>{ const s=ac.createBufferSource(); s.buffer=ks(m); const gg=ac.createGain(); gg.gain.setValueAtTime(1,t0); gg.gain.setTargetAtTime(.0,t0+60/BPM*.9,.25); s.connect(gg).connect(body); s.start(t0+i*(o.down?.016:.012)); s.stop(t0+3.2); }); }
-  else if(kind==="pop"||kind==="crackle"||kind==="strike"){ const s=ac.createBufferSource(); s.buffer=nbuf; const hp=ac.createBiquadFilter(); hp.type=kind==="strike"?"bandpass":"highpass"; hp.frequency.value=kind==="strike"?2400:rnd(1200,2600); const g=ac.createGain(); const dur=kind==="strike"?.22:kind==="pop"?rnd(.03,.07):rnd(.008,.03), v=kind==="strike"?.35:kind==="pop"?rnd(.25,.45):rnd(.06,.2);
+  else if(kind==="pop"||kind==="crackle"||kind==="strike"){ const s=ac.createBufferSource(); s.buffer=nbuf; const hp=ac.createBiquadFilter(); hp.type="bandpass"; hp.frequency.value=kind==="strike"?2400:rnd(700,1800); hp.Q.value=kind==="strike"? 1 : .7; const g=ac.createGain(); const dur=kind==="strike"?.22:kind==="pop"?rnd(.03,.07):rnd(.008,.03), v=kind==="strike"?.35:kind==="pop"?rnd(.07,.14):rnd(.012,.045);
     g.gain.setValueAtTime(v,t0); g.gain.exponentialRampToValueAtTime(.001,t0+dur); s.connect(hp).connect(g).connect(out); s.start(t0,rnd(0,1.5),dur+.02); } }
 /* the guitar: Jim's own slow blues, recorded, looping seamlessly. Fetched and decoded in the background as soon as night is called, so nothing stalls;
    it plays while he plays, pauses where it is when he stops (for a s'more) and picks up from there */
@@ -872,8 +872,9 @@ function songStep(){ if(!ac) return; songDecode(); if(!songBuf) return;
   if(want&&!songSrc){ songSrc=ac.createBufferSource(); songSrc.buffer=songBuf; songSrc.loop=true; songSrc.connect(songG); songStart=ac.currentTime-songAt; songSrc.start(0,songAt%songBuf.duration); songG.gain.cancelScheduledValues(ac.currentTime); songG.gain.setTargetAtTime(.5,ac.currentTime,.8); }
   else if(!want&&songSrc){ songAt=(ac.currentTime-songStart)%songBuf.duration; const s0=songSrc; songSrc=null; songG.gain.cancelScheduledValues(ac.currentTime); songG.gain.setTargetAtTime(0,ac.currentTime,.12); try{ s0.stop(ac.currentTime+.6); }catch(e){} } }
 function sndStep(dt){ songStep(); if(!ac) return; const want=(window.natureSfx&&natureSfx.playing&&S.run? 1 : 0)*S.alpha;
-  out.gain.setTargetAtTime(want*.9,ac.currentTime,.3); fireG.gain.setTargetAtTime(.05*S.fire*S.flick,ac.currentTime,.1);
-  if(want>.05&&S.fire>.05&&Math.random()<dt*(3+9*S.fire)) snd("crackle"); }
+  out.gain.setTargetAtTime(want*.9,ac.currentTime,.3); fireG.gain.setTargetAtTime(.03*S.fire*S.flick,ac.currentTime,.1);
+  if(want>.05&&S.fire>.05&&Math.random()<dt*(.5+1.3*S.fire)){ snd("crackle"); if(Math.random()<.2) setTimeout(()=>snd("crackle"),rnd(60,180)); }
+  if(want>.05&&S.fire>.3&&Math.random()<dt*.05) snd("pop"); }
 
 /* ---------------------------------------------------------------- the page's switch ---------------------------------------------------------------- */
 function set(v,now){ v=!!v; if(v===S.on) return; S.on=v; if(v) songLoad();
