@@ -3796,8 +3796,8 @@ const ambient=(function(){
     m.ang= m.glide? lerp(m.ang,P.ga,Math.min(1,dt*6)) : (P.ga*.4+.15)+Math.sin(m.t*Math.PI*2*P.hz+m.ph)*P.amp; }
   function restWings(m,dt){ const P=spf(m.kind), k=Math.min(1,dt*3);
     if(P.rest==="tent") m.ang=lerp(m.ang,-.55,k);                                                                                     /* a moth's wings folded down like a little roof */
-    else if(P.rest==="open"){ const shut=Math.pow(Math.max(0,Math.sin(m.t*.4+m.ph)),10); m.ang=lerp(m.ang,.08+shut*1.35+Math.sin(m.t*1.7)*.05,k); }   /* basking spread flat, closing now and then */
-    else { const bask=P.bask? Math.pow(Math.max(0,Math.sin(m.t*.55+m.ph)),3)*P.bask : 0; m.ang=lerp(m.ang,1.5-bask*1.25,k); } }      /* closed over the back, opening slowly to bask */
+    else if(P.rest==="open"){ const shut=Math.pow(Math.max(0,Math.sin(m.t*.4+m.ph)),10); m.ang=lerp(m.ang,.12+shut*.9+Math.sin(m.t*1.7)*.05,k); }   /* basking spread wide, facing you, half-closing now and then */
+    else { const bask=P.bask? Math.pow(Math.max(0,Math.sin(m.t*.55+m.ph)),3)*P.bask : 0; m.ang=lerp(m.ang,1.5-bask*.8,k); } }      /* wings raised up over the back where you can see them, parting to a V now and then to bask, never laid flat out of sight */
   let cmon=null, nextCmon=rnd(40,80); const cmcv=document.createElement("canvas"), cmcx=cmcv.getContext("2d");
   function startCmon(kind,perch){ const inn=Math.random()<.5, side=Math.random()<.5?-1:1, far={x:W*rnd(.3,.7),y:H*rnd(.32,.55)}, near={x:W/2+side*W*rnd(.22,.4),y:H*rnd(.4,.7)};
     cmon={kind:kind||(Math.random()<.5?"monarch":pick(["tiger","spice","frit","admiral","cloak","sulphur","diana"])),t:0,dur:rnd(7,9.5),inn,a:inn? far : near,b:inn? near : far,ph:rnd(0,6),flapT:0,glide:0,ang:.4,wx:rnd(0,6),wy:rnd(0,6),forcePerch:!!perch}; }   /* called from the menu, it always comes in and lands on a grass stem right in front of you */
@@ -3820,7 +3820,7 @@ const ambient=(function(){
     if(m.rest&&m.kind==="luna"){ const shiver=Math.pow(Math.max(0,Math.sin(m.t*.7+m.ph)),8); m.ang=lerp(m.ang,.05+shiver*.35*(.5+.5*Math.sin(m.t*14)),Math.min(1,dt*4)); }   /* a moth rests with its wings spread, now and then a little shiver of them */
     else if(m.rest) restWings(m,dt);
     const X=(m.sx-cx)*z/F, Y=(m.sy-cy)*z/F, Pn=[X,Y,z]; let Vn=m.pp? [X-m.pp[0],Y-m.pp[1],z-m.pp[2]] : [0,0,m.inn?-1:1]; m.pp=Pn;
-    if(m.rest) Vn= m.kind==="luna"? [m.pdir*.02,-.3,.08] : [m.pdir*.01,.003,.002];   /* a moth clings head-up on the stem, wings spread flat toward you; a butterfly sits along the tip */                                                                                          /* settled, facing along the stem's tip */
+    if(m.rest) Vn= (m.kind==="luna"||spf(m.kind).rest==="open")? [m.pdir*.02,-.3,.08] : [m.pdir*.01,.003,.002];   /* a moth clings head-up on the stem, wings spread flat toward you; a butterfly sits along the tip */                                                                                          /* settled, facing along the stem's tip */
     if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((v,j)=>lerp(v,Vn[j],m.rest? .08 : .12)) : Vn;
     if(ps) drawStem(m,dark,ps.stemAt,ps.yBot,ps.yTop,F,cx,cy);
     const sz=Math.ceil(Math.min(Math.max(W,H)*1.1,(m.kind==="luna"? 100*.0068 : 64*.0074)*F/z+16)); if(cmcv.width<sz||cmcv.height<sz){ cmcv.width=cmcv.height=Math.max(sz,cmcv.width); }
