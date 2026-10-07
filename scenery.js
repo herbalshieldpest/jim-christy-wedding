@@ -1532,7 +1532,7 @@ const ambient=(function(){
   }
   function deerPose(d){
     const s=d.s, w=1-s, X=w*w*d.a.X+2*w*s*d.m.X+s*s*d.e.X, Z=w*w*d.a.Z+2*w*s*d.m.Z+s*s*d.e.Z, Dw=Z*GF/FOC(), sc=toScreen(X,Dw);
-    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.62+.7*(1-(d.fa??1)))-(d.u<.28? Math.sin(d.u/.28*Math.PI)*.28 : d.u>.95? Math.sin((d.u-.95)/.05*Math.PI*.5)*.12 : 0)*(1-(d.fa??1)),leapU:d.u,pitchK:1+.25*(1-(d.fa??1)),q:0,ph:0};   /* in the brush each bound arcs up out of it and the deer sinks back down into it, gathering, before the next */
+    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.42+.33*(1-(d.fa??1)))-(d.u<.28? Math.sin(d.u/.28*Math.PI)*.28 : d.u>.95? Math.sin((d.u-.95)/.05*Math.PI*.5)*.12 : 0)*(1-(d.fa??1)),leapU:d.u,pitchK:1+.25*(1-(d.fa??1)),q:0,ph:0};   /* in the brush each bound arcs up out of it and the deer sinks back down into it, gathering, before the next */
   }
   function stepHerd(dt){
     if(!herd.length){ nextDeer-=(lull>0?0:dt); if(nextDeer<=0) startDeer(); deer=null; return; }
