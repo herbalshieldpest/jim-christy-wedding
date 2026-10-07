@@ -4427,7 +4427,7 @@ const ambient=(function(){
     const T= B.st==="away"? [B.P[0]+(w.left? -1 : 1)*-3,B.P[1]-2.2,B.P[2]+3] : B.st==="grab"? [B.T[0],B.T[1]-.03,B.T[2]-.04] : [B.T[0],B.T[1]-.02,B.T[2]-.05];
     const D=[T[0]-B.P[0],T[1]-B.P[1],T[2]-B.P[2]], dl=Math.hypot(...D)||1, spd=B.st==="away"? 2.6 : B.st==="grab"? .6 : Math.min(2.2,.6+dl*2.2);
     for(let i=0;i<3;i++) B.V[i]+=(D[i]/dl*spd-B.V[i])*Math.min(1,dt*(B.st==="in"? 5 : 3)); B.P=B.P.map((v,i)=>v+B.V[i]*dt);
-    if(B.st==="in"&&dl<.07){ B.st="grab"; B.gt=0; w.ph="gone"; w.jolt=1; w.tear=[w.su,w.sv]; try{ natureSfx.bluebird&&natureSfx.bluebird(B.T[0]>0? .4 : -.4); }catch(e){} }   /* got her: the web jerks and tears */
+    if(B.st==="in"&&dl<.07){ B.st="grab"; B.gt=0; w.ph="gone"; w.life=Math.min(w.life,w.t+3.5);   /* the torn web and its grass fade away a few seconds later */ w.jolt=1; w.tear=[w.su,w.sv]; try{ natureSfx.bluebird&&natureSfx.bluebird(B.T[0]>0? .4 : -.4); }catch(e){} }   /* got her: the web jerks and tears */
     if(B.st==="grab"){ B.gt+=dt; if(B.gt>.35) B.st="away"; }
     if(B.st==="away"&&(B.P[2]>9||Math.abs(cx+B.P[0]*F/B.P[2]-W/2)>W*.9)){ w.bird=null; return; }
     B.ph+=dt*Math.PI*2*(B.st==="grab"? 18 : 12);
