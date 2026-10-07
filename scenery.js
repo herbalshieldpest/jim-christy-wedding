@@ -870,14 +870,16 @@ const ambient=(function(){
   function holdNight(v){ v=!!v; if(v===nightHold) return; nightHold=v;
     if(v){ if(rb) rb.dur=Math.min(rb.dur,rb.t+3); if(storm) storm.dur=Math.min(storm.dur,storm.t+4);
       /* the northern lights first, coming up within seconds of dark and staying a good while (while the fire is being built), then the rest of the night's sky */
-      if(tl.ph!=="night"||!skyEv||!NIGHT_EV.includes(skyEv.k)) beginNight(); tl.q=["aurora"].concat(tl.q.filter(e=>e!=="aurora")); if(skyEv&&skyEv.k==="night") skyEv.t1=t+6; auroraLong=true; }
+      if(tl.ph!=="night"||!skyEv||!NIGHT_EV.includes(skyEv.k)) beginNight(); tl.q=["aurora"].concat(["milkyway","shower","comet"].sort(()=>Math.random()-.5));   /* every night sky in turn: the northern lights first, then the rest */ if(skyEv&&skyEv.k==="night") skyEv.t1=t+6; auroraLong=true; }
     else { if(skyEv&&NIGHT_EV.includes(skyEv.k)) skyEv.t1=t; tl=newDay(); tl.next=Math.max(tl.next,60); dayFast=12; } }
   function dayNow(){ holdNight(false); if(skyEv&&NIGHT_EV.includes(skyEv.k)) skyEv.t1=t; tl=newDay(); tl.next=Math.max(tl.next,60); dayFast=12; }
+  /* once every night sky has had its turn, the evening ends: they put the fire out and walk home as the day comes back */
+  let evEnding=false; function endEvening(){ if(evEnding) return; evEnding=true; setTimeout(()=>{ evEnding=false; try{ if(window.Campfire&&Campfire.on) Campfire.set(false); else dayNow(); }catch(e){} },0); }
   function skyActive(){ return !!(skyEv||rb||storm); }
   function stepTimeline(dt,on){
     if(tl.ph==="night"){
-      if(skyEv&&NIGHT_EV.includes(skyEv.k)&&t>=skyEv.t1-.05){ if(tl.q.length&&on) { skyStart(tl.q.shift()); skyEv.tl=1; } else if(nightHold){ skyStart(Math.random()<.35? "milkyway" : "night"); skyEv.t1=t+rnd(70,140); } else { skyEv.t1=t; tl=newDay(); } }   /* the next night event follows straight on, so it stays dark between them */
-      else if(!skyActive()){ if(nightHold){ skyStart("night"); skyEv.t1=t+rnd(70,140); } else tl=newDay(); }
+      if(skyEv&&NIGHT_EV.includes(skyEv.k)&&t>=skyEv.t1-.05){ if(tl.q.length&&on) { skyStart(tl.q.shift()); skyEv.tl=1; } else if(nightHold){ skyStart("night"); skyEv.t1=t+20; endEvening(); } else { skyEv.t1=t; tl=newDay(); } }   /* the next night event follows straight on, so it stays dark between them */
+      else if(!skyActive()){ if(nightHold){ skyStart("night"); skyEv.t1=t+20; endEvening(); } else tl=newDay(); }
       return; }
     if(!on||skyActive()||lull>0) return;
     tl.next-=dt; if(tl.next>0) return;
