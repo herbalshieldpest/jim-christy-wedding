@@ -557,8 +557,6 @@ let sndSt=null; const lab=()=>{ const s=natureSfx.playing?"on":natureSfx.blocked
   /* it shows what the sky is doing: a sun to bring the day back whenever it's night (the campfire, or nightfall, the Milky Way, the northern lights from the menu), a moon when it's day */
   const isNight=()=>Campfire.on||(window.SceneryPlug&&(Campfire.leaving? SceneryPlug.nightCalledAt>Campfire.leftAt : SceneryPlug.isNight));   /* while they're walking off it's already day, unless a night sky was just called */
   let shown=null; const draw=()=>{ const on=isNight(); if(on===shown) return; shown=on; dn.innerHTML=on?SUN:MOON; dn.setAttribute("aria-label",on?"Back to daylight":"Night by the fire"); dn.setAttribute("aria-pressed",String(on)); };
-  /* from 8 in the evening to 7 in the morning, Eastern time, the page opens on the night, with the campfire */
-  try{ const hr=+new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",hour:"numeric",hourCycle:"h23"}).format(new Date()); if(hr>=20||hr<7) Campfire.set(true,true); }catch(e){}
   dn.onclick=()=>{ if(isNight()){ if(Campfire.on) Campfire.set(false); else SceneryPlug.day(); } else Campfire.set(true); shown=null; setTimeout(draw,30); }; draw(); setInterval(draw,250); })();   /* the menu's Daytime and Campfire flip it too */
 b.onclick=()=>{ if(natureSfx.playing) natureSfx.set(false); else natureSfx.set(true); setTimeout(lab,150); }; lab(); setInterval(lab,600);
 </script>

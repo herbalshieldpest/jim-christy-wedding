@@ -971,7 +971,7 @@ const ambient=(function(){
   function nightLayerEnd(m){ if(!m) return; const x=nlX; ctx=m;
     x.save(); x.setTransform(1,0,0,1,0,0); x.globalAlpha=1; x.filter="none"; x.globalCompositeOperation="source-atop"; x.fillStyle=`rgba(16,24,52,${(.3*nA).toFixed(3)})`; x.fillRect(0,0,nlC.width,nlC.height); x.restore();   /* cool moonlight, and shadow */
     ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation="source-over"; if(FILT) ctx.filter=`saturate(${(1-.5*nA).toFixed(2)}) brightness(${(1-.1*nA).toFixed(2)})`; ctx.drawImage(nlC,0,0); ctx.filter="none"; ctx.restore(); }
-  /* moonlight pooling in the low places: pale mist lying in the valleys between the ridges and over the meadow, a few farm lights far off down there,
+  /* moonlight pooling in the low places: pale mist lying in the valleys between the ridges and over the meadow,
      and a soft wash of moonlight across the lawn, so the land and whatever's out on it can still be made out */
   const VMIST=[[.44,.47,.07],[.6,.476,.06],[.3,.505,.12],[.5,.6,.2],[.78,.58,.14],[.16,.6,.14]];
   const VLIGHTS=Array.from({length:9},()=>{ const fx=rnd(.39,.88); return {fx,k:rnd(.35,.85),r:rnd(.7,1.3),ph:rnd(0,6),c:pick(["255,206,130","255,190,110","255,224,170"])}; });
@@ -980,8 +980,7 @@ const ambient=(function(){
     for(const [fx,fy,r] of VMIST){ const x=IX(fx), y=IY(fy), rx=r*sc, ry=rx*.22, br=.2*nA*(.85+.15*Math.sin(t*.2+fx*9));
       ctx.save(); ctx.translate(x,y); ctx.scale(1,ry/rx); const g=ctx.createRadialGradient(0,0,0,0,0,rx); g.addColorStop(0,`rgba(150,170,214,${br.toFixed(3)})`); g.addColorStop(.6,`rgba(120,140,190,${(br*.45).toFixed(3)})`); g.addColorStop(1,"rgba(120,140,190,0)"); ctx.fillStyle=g; ctx.fillRect(-rx,-rx,rx*2,rx*2); ctx.restore(); }
     { const y0=IY(.56), g=ctx.createLinearGradient(0,y0,0,H); g.addColorStop(0,"rgba(110,128,170,0)"); g.addColorStop(.35,`rgba(110,128,170,${(.15*nA).toFixed(3)})`); g.addColorStop(1,`rgba(90,104,140,${(.1*nA).toFixed(3)})`); ctx.fillStyle=g; ctx.fillRect(-W,y0,W*3,H*2); }   /* moonlight on the lawn */
-    ctx.globalCompositeOperation="lighter";
-    for(const L of VLIGHTS){ const y0=ridgeY(SKYL.far,L.fx), y1=ridgeY(SKYL.near,L.fx); if(y1-y0<6) continue; const x=IX(L.fx), y=lerp(y0+3,y1-2,L.k), a=nA*(.75+.25*Math.sin(t*1.3+L.ph)), r=L.r*1.6*Math.max(1,W/1400);
+    if(false) for(const L of VLIGHTS){   /* (no lights in the hills: there's nothing built out there in this view) */ const y0=ridgeY(SKYL.far,L.fx), y1=ridgeY(SKYL.near,L.fx); if(y1-y0<6) continue; const x=IX(L.fx), y=lerp(y0+3,y1-2,L.k), a=nA*(.75+.25*Math.sin(t*1.3+L.ph)), r=L.r*1.6*Math.max(1,W/1400);
       const g=ctx.createRadialGradient(x,y,0,x,y,r*5); g.addColorStop(0,`rgba(${L.c},${(.9*a).toFixed(3)})`); g.addColorStop(.18,`rgba(${L.c},${(.4*a).toFixed(3)})`); g.addColorStop(1,`rgba(${L.c},0)`); ctx.fillStyle=g; ctx.fillRect(x-r*5,y-r*5,r*10,r*10); }
     ctx.restore(); }
   /* cloud shadows: on a breezy day, big soft shadows of the clouds sliding across the far ridges and the meadow, small and quick far off, broad near by */
@@ -2804,31 +2803,31 @@ const ambient=(function(){
     io:{fw:[226,186,62],fw2:[200,150,52],edge:[170,110,40],hw:[238,206,80],eye:true,body:[214,170,60]}};
   /* a luna moth, drawn from life: broad pale-lime forewings with a maroon leading edge that runs right across the shoulders, small comma eyespots,
      long twisting hindwing tails, round yellow-ringed eyespots with a dark crescent and a pink centre, a white furry body and feathery tan antennae */
-  function lunaWings(x,flap,only){
-    const wf=only? 1 : Math.max(.12,Math.abs(Math.cos(flap))), G=[194,216,162], G2=[176,204,148], RIM=[226,224,176], COSTA=[104,70,92];
+  function lunaWings(x,flap,only,o){
+    o=o||{}; const wf=only? 1 : Math.max(.12,Math.abs(Math.cos(flap))), G=o.g||[194,216,162], G2=o.g2||[176,204,148], RIM=o.rim||[226,224,176], COSTA=o.costa||[104,70,92], VN=o.vein??1, ES=o.eye??1, TL=o.tail??1;
     for(const sd of (only?[1]:[-1,1])){ x.save(); x.scale(sd*wf,1);
       /* hindwing with its long tail */
       const hg=x.createLinearGradient(0,0,6,38); hg.addColorStop(0,rgb(G2)); hg.addColorStop(.6,rgb(G)); hg.addColorStop(1,rgb(mixv(G,RIM,.5))); x.fillStyle=hg;
       x.beginPath(); x.moveTo(1.5,-1); x.bezierCurveTo(9,-1,18,2,19,7); x.bezierCurveTo(20,12,15,16,12,19);
-      x.bezierCurveTo(9,23,8.5,29,9.5,34); x.bezierCurveTo(10.5,38,10,41,8.6,42); x.bezierCurveTo(7,41,6,37,5.4,33);
+      x.bezierCurveTo(9,23,8.5,19+10*TL,9.5,19+15*TL); x.bezierCurveTo(10.5,19+19*TL,10,19+22*TL,8.6,19+23*TL); x.bezierCurveTo(7,19+22*TL,6,19+18*TL,5.4,19+14*TL);
       x.bezierCurveTo(4.6,27,3.4,22,2.2,16); x.bezierCurveTo(1.6,10,1.2,4,1.5,-1); x.closePath(); x.fill();
       x.strokeStyle=rgb(RIM); x.lineWidth=.7; x.stroke();
-      x.strokeStyle="rgba(96,120,78,.28)"; x.lineWidth=.35; for(const [ex,ey] of [[17,8],[13,16],[8,30]]){ x.beginPath(); x.moveTo(2,2); x.quadraticCurveTo(ex*.5,ey*.45,ex,ey); x.stroke(); }
+      x.strokeStyle=`rgba(96,120,78,${(.28*VN).toFixed(2)})`; x.lineWidth=.35; if(VN>0) for(const [ex,ey] of [[17,8],[13,16],[8,30]]){ x.beginPath(); x.moveTo(2,2); x.quadraticCurveTo(ex*.5,ey*.45,ex,ey); x.stroke(); }
       /* the hindwing eyespot */
-      x.fillStyle=rgb([214,186,86]); x.beginPath(); x.ellipse(9.4,11,2.1,2.0,0,0,6.283); x.fill();
-      x.fillStyle=rgb([214,152,170]); x.beginPath(); x.arc(9.4,11.3,1.15,0,6.283); x.fill();
-      x.strokeStyle=rgb([28,22,24]); x.lineWidth=.8; x.beginPath(); x.arc(9.4,11,2.05,Math.PI*1.1,Math.PI*1.95); x.stroke();
+      x.fillStyle=rgb([214,186,86]); x.beginPath(); x.ellipse(9.4,11,2.1*ES,2.0*ES,0,0,6.283); x.fill();
+      x.fillStyle=rgb([214,152,170]); x.beginPath(); x.arc(9.4,11.3,1.15*ES,0,6.283); x.fill();
+      x.strokeStyle=rgb([28,22,24]); x.lineWidth=.8*ES; x.beginPath(); x.arc(9.4,11,2.05*ES,Math.PI*1.1,Math.PI*1.95); x.stroke();
       /* forewing */
       const fg=x.createLinearGradient(0,-6,26,0); fg.addColorStop(0,rgb(G2)); fg.addColorStop(.5,rgb(G)); fg.addColorStop(1,rgb(mixv(G,RIM,.3))); x.fillStyle=fg;
       x.beginPath(); x.moveTo(1.5,-5); x.bezierCurveTo(10,-7.5,20,-10,25.5,-9.6); x.bezierCurveTo(28,-9,28.4,-6,27,-3.4);
       x.bezierCurveTo(25,1,22,5,18.5,6.8); x.bezierCurveTo(12,8.4,6,6.6,1.8,3.4); x.closePath(); x.fill();
       x.strokeStyle=rgb(RIM); x.lineWidth=.7; x.beginPath(); x.moveTo(27,-3.4); x.bezierCurveTo(25,1,22,5,18.5,6.8); x.bezierCurveTo(12,8.4,6,6.6,1.8,3.4); x.stroke();
-      x.strokeStyle="rgba(96,120,78,.28)"; x.lineWidth=.35; for(const [ex,ey] of [[25,-6],[23,-1],[19,5],[13,7]]){ x.beginPath(); x.moveTo(2,-2); x.quadraticCurveTo(ex*.5,ey*.5-1.5,ex,ey); x.stroke(); }
+      x.strokeStyle=`rgba(96,120,78,${(.28*VN).toFixed(2)})`; x.lineWidth=.35; if(VN>0) for(const [ex,ey] of [[25,-6],[23,-1],[19,5],[13,7]]){ x.beginPath(); x.moveTo(2,-2); x.quadraticCurveTo(ex*.5,ey*.5-1.5,ex,ey); x.stroke(); }
       /* the comma eyespot near the leading edge */
-      x.strokeStyle=rgb([60,40,50]); x.lineWidth=1; x.beginPath(); x.arc(11.6,-6.3,1.15,-.4,Math.PI*1.25); x.stroke();
-      x.fillStyle=rgb([214,156,170]); x.beginPath(); x.ellipse(11.6,-6.0,.7,.85,0,0,6.283); x.fill();
+      x.strokeStyle=rgb([60,40,50]); x.lineWidth=ES; x.beginPath(); x.arc(11.6,-6.3,1.15*ES,-.4,Math.PI*1.25); x.stroke();
+      x.fillStyle=rgb([214,156,170]); x.beginPath(); x.ellipse(11.6,-6.0,.7*ES,.85*ES,0,0,6.283); x.fill();
       /* the maroon leading edge */
-      x.strokeStyle=rgb(COSTA); x.lineWidth=1.8; x.beginPath(); x.moveTo(0,-5.4); x.bezierCurveTo(10,-7.8,20,-10.2,25.6,-9.7); x.stroke();
+      x.strokeStyle=rgb(COSTA); x.lineWidth=1.8*(o.cw??1); x.beginPath(); x.moveTo(0,-5.4); x.bezierCurveTo(10,-7.8,20,-10.2,25.6,-9.7); x.stroke();
       x.restore(); }
     if(only) return;
     x.strokeStyle=rgb([104,70,92]); x.lineWidth=2.2; x.beginPath(); x.moveTo(-2.5,-5.2); x.lineTo(2.5,-5.2); x.stroke();   /* the band carries across the shoulders */
@@ -2838,14 +2837,16 @@ const ambient=(function(){
   }
   /* the luna moth in true 3D: each wing is a flat painted sheet hinged at the body, beating up and down about the body's axis,
      the body pitched up as moths fly, heading the way it's moving, all projected with perspective */
-  let lunaSpr=null; const LR=6, LX0=0, LY0=-16;
-  function lunaSprite(){ if(lunaSpr) return lunaSpr; const c=document.createElement("canvas"); c.width=31*LR; c.height=60*LR; const x=c.getContext("2d");
-    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true); return lunaSpr=mipChain(c); }
-  function luna3D(x,P,V,flap,proj){
+  const lunaSpr={}; const LR=6, LX0=0, LY0=-16;
+  /* luna moths aren't all alike: some fresh and finely marked, some paler and worn soft, some a deeper green with long sweeping tails */
+  const LUNAV=[{}, {g:[208,222,170],g2:[192,212,160],rim:[232,228,186],vein:.35,eye:.75,tail:.85,cw:.7}, {g:[168,206,150],g2:[150,192,136],costa:[118,64,96],vein:1.3,eye:1.2,tail:1.25,cw:1.2}, {g:[200,214,140],g2:[184,204,132],rim:[236,226,160],vein:.7,eye:.9,tail:1.05}];
+  function lunaSprite(v){ v=v||0; if(lunaSpr[v]) return lunaSpr[v]; const c=document.createElement("canvas"); c.width=31*LR; c.height=60*LR; const x=c.getContext("2d");
+    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true,LUNAV[v]); return lunaSpr[v]=mipChain(c); }
+  function luna3D(x,P,V,flap,proj,o){ o=o||{};
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-    const v=nrm(V), f=nrm([v[0],v[1]-.55,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0068;               /* nose pitched up into the climb */
+    const v=nrm(V), f=nrm([v[0],v[1]-.55,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0068*(o.k||1);               /* nose pitched up into the climb */
     const W3=(a,b,c)=>[P[0]+(f[0]*a+r[0]*b+u[0]*c)*K, P[1]+(f[1]*a+r[1]*b+u[1]*c)*K, P[2]+(f[2]*a+r[2]*b+u[2]*c)*K], S=p=>proj(p[0],p[1],p[2]);
-    const ang=.25+Math.sin(flap)*1.05, spr=lunaSprite();                                                     /* the wing beat, about a slight resting V */
+    const ang=.25+Math.sin(flap)*1.05, spr=lunaSprite(o.v);                                                     /* the wing beat, about a slight resting V */
     const wingAt=sd=>{ /* local wing (x outward, y toward the tail) -> 3D: outward along r and up along u by the beat angle, back along -f */
       const L=(lx,ly)=>W3(-ly,sd*lx*Math.cos(ang),lx*Math.sin(ang));
       const O=S(L(0,0)), A=S(L(1,0)), B=S(L(0,1)), X=[A[0]-O[0],A[1]-O[1]], Y=[B[0]-O[0],B[1]-O[1]];
@@ -2883,6 +2884,30 @@ const ambient=(function(){
     const M2=MOTH[sp]; x.fillStyle=rgb(M2.body); x.beginPath(); x.ellipse(0,1,2.6,7.5,0,0,6.283); x.fill();   /* fuzzy body */
     x.strokeStyle=rgb(mulv(M2.body,.75)); x.lineWidth=.9; for(const sd of [-1,1]){ x.beginPath(); x.moveTo(sd*.8,-6); x.quadraticCurveTo(sd*4,-12,sd*6,-14); x.stroke(); }   /* feathery antennae */
   }
+  /* ---- at night, luna moths are out over the field: several at once, each its own size and markings, some glowing pale in the dark more than others,
+     fluttering in loose loops across the field at different distances ---- */
+  const lunas=[]; let nextLuna=2;
+  function drawNightLunas(dt,dark){
+    const night=nA>.5&&!(window.Campfire&&Campfire.leaving), F=H*.5, cx=W/2, cy=H*.52, cap=MOBILE()? 3 : 5;
+    nextLuna-=dt; if(night&&nextLuna<=0&&lunas.length<cap){ nextLuna=rnd(5,14); const sd=Math.random()<.5?-1:1, z=rnd(1.6,7.5);
+      lunas.push({t:0,z,z0:z,zA:rnd(.2,.8),sd,sx:sd<0? -60 : W+60,vx:-sd*rnd(26,58)*(4/z),yb:rnd(.3,.62)*H,ph:rnd(0,6),fl:rnd(0,6),k:rnd(.55,1.45),lum:rnd(.35,1.6),v:Math.floor(Math.random()*LUNAV.length),hz:rnd(6.5,8.5),a:0,loop:rnd(.5,1.4)}); }
+    for(let i=lunas.length-1;i>=0;i--){ const m=lunas[i]; m.t+=dt; m.fl+=dt*Math.PI*2*(m.hz+Math.sin(m.t*1.3+m.ph)*1.4);
+      m.sx+=(m.vx+Math.sin(m.t*m.loop+m.ph)*28*(4/m.z))*dt; m.z=m.z0+Math.sin(m.t*.35+m.ph)*m.zA;
+      const sy=m.yb+Math.sin(m.t*.9+m.ph)*H*.05+Math.sin(m.t*2.7+m.ph*2)*H*.012;
+      m.a= night? Math.min(1,m.a+dt*.8) : Math.max(0,m.a-dt*.6);
+      if(m.a<=0&&!night||m.sx<-120||m.sx>W+120&&m.t>3){ lunas.splice(i,1); continue; }
+      const X=(m.sx-cx)*m.z/F, Y=(sy-cy)*m.z/F, Pn=[X,Y,m.z], Vn=m.pp? [X-m.pp[0],Y-m.pp[1],m.z-m.pp[2]] : [-m.sd,0,0]; m.pp=Pn; if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((q,j)=>lerp(q,Vn[j],.12)) : Vn;
+      const s=.0068*m.k*F/m.z, sz=Math.ceil(84*s)+4, hx=mcx; if(sz<6) continue; if(mcv.width<sz||mcv.height<sz){ mcv.width=Math.max(mcv.width,sz); mcv.height=Math.max(mcv.height,sz); }
+      hx.setTransform(1,0,0,1,0,0); hx.clearRect(0,0,mcv.width,mcv.height);
+      luna3D(hx,Pn,m.V||Vn,m.fl,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz-m.sx+sz/2, cy+Y3*F/zz-sy+sz/2]; },{k:m.k,v:m.v});
+      hx.setTransform(1,0,0,1,0,0); hx.globalCompositeOperation="source-atop";
+      hx.fillStyle=`rgba(8,12,22,${Math.max(.08,.62-.34*m.lum).toFixed(2)})`; hx.fillRect(0,0,sz,sz);              /* night takes the colour down... */
+      hx.fillStyle=`rgba(196,232,206,${(.07*m.lum).toFixed(3)})`; hx.fillRect(0,0,sz,sz);                         /* ...but the pale wings catch the moonlight, some much more than others */
+      const haze=Math.min(.5,Math.max(0,(m.z-3)/9)); if(haze>0){ hx.fillStyle=`rgba(26,34,52,${haze.toFixed(2)})`; hx.fillRect(0,0,sz,sz); }
+      hx.globalCompositeOperation="source-over";
+      ctx.save(); ctx.globalAlpha=m.a*.9; if(m.z>4.5) ctx.filter=`blur(${Math.min(1.2,(m.z-4.5)*.3).toFixed(1)}px)`; ctx.drawImage(mcv,0,0,sz,sz,m.sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); ctx.filter="none";
+      if(m.lum>.7){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=m.a*(m.lum-.7)*.22; const gl=ctx.createRadialGradient(m.sx,sy,0,m.sx,sy,sz*.42); gl.addColorStop(0,"rgba(200,240,210,.55)"); gl.addColorStop(1,"rgba(200,240,210,0)"); ctx.fillStyle=gl; ctx.fillRect(m.sx-sz/2,sy-sz/2,sz,sz); ctx.restore(); }   /* the brightest ones seem to shine faintly */
+      m.tagX=m.sx; m.tagY=sy; m.tr=Math.max(30,Math.min(160,s*70)); } }
   function drawMoths(dt,dark,layer){
     const sp=sun();
     if(layer==="field"){
@@ -2896,6 +2921,7 @@ const ambient=(function(){
       for(let i=motes2.length-1;i>=0;i--) if(motes2[i].t>motes2[i].life) motes2.splice(i,1);
       ctx.globalAlpha=1; return;
     }
+    drawNightLunas(dt,dark);
     /* the big one: comes in from right beside you, huge and soft, wings flashing, and flutters off into the evening toward the light */
     nextHero-=(lull>0?0:dt); if(!hero&&nextHero<=0&&stageBusy()) nextHero=rnd(12,25); if(!hero&&nextHero<=0){ const sd=Math.random()<.5?-1:1; lunaDir=lunaDir==="out"?"in":"out"; hero={t:0,sp:"luna",dir:forceDir||lunaDir,X0:sd*rnd(.18,.3),Y0:rnd(.06,.16),ph:rnd(0,6),fl:0}; forceDir=null; }
     if(!hero) return; const h=hero; h.t+=dt; h.fl+=dt*Math.PI*2*(6.5+Math.sin(h.t*1.3)*1.5);
@@ -3497,7 +3523,7 @@ const ambient=(function(){
     ctx.save(); ctx.globalAlpha=p.state==="leave3"? Math.max(0,p.fade) : 1; { const bl=Math.max(0,p.m-6)*.15+(p.three&&p.P3? Math.min(1,Math.max(0,p.P3[2]-5)*.2) : 0); ctx.filter=bl>.3? `blur(${bl.toFixed(1)}px)` : "none"; } ctx.drawImage(pcv,0,0,sz,sz,p.x-sz/R2/2,p.y-sz/R2/2,sz/R2,sz/R2); ctx.restore(); ctx.filter="none";
   }
   /* ---- fireflies blinking low over the lawn and along the edge of the field ---- */
-  const flies=[], flyGlow=(()=>{ const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d"), g=x.createRadialGradient(24,24,0,24,24,24); g.addColorStop(0,"rgba(244,255,160,1)"); g.addColorStop(.3,"rgba(190,250,90,.5)"); g.addColorStop(1,"rgba(160,230,60,0)"); x.fillStyle=g; x.fillRect(0,0,48,48); return c; })();
+  const flies=[], nflies=[], flyGlow=(()=>{ const c=document.createElement("canvas"); c.width=c.height=48; const x=c.getContext("2d"), g=x.createRadialGradient(24,24,0,24,24,24); g.addColorStop(0,"rgba(244,255,160,1)"); g.addColorStop(.3,"rgba(190,250,90,.5)"); g.addColorStop(1,"rgba(160,230,60,0)"); x.fillStyle=g; x.fillRect(0,0,48,48); return c; })();
   function edgeY(x){ return gnd().vy+lawnMinG(x)-rnd(-4,22); }
   function drawFireflies(dt,dark){
     if(!flies.length) for(let i=0;i<(JUNE19?44:MOBILE()?9:16);i++){ const x=rnd(0,W); flies.push({ax:x,ay:edgeY(x),x,y:0,per:rnd(3,6.5),ph:rnd(0,6),wan:rnd(0,6),r:rnd(1.1,1.9)}); }
@@ -3509,6 +3535,17 @@ const ambient=(function(){
       const c=((t+f.ph*f.per/6.283)%f.per), on=c<.55? Math.sin(c/.55*Math.PI) : 0; if(on<=.01) continue;
       const vy0=gnd().vy, dk=Math.max(0,Math.min(1,(f.y-vy0)/Math.max(1,H-vy0))), sc=.28+1.05*dk*dk, r=f.r*(dark?1.2:1)*sc, yy=f.y-c*5*sc;   /* far off along the brush they are tiny pinpricks; near you they are bigger */                                                                    /* a small rising flash, the eastern firefly's J */
       ctx.globalAlpha=Math.min(1,on*1.1); ctx.drawImage(flyGlow,f.x-r*3,yy-r*3,r*6,r*6); }
+    /* after dark the lightning bugs are out all over: rising out of the grass across the whole lawn and meadow, far ones tiny sparks, near ones big soft blinks,
+       each on its own rhythm, now and then a few answering one another in a little ripple */
+    const want=nA>.3? Math.round((MOBILE()? 26 : 52)*Math.min(1,(nA-.3)/.4)) : 0;
+    while(nflies.length<want){ const x=rnd(-.02,1.02)*W, top=gnd().vy+lawnMinG(Math.max(0,Math.min(W,x)))-6, u=Math.pow(Math.random(),1.6); nflies.push({x,y:lerp(top,H*.97,u),hb:rnd(4,30),vx:rnd(-6,6),vy:rnd(-3,3),per:rnd(2.2,6),ph:rnd(0,9),r:rnd(1,1.9),a:0,life:t+rnd(25,70),hue:Math.random()}); }
+    for(let i=nflies.length-1;i>=0;i--){ const f=nflies[i], gone=t>f.life||nflies.length>want+2&&i===0; f.a= gone? f.a-dt*.6 : Math.min(1,f.a+dt*.4); if(f.a<=0&&gone){ nflies.splice(i,1); continue; }
+      f.vx+=(Math.sin(t*.7+f.ph)*8-f.vx*.5)*dt; f.vy+=(Math.cos(t*.53+f.ph*1.7)*5-f.vy*.5)*dt; f.x+=f.vx*dt; f.y+=f.vy*dt;
+      if(Math.random()<dt*.015) f.ph-=f.per*.3;                                                     /* falling in step with a neighbour now and then */
+      const c=((t+f.ph)%f.per+f.per)%f.per, on=c<.6? Math.sin(c/.6*Math.PI) : 0; if(on<=.01) continue;
+      const vy0=gnd().vy, dk=Math.max(0,Math.min(1,(f.y-vy0)/Math.max(1,H-vy0))), sc=.25+1.5*dk*dk, r=f.r*1.25*sc, yy=f.y-f.hb*sc*.3-c*7*sc;   /* the J: a short rising flash */
+      ctx.globalAlpha=Math.min(1,on*1.15)*f.a*Math.min(1,nA*1.4); ctx.drawImage(flyGlow,f.x-r*3,yy-r*3,r*6,r*6);
+      if(sc>.9){ ctx.globalAlpha*=.25; ctx.drawImage(flyGlow,f.x-r*8,yy-r*8,r*16,r*16); } }      /* close ones light a little halo of air around them */
     ctx.globalAlpha=1;
     ctx.restore();
   }
@@ -5081,7 +5118,11 @@ const ambient=(function(){
   /* ================= dusk, mist, bats, doe and fawn, hummingbird, hen turkey with poults, June 19th, tap-to-identify ================= */
   const MOBILE=()=>W<700, JUNE19=(()=>{ const d=new Date(); return d.getMonth()===5&&d.getDate()===19; })();
   /* ---- a slow dusk: over the first several minutes the sky deepens, Venus comes out, then a few stars ---- */
-  let duskV=0; const stars=[]; let starNext=0, venNext=12, venB=null; const meteors=[]; let metNext=rnd(6,14);
+  let duskV=0; const stars=[]; let starNext=0, venNext=12, venB=null; const meteors=[], metQ=[]; let metNext=rnd(6,14);
+  /* a staggered group: one or two more following the first a beat apart, side by side on nearly the same track, smaller and quicker than the leader */
+  function metTrain(m,shower){ const n=Math.random()<.55? 1 : 2, px=-m.vy, py=m.vx; let at=m.t0;
+    for(let k=1;k<=n;k++){ at+=rnd(.14,.42); const off=rnd(.03,.09)*W*(Math.random()<.5? -1 : 1), back=rnd(-.04,.06)*W, a=rnd(-.03,.03), vx=m.vx*Math.cos(a)-m.vy*Math.sin(a), vy=m.vx*Math.sin(a)+m.vy*Math.cos(a), sc=rnd(.6,.95);
+      metQ.push({x0:m.x0+px*off-m.vx*back, y0:Math.max(2,m.y0+py*off-m.vy*back), vx, vy, L:m.L*sc, dur:m.dur*rnd(.75,1), t0:at, big:false, w:Math.max(1.1,m.w*sc*(m.big?.7:1)), tint:m.tint}); } }
   function starBurst(x,y,e,L){ if(e<=.01) return; const l=L*(.5+.5*e);                                                   /* a "+" of light: four fine spikes and a soft glow, like a lens catching a star */
     const g=ctx.createRadialGradient(x,y,0,x,y,l*.22); g.addColorStop(0,`rgba(255,252,240,${(.55*e).toFixed(3)})`); g.addColorStop(1,"rgba(240,236,255,0)"); ctx.fillStyle=g; ctx.fillRect(x-l*.5,y-l*.5,l,l);
     for(const [dx,dy,k] of [[1,0,.32],[-1,0,.32],[0,1,.32],[0,-1,.32]]){ const ll=l*k, sg=ctx.createLinearGradient(x,y,x+dx*ll,y+dy*ll);
@@ -5139,11 +5180,14 @@ const ambient=(function(){
     { const vis=Math.max(shA,Math.max(0,Math.min(1,(d-.3)/.12)));   /* a rare shooting star once it's really dusk; a whole shower of them when one is under way */
       if(d>.3&&t>metNext&&meteors.length<2&&shA<.1){ metNext=t+rnd(25,60); const big=Math.random()<.18, ang=rnd(.42,.78), L=(big? rnd(.26,.4) : rnd(.12,.24))*W,
           x0=rnd(.08,.6)*W, y0=rnd(.02,.16)*hz, dir=Math.random()<.5? -1 : 1;
-        meteors.push({x0,y0,vx:Math.cos(ang)*dir,vy:Math.sin(Math.abs(ang)),L,dur:big? rnd(1,1.4) : rnd(.55,.9),t0:t,big,w:big? rnd(2.4,3.2) : rnd(1.5,2.1),tint:pick([[255,252,244],[236,255,240],[255,246,226],[230,240,255]])}); }
+        meteors.push({x0,y0,vx:Math.cos(ang)*dir,vy:Math.sin(Math.abs(ang)),L,dur:big? rnd(1,1.4) : rnd(.55,.9),t0:t,big,w:big? rnd(2.4,3.2) : rnd(1.5,2.1),tint:pick([[255,252,244],[236,255,240],[255,246,226],[230,240,255]])});
+        if(Math.random()<.5) metTrain(meteors[meteors.length-1],false); }   /* often they come in twos and threes, one just behind another */
       if(skyEv&&skyEv.k==="shower"&&shA>.4&&t>skyEv.nm&&meteors.length<18){ skyEv.nm=t+(Math.random()<.4? rnd(.04,.18) : rnd(.18,.65));   /* a good, busy shower */   /* the Perseids: all streaking out from one point in the sky, sometimes two or three together */
         const th=skyEv.ang+rnd(-.05,.05), ux=Math.cos(th), uy=Math.sin(th), big=Math.random()<.14, L=(big? rnd(.18,.28) : rnd(.07,.16))*W;   /* a shower comes from one direction: every streak runs the same way */
         const x0=rnd(-.05,1)*W-ux*L*.3, y0=rnd(.0,.3)*H;
-        meteors.push({x0,y0,vx:ux,vy:uy,L,dur:big? rnd(.9,1.3) : rnd(.4,.8),t0:t,big,w:big? rnd(2.2,3) : rnd(1.2,2),tint:pick([[255,252,244],[236,255,240],[255,246,226],[230,240,255]])}); }
+        meteors.push({x0,y0,vx:ux,vy:uy,L,dur:big? rnd(.9,1.3) : rnd(.4,.8),t0:t,big,w:big? rnd(2.2,3) : rnd(1.2,2),tint:pick([[255,252,244],[236,255,240],[255,246,226],[230,240,255]])});
+        if(Math.random()<.55){ metTrain(meteors[meteors.length-1],true); skyEv.nm+=rnd(.3,.7); } }
+      for(let i=metQ.length-1;i>=0;i--) if(t>=metQ[i].t0){ meteors.push(metQ[i]); metQ.splice(i,1); }   /* the rest of a staggered group, each in its turn */
       ctx.save(); skyClip(); ctx.globalCompositeOperation="lighter";
       for(let i=meteors.length-1;i>=0;i--){ const m=meteors[i], u=(t-m.t0)/m.dur, life=m.big? 2.8 : 1.15; if(u>life){ meteors.splice(i,1); continue; }
         const head=Math.min(1,u), e=1-Math.pow(1-head,1.6), hx=m.x0+m.vx*m.L*e, hy=m.y0+m.vy*m.L*e;   /* slowing a little as it burns */
@@ -5699,14 +5743,14 @@ const ambient=(function(){
     if(turks) for(const b of turks.birds) T(b,"Wild turkey",26);
     for(const bn of buns) tag(bn.x,bn.y-8,16,"Eastern cottontail");
     if(hawkG) tag(hawkG.x,hawkG.y-10,g(30*hawkG.m),"Red-tailed hawk"); if(eag){ const Pe=eagleAt(eag,eag.t/eag.dur); tag(W/2+Pe[0]*H*.5/Pe[2],H*.52+Pe[1]*H*.5/Pe[2],30,eag.golden?"Golden eagle":"Bald eagle"); } if(pecker) tag(pecker.x,pecker.y,g(16*pecker.m),"Pileated woodpecker");
-    if(hero&&hero.sx!=null) tag(hero.sx,hero.sy,hero.tr||40,"Luna moth"); if(cmon&&cmon.sx!=null) tag(cmon.sx,cmon.sy,cmon.tr||40,(BFLY[cmon.kind]||BFLY.monarch).name); for(const m of mons) tag(m.sx,m.sy,Math.max(24,70/Math.max(1,m.z||3)),(BFLY[m.kind]||BFLY.monarch).name);
+    if(hero&&hero.sx!=null) tag(hero.sx,hero.sy,hero.tr||40,"Luna moth"); for(const m of lunas) if(m.tagX!=null) tag(m.tagX,m.tagY,m.tr,"Luna moth"); if(cmon&&cmon.sx!=null) tag(cmon.sx,cmon.sy,cmon.tr||40,(BFLY[cmon.kind]||BFLY.monarch).name); for(const m of mons) tag(m.sx,m.sy,Math.max(24,70/Math.max(1,m.z||3)),(BFLY[m.kind]||BFLY.monarch).name);
     if(bbFlock) for(const b of bbFlock.birds) if(b.sx!=null) tag(b.sx,b.sy,24,{finch:"American goldfinch",bunting:"Indigo bunting",tanager:"Scarlet tanager",wpw:"Eastern whip-poor-will",oriole:"Baltimore oriole",waxwing:"Cedar waxwing"}[bbFlock.kind]||"Eastern bluebird");
     if(hum&&hum.sx!=null) tag(hum.sx,hum.sy,40,"Ruby-throated hummingbird"); for(const b of bats) tag(b.x,b.y,16,"Little brown bat");
     for(const c of cards) tag(c.x,gnd().vy+lawnMinG(c.x)-16,14,c.male?"Northern cardinal":"Northern cardinal (female)");
     { const LEAFN={maple:"Sugar maple leaf",oak:"Red oak leaf",birch:"Yellow birch leaf",milkweed:"Milkweed seed"};
       for(const l of leaves) if(l.x!=null) tag(l.x,l.y,Math.max(10,(l.s||12)*1.2),LEAFN[l.kind]||"Leaf",true);
       if(bigL&&bigL.sx!=null) tag(bigL.sx,bigL.sy,Math.min(220,bigL.sS*1.2),LEAFN[bigL.kind]||"Leaf"); }
-    for(const f of flies) tag(f.x,f.y,10,"Firefly",true); for(const b of bugs) if(b.sx!=null) tag(b.sx,b.sy,b.kind==="bee"?24:30,b.kind==="bee"?"Common eastern bumble bee":"Common green darner");
+    for(const f of flies) tag(f.x,f.y,10,"Firefly",true); for(const f of nflies) if(f.a>.5) tag(f.x,f.y,10,"Firefly",true); for(const b of bugs) if(b.sx!=null) tag(b.sx,b.sy,b.kind==="bee"?24:30,b.kind==="bee"?"Common eastern bumble bee":"Common green darner");
     for(const m of motes2) tag(m.x,m.y,18,"Cabbage moth");
     for(const f of flocks){ const c=w2s(f.X,f.Y,f.Z); tag(c.x,c.y,Math.max(30,40*9/Math.max(4,f.Z)),"Canada geese"); }
     for(const q of covey) if(q.sx!=null) tag(q.sx,q.sy,q.sr,"Northern bobwhite"); if(grouse&&grouse.sx!=null) tag(grouse.sx,grouse.sy,grouse.sr,"Ruffed grouse"); if(pheas&&pheas.sx!=null) tag(pheas.sx,pheas.sy,pheas.sr,"Ring-necked pheasant");
