@@ -4317,11 +4317,11 @@ const ambient=(function(){
     const x=spX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S*2,S*2); x.translate(S,S); x.scale(sc*sqx,sc); x.lineCap="round"; x.lineJoin="round";
     const L=c=>rgb(mulv(c,lit));
     /* legs: [base angle from the head axis, lengths of femur / tibia / tarsus], front pairs reaching ahead together, the third pair short, the fourth pair back */
-    const LEGS=[[.32,5.2,5.4,5.6],[.62,4.7,4.6,4.8],[1.75,3,2.8,2.6],[2.55,4.6,4.8,5.2]];
+    const LEGS=[[.32,6,6.2,6.4],[.62,5.4,5.3,5.5],[1.75,3.4,3.2,3],[2.55,5.3,5.5,6]];
     for(const sd of [-1,1]) LEGS.forEach(([a0,l1,l2,l3],i)=>{ const st=walking? Math.sin(legPh+i*1.6+(sd>0? 0 : Math.PI))*.22 : Math.sin(legPh*.3+i)*.02, a=(a0+st)*sd, bend=(i<2? .55 : i===2? .9 : -.5)*sd;
       const p0=[Math.sin(a)*1.4,2.8+Math.cos(a)*1.4], d1=[Math.sin(a+bend*.6),Math.cos(a+bend*.6)], p1=[p0[0]+d1[0]*l1,p0[1]+d1[1]*l1], d2=[Math.sin(a-bend*.15),Math.cos(a-bend*.15)], p2=[p1[0]+d2[0]*l2,p1[1]+d2[1]*l2], d3=[Math.sin(a-bend*.5),Math.cos(a-bend*.5)], p3=[p2[0]+d3[0]*l3,p2[1]+d3[1]*l3];
-      const seg=(a,b,w0,w1,c)=>{ x.strokeStyle=c; x.lineWidth=(w0+w1)/2; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
-      seg(p0,p1,.8,.65,L([150,72,32])); seg(p1,[lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],.6,.52,L([24,20,16])); seg([lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],p2,.52,.46,L([226,176,48])); seg(p2,p3,.42,.22,L([22,18,14]));   /* reddish femur, black and yellow-banded tibia, black tarsus */
+      const seg=(a,b,w0,w1,c)=>{ x.strokeStyle=c; x.lineWidth=(w0+w1)/2*1.35; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.strokeStyle=`rgba(255,214,150,${(.45*lit).toFixed(2)})`; x.lineWidth=(w0+w1)/2*.4; x.beginPath(); x.moveTo(a[0],a[1]-.15); x.lineTo(b[0],b[1]-.15); x.stroke(); };   /* each leg segment with the sun catching its upper edge */
+      seg(p0,p1,.8,.65,L([186,92,40])); seg(p1,[lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],.6,.52,L([118,72,36])); seg([lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],p2,.52,.46,L([236,188,58])); seg(p2,p3,.42,.22,L([128,84,42]));   /* reddish femur, black and yellow-banded tibia, black tarsus */
       x.fillStyle=L([30,24,18]); for(const q of [p1,p2]){ x.beginPath(); x.arc(q[0],q[1],.34,0,6.283); x.fill(); }
       if(sc>1.4){ x.strokeStyle=rgb(mulv([60,50,40],lit),.6); x.lineWidth=.08; for(let k=0;k<6;k++){ const u=(k+.5)/6, q=[lerp(p1[0],p3[0],u),lerp(p1[1],p3[1],u)]; x.beginPath(); x.moveTo(q[0],q[1]); x.lineTo(q[0]+d2[1]*.5*sd,q[1]-d2[0]*.5*sd); x.stroke(); } } });   /* fine spines along the legs, when she's close */
     /* the abdomen: egg-shaped, broadest near the front */
