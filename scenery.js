@@ -694,8 +694,8 @@ const ambient=(function(){
       const top=Math.round(h*.5), id=x.getImageData(0,0,w,top), a=id.data;
       for(let y=0;y<top;y++){ const wy=Math.max(0,Math.min(1,(.47-y/h)/.12)); if(wy<=0) continue;
         for(let xx=0;xx<w;xx++){ const i=(y*w+xx)*4, r=a[i]/255, g=a[i+1]/255, b=a[i+2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, dlt=mx-mn; if(dlt<.004||b<r) continue;
-          let hue=mx===b? 4+(r-g)/dlt : mx===g? 2+(b-r)/dlt : (g-b)/dlt; hue*=60; if(hue<0) hue+=360; const hw=Math.max(0,1-Math.abs(hue-212)/55); if(hw<=0) continue;
-          let sat=l>.5? dlt/(2-mx-mn) : dlt/(mx+mn); const lg=Math.max(0,Math.min(1,(l-.24)/.2))*Math.max(0,Math.min(1,(.88-l)/.12)), k=wy*hw*lg; if(k<=.01) continue; const s2=Math.min(1,sat*(1+3.1*k)+.16*k), l2=l*(1-.17*k);   /* the blue of the sky, deepened */
+          let hue=mx===b? 4+(r-g)/dlt : mx===g? 2+(b-r)/dlt : (g-b)/dlt; hue*=60; if(hue<0) hue+=360; const hw0=Math.max(0,1-Math.abs(hue-212)/55), hw=hw0*hw0*(3-2*hw0);   /* eased in at the edges of the blue, so no hard seams */ if(hw<=0) continue;
+          let sat=l>.5? dlt/(2-mx-mn) : dlt/(mx+mn); const lg=Math.max(0,Math.min(1,(l-.28)/.22))*Math.max(0,Math.min(1,(.86-l)/.14)), k=wy*hw*lg; if(k<=.01) continue; const s2=Math.min(sat+.3,Math.min(1,sat*(1+2.3*k)+.1*k)), l2=l*(1-.12*k);   /* the blue of the sky, deepened a little */
           const q=l2<.5? l2*(1+s2) : l2+s2-l2*s2, p2=2*l2-q, hh=hue/360, f=tt=>{ tt<0&&(tt+=1); tt>1&&(tt-=1); return tt<1/6? p2+(q-p2)*6*tt : tt<.5? q : tt<2/3? p2+(q-p2)*(2/3-tt)*6 : p2; };
           a[i]=f(hh+1/3)*255; a[i+1]=f(hh)*255; a[i+2]=f(hh-1/3)*255; } }
       x.putImageData(id,0,0); c.naturalWidth=w; c.naturalHeight=h; return c; }catch(e){ return im; } }
