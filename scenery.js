@@ -421,7 +421,7 @@ const ambient=(function(){
     l.Y+=(l.kind==="milkweed"? l.vY*(.5+.9*Math.sin(l.ph*.7)**2)-.012*Math.sin(l.ph*1.3) : l.vY*(.75+.5*Math.sin(l.ph)**2))*dt;
     l.rot+= l.kind==="milkweed"? Math.sin(l.ph)*.35*dt : l.vr*dt; l.flip+=l.vf*dt;
     const sx=vp[0]+l.X*f/l.D, sy=vp[1]+l.Y*f/l.D;
-    if(l.D<.35||l.D>14||l.Y>hg||sx<-140||sx>W+140||sy>H+80){ Object.assign(l,newLeaf(true)); place3D(l,false); return step3D(l,0); }
+    if(l.D<.35||l.D>14||l.Y>hg||sx<-140||sx>W+140||sy>H+80){ const mw=l.kind==="milkweed"; for(const k in l) delete l[k]; l.off=true; l.cat=mw? "milk" : "leaf"; return; }   /* gone by: it waits for the next flurry */
     l.x=sx; l.y=sy; l.s=l.base*f/l.D;
     l.mi3=Math.max(0,Math.min(.5,(l.D-2)/10));                    /* the air washes far leaves out */
     l.in3=(l.D>9? Math.max(0,1-(l.D-9)/5) : 1)*(l.D<.7? .78 : 1)*Math.min(1,(sy+90)/60);
@@ -495,6 +495,15 @@ const ambient=(function(){
         ctx.restore(); }
       ctx.globalAlpha=fade*(1-focus*.5)*.55; ctx.fillStyle=rgb(mixv([110,84,60],[206,178,138],air*.7)); ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Math.max(.6,Lpx*.07),Math.max(.5,Lpx*.055),0,0,6.283); ctx.fill(); }   /* the seed at the hub, steady while the wing whirls round it */
     ctx.globalAlpha=1; }
+  /* the leaves and the milkweed fluff, like the maple keys, come in flurries: a gust lets go a whole batch, then the air is clear a while.
+     Each kind keeps its own rhythm, so sometimes the leaves come down while the milkweed drifts, sometimes neither */
+  const FLUR={leaf:{on:false,t:0,next:rnd(4,10),dur:0,acc:0},milk:{on:false,t:0,next:rnd(35,70),dur:0,acc:0}};
+  function stepFlurries(dt){
+    for(const cat of ["leaf","milk"]){ const F=FLUR[cat]; F.t+=dt;
+      if(!F.on&&F.t>F.next){ F.on=true; F.t=0; F.dur= cat==="leaf"? rnd(12,22) : rnd(10,16); F.acc=0; F.rate= cat==="leaf"? rnd(.9,1.6) : rnd(.5,.9); }
+      if(F.on){ F.acc+=dt*F.rate; while(F.acc>=1){ F.acc-=1; let l=leaves.find(q=>q.off&&(q.cat===cat||q.cat==null)); if(!l){ if(leaves.length<Math.round(26*Math.max(.6,Math.min(1.6,W/1400)))) leaves.push(l={}); else break; }
+          let n; do{ n=newLeaf(true); }while((n.kind==="milkweed")!==(cat==="milk")); for(const k in l) delete l[k]; Object.assign(l,n); place3D(l,false); }
+        if(F.t>F.dur){ F.on=false; F.t=0; F.next= cat==="leaf"? rnd(30,70) : rnd(55,120); } } } }
   /* ---- ground plane under the photo: things farther away sit higher (closer to the horizon) and smaller, and move slower on screen ---- */
   const GF=4000;                                                       /* depth scale: the field edge comes out ~20 m away */
   const gnd=()=>{ const v=vanish(); return {vx:v[0],vy:v[1]}; };
@@ -508,7 +517,7 @@ const ambient=(function(){
   }
   function seed(){
     const k=Math.max(.45,Math.min(1.5,W*H/(1440*900)));
-    leaves=Array.from({length:Math.round(12*k)},()=>place3D(newLeaf(false),true));
+    leaves=Array.from({length:Math.round(12*k)},()=>({off:true}));   /* the air starts clear; the first flurry comes along in a few seconds */
     motes=[...Array.from({length:Math.round(70*k)},()=>newMote(0)),...Array.from({length:Math.round(34*k)},()=>newMote(1)),...Array.from({length:Math.round(7*k)},()=>newMote(2))];
   }
   function sun(){
@@ -4312,13 +4321,13 @@ const ambient=(function(){
     for(const sd of [-1,1]) LEGS.forEach(([a0,l1,l2,l3],i)=>{ const st=walking? Math.sin(legPh+i*1.6+(sd>0? 0 : Math.PI))*.22 : Math.sin(legPh*.3+i)*.02, a=(a0+st)*sd, bend=(i<2? .55 : i===2? .9 : -.5)*sd;
       const p0=[Math.sin(a)*1.4,2.8+Math.cos(a)*1.4], d1=[Math.sin(a+bend*.6),Math.cos(a+bend*.6)], p1=[p0[0]+d1[0]*l1,p0[1]+d1[1]*l1], d2=[Math.sin(a-bend*.15),Math.cos(a-bend*.15)], p2=[p1[0]+d2[0]*l2,p1[1]+d2[1]*l2], d3=[Math.sin(a-bend*.5),Math.cos(a-bend*.5)], p3=[p2[0]+d3[0]*l3,p2[1]+d3[1]*l3];
       const seg=(a,b,w0,w1,c)=>{ x.strokeStyle=c; x.lineWidth=(w0+w1)/2; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
-      seg(p0,p1,.62,.5,L([138,66,30])); seg(p1,[lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],.48,.42,L([24,20,16])); seg([lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],p2,.42,.38,L([206,160,44])); seg(p2,p3,.34,.18,L([22,18,14]));   /* reddish femur, black and yellow-banded tibia, black tarsus */
+      seg(p0,p1,.8,.65,L([150,72,32])); seg(p1,[lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],.6,.52,L([24,20,16])); seg([lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],p2,.52,.46,L([226,176,48])); seg(p2,p3,.42,.22,L([22,18,14]));   /* reddish femur, black and yellow-banded tibia, black tarsus */
       x.fillStyle=L([30,24,18]); for(const q of [p1,p2]){ x.beginPath(); x.arc(q[0],q[1],.34,0,6.283); x.fill(); }
       if(sc>1.4){ x.strokeStyle=rgb(mulv([60,50,40],lit),.6); x.lineWidth=.08; for(let k=0;k<6;k++){ const u=(k+.5)/6, q=[lerp(p1[0],p3[0],u),lerp(p1[1],p3[1],u)]; x.beginPath(); x.moveTo(q[0],q[1]); x.lineTo(q[0]+d2[1]*.5*sd,q[1]-d2[0]*.5*sd); x.stroke(); } } });   /* fine spines along the legs, when she's close */
     /* the abdomen: egg-shaped, broadest near the front */
     const ab=new Path2D(); ab.moveTo(0,.4); ab.bezierCurveTo(3.7,.2,3.9,-4.6,2.4,-8.4); ab.bezierCurveTo(1.2,-10.6,-1.2,-10.6,-2.4,-8.4); ab.bezierCurveTo(-3.9,-4.6,-3.7,.2,0,.4); ab.closePath();
     x.save(); x.clip(ab); x.fillStyle=L([20,17,14]); x.fillRect(-5,-12,10,13);
-    x.fillStyle=L([238,198,60]); for(const sd of [-1,1]){ for(let i=0;i<5;i++){ const yy=-1.4-i*1.75, xx=sd*(2.15-i*.22); x.beginPath(); x.ellipse(xx,yy,1.4-i*.12,.86-i*.05,sd*(.35+i*.05),0,6.283); x.fill(); } x.beginPath(); x.ellipse(sd*1.2,-.9,1.35,.85,sd*.2,0,6.283); x.fill(); }   /* the yellow patches down each side, and the band across the front */
+    x.fillStyle=L([250,212,64]); for(const sd of [-1,1]){ for(let i=0;i<5;i++){ const yy=-1.4-i*1.75, xx=sd*(2.15-i*.22); x.beginPath(); x.ellipse(xx,yy,1.4-i*.12,.86-i*.05,sd*(.35+i*.05),0,6.283); x.fill(); } x.beginPath(); x.ellipse(sd*1.2,-.9,1.35,.85,sd*.2,0,6.283); x.fill(); }   /* the yellow patches down each side, and the band across the front */
     x.fillStyle=L([226,214,170]); for(let i=0;i<4;i++){ x.beginPath(); x.arc(0,-2.6-i*1.8,.22,0,6.283); x.fill(); }   /* the pale dots down the middle */
     const sh=x.createRadialGradient(-sunS*1.4,-5.4,.4,0,-4.6,5.6); sh.addColorStop(0,"rgba(255,246,220,.28)"); sh.addColorStop(.45,"rgba(0,0,0,0)"); sh.addColorStop(1,"rgba(0,0,0,.5)"); x.fillStyle=sh; x.fillRect(-5,-12,10,13);   /* round, glossy */
     x.restore();
@@ -4332,7 +4341,7 @@ const ambient=(function(){
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop"; x.fillStyle=rgb(haze,.16); x.fillRect(0,0,S*2,S*2); x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=A; ctx.translate(cx,cy); ctx.rotate(ang); ctx.filter=sc<1.2? "none" : "blur(.35px)"; ctx.drawImage(spC,0,0,S*2,S*2,-S,-S,S*2,S*2); ctx.restore(); ctx.filter="none"; }
   function startWeb(){ const left=Math.random()<.5, R=Math.min(W,H)*rnd(.14,.17);
-    web={left,sx:W*(left? rnd(.12,.2) : rnd(.8,.88)),sy:H*rnd(.7,.76),R,a:(left?1:-1)*rnd(.3,.6),t:0,life:rnd(46,58),alpha:0,ph:"hub",hubT:rnd(5,9),
+    web={left,sx:Math.max(R*1.7,W*(left? rnd(.16,.24) : rnd(.76,.84))),sy:H*rnd(.7,.76),R,a:(left?1:-1)*rnd(.3,.6),t:0,life:rnd(46,58),alpha:0,ph:"hub",hubT:rnd(5,9),
       rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:80},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)]),su:0,sv:0,sh:-Math.PI/2,leg:0,jolt:0,tear:null};
     buildTuft(web); }
   /* the tuft, painted once: blades behind the web, and the big soft blades at the lens in front of it */
@@ -4350,7 +4359,7 @@ const ambient=(function(){
     const mk=()=>{ const c=document.createElement("canvas"); c.width=bw; c.height=bh; const x=c.getContext("2d"); x.translate(-x0,-y0); return [c,x]; };
     const [cB,xB]=mk(), [cF,xF]=mk();
     /* kept simple: a couple of slender blades behind, low at the outer side, and one long soft blade at the lens */
-    for(const [o,l,ln] of [[2.0,1.15,.1],[2.45,.85,-.06],[-1.6,.7,.08]]){ const b=w.sx+sd*R*o; blade(xB,b,R*l+(H-w.sy)*.55,-sd*ln,R*.026,.55,.85,false); }
+    for(const [o,l,ln] of []){ const b=w.sx+sd*R*o; blade(xB,b,R*l+(H-w.sy)*.55,-sd*ln,R*.026,.55,.85,false); }
     xF.filter=`blur(${Math.max(4,R*.07).toFixed(1)}px)`; blade(xF,w.sx+sd*R*2.9,R*1.5+(H-w.sy)*.4,-sd*.3,R*.075,.4,.55,false);
     w.tB=cB; w.tF=cF; w.tx0=x0; w.ty0=y0; w.sunS=sunS; }
   function drawWeb(dt,dark){
@@ -4359,15 +4368,15 @@ const ambient=(function(){
     w.jolt=Math.max(0,w.jolt-dt*.6);
     const sway=Math.sin(w.t*.9)*.05+Math.sin(w.t*2.3)*.015+Math.sin(w.t*7)*w.jolt*.12, a=w.a+sway*.6, ca=Math.cos(a), sa=Math.sin(a), R=w.R, tilt=sway*.06;
     const base=[w.sx+(w.left? -1 : 1)*R*.6,H+8], rot=(p)=>{ const dx=p[0]-base[0], dy=p[1]-base[1], c=Math.cos(tilt), s=Math.sin(tilt); return [base[0]+dx*c-dy*s, base[1]+dx*s+dy*c]; };
-    const P=(u,v)=>{ const zz=u*sa*.45, f=1/(1+zz); return rot([w.sx+u*ca*R*f, w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01]); };   /* the web's plane, turned a little toward or away from you */
+    const P=(u,v)=>{ const zz=u*sa*.22, f=1/(1+zz); return rot([w.sx+u*ca*R*f, w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01]); };   /* the web's plane, turned a little toward or away from you */
     const sp=sun(), sunA=Math.atan2(-(sp.y-w.sy),(sp.x-w.sx)), lit=dark? .35 : 1, A=w.alpha*(1-.6*nA);
     const x=ctx; x.save(); x.globalAlpha=A; x.globalCompositeOperation="source-over"; x.filter="none"; x.lineCap="round";
     const drawT=img=>{ x.save(); x.translate(base[0],base[1]); x.rotate(tilt); x.translate(-base[0],-base[1]); x.drawImage(img,w.tx0,w.ty0); x.restore(); };
     drawT(w.tB);
     /* the two tall stems it hangs between, and the guy lines */
-    const sL=P(-1.35,-1.6), sR=P(1.3,-1.6), tL=P(-1.25,1.25), tR=P(1.2,1.1);
-    const stem=(b,top,lean)=>{ const g=x.createLinearGradient(0,H,0,top[1]); g.addColorStop(0,`rgba(${dark?40:80},${dark?50:92},${dark?24:40},${A})`); g.addColorStop(1,`rgba(${dark?70:178},${dark?70:160},${dark?40:96},${A})`); x.strokeStyle=g;
-      x.lineWidth=Math.max(1.2,R*.024); x.beginPath(); x.moveTo(b[0],H*1.02); x.quadraticCurveTo(b[0]+lean*R*.08,(b[1]+top[1])/2,top[0],top[1]); x.stroke();
+    const sL=P(-1.12,-1.6), sR=P(1.1,-1.6), tL=P(-1.1,1.2), tR=P(1.08,1.05);   /* the two stems stand right at the web's edges; it is slung between them */
+    const stem=(b,top,lean)=>{ const g=x.createLinearGradient(0,H,0,top[1]); g.addColorStop(0,`rgba(${dark?40:96},${dark?50:110},${dark?24:46},${A})`); g.addColorStop(1,`rgba(${dark?80:206},${dark?78:186},${dark?46:110},${A})`); x.strokeStyle=g;
+      x.lineWidth=Math.max(1.6,R*.022); x.beginPath(); x.moveTo(b[0],H*1.02); x.quadraticCurveTo(b[0]+lean*R*.08,(b[1]+top[1])/2,top[0],top[1]); x.stroke();
       x.lineWidth=Math.max(.8,R*.014); x.beginPath(); x.moveTo(top[0],top[1]); x.quadraticCurveTo(top[0]+lean*R*.1,top[1]-R*.25,top[0]+lean*R*.04,top[1]-R*.42); x.stroke();   /* running on up to a seed head */
       const hx=top[0]+lean*R*.04, hy=top[1]-R*.42; x.fillStyle=`rgba(${Math.round(214*lit)},${Math.round(186*lit)},${Math.round(120*lit)},${(.9*A).toFixed(3)})`; x.beginPath(); x.ellipse(hx,hy-R*.1,R*.03,R*.12,lean*.15,0,6.283); x.fill();
       x.strokeStyle=`rgba(255,232,170,${(.5*A*lit).toFixed(3)})`; x.lineWidth=.6; for(let i=0;i<14;i++){ const yy=hy-R*.2*i/13, s2=i%2? 1 : -1; x.beginPath(); x.moveTo(hx,yy); x.lineTo(hx+s2*R*.06,yy-R*.04); x.stroke(); } };
@@ -4383,15 +4392,15 @@ const ambient=(function(){
       let r0=.05; for(let s2=0;s2<4;s2++){ const r1=r0+(rEnd-r0)/(4-s2), q0=P(Math.cos(th)*r0,Math.sin(th)*r0), q1=P(Math.cos(th)*r1,Math.sin(th)*r1); put(q0,q1,Math.atan2(-(q1[1]-q0[1]),q1[0]-q0[0])); r0=r1; }
       if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); bins[1].push(o,[back[0]-R*.02,back[1]+R*.2]); } }
     let prev=null; for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30, r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); if(torn(th,r1)){ prev=null; continue; } if(prev) put(prev,q,Math.atan2(-(q[1]-prev[1]),q[0]-prev[0])); prev=q; }
-    const lw=Math.max(.45,R*.0032); x.lineWidth=lw;
-    [[.04,lw],[.09,lw],[.17,lw],[.3,lw*1.05]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
+    const lw=Math.max(.6,R*.0036); x.lineWidth=lw;
+    [[.11,lw],[.17,lw],[.28,lw*1.05],[.48,lw*1.1]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
     /* the stabilimentum: a white zigzag band above and below the hub */
     x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.3*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.006); x.beginPath();
     if(!w.zz) w.zz=Array.from({length:40},()=>[rnd(.6,1.4),rnd(.7,1.3)]);
     x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.16*A).toFixed(3)})`;
     for(const sg of [1,-1]){ let n=0; for(let j=0;j<=18;j++){ const z=w.zz[j+(sg>0? 0 : 20)], v=sg*(.12+j*.02*z[1]), u=(j%2? .024 : -.024)*z[0]*(1-j/26), q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke();   /* the zigzag silk band, uneven and faint */
     /* dew, sparkling now and then */
-    for(const [th,rr,ph] of w.dew){ if(torn(th,rr)) continue; const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),18); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
+    for(const [th,rr,ph] of w.dew){ if(torn(th,rr)) continue; const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=.25+.75*Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),10); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
     /* ---- the spider: waits at the hub, then walks out along a spoke ---- */
     if(w.ph==="hub"){ w.hubT-=dt; if(w.hubT<=0&&!out){ w.ph="walk"; const th=rnd(0,6.283), r=rnd(.45,.62); w.tu=Math.cos(th)*r; w.tv=Math.sin(th)*r; w.walkT=0; w.birdAt=rnd(3,4.5); } }
     if(w.ph==="walk"){ w.walkT+=dt; const du=w.tu-w.su, dv=w.tv-w.sv, d=Math.hypot(du,dv); if(d>.01){ const st=Math.min(d,dt*.11*(1+.5*Math.sin(w.walkT*6))); w.su+=du/d*st; w.sv+=dv/d*st; w.sh=Math.atan2(dv,du); w.leg+=dt*9; }
@@ -4399,7 +4408,7 @@ const ambient=(function(){
     if(w.ph!=="gone"){ const c0=P(w.su,w.sv), hd=P(w.su+Math.cos(w.sh)*.1,w.sv+Math.sin(w.sh)*.1), ang=Math.atan2(hd[1]-c0[1],hd[0]-c0[0])-Math.PI/2;
       if(!w.haze){ const ip=toImg(c0[0],c0[1]); w.haze=mixv((ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[150,130,90],[230,200,150],.4); }
       x.save(); x.setTransform(1,0,0,1,0,0); x.restore();
-      drawArgiope(c0[0],c0[1],ang,R*.013,Math.max(.6,Math.abs(ca)),w.leg,w.ph==="walk",lit,A,w.sunS||1,w.haze);
+      drawArgiope(c0[0],c0[1],ang,R*.017,Math.max(.6,Math.abs(ca)),w.leg,w.ph==="walk",lit,A,w.sunS||1,w.haze);
       web.sx2=c0[0]; web.sy2=c0[1]; }
     drawT(w.tF);   /* the soft blades at the lens, in front of it all */
     x.restore();
@@ -6798,9 +6807,9 @@ const ambient=(function(){
     stepLull(dt);
     if(img){ drawScene(dark); stepDusk(dt); drawDusk(dark); drawUtvTracks(dark); drawTracks(dark); drawHaze(dt,dark); drawMist(dark); drawRays(dt,dark); drawSunburst(); drawSundogs(); drawBalloon(); }
     const nlMain=nightLayerBegin();   /* at night everything out in the field is drawn on its own layer and then lit like the scene: darker, cooler, the colour drained */
-    for(const l of leaves) step3D(l,dt);
-    leaves.sort((a,b)=>b.D-a.D);
-    for(const l of leaves) if(l.D>=5) leaf(l, dark?.7:1);         /* far ones drift among the hills, behind the animals */
+    stepFlurries(dt); for(const l of leaves) if(!l.off) step3D(l,dt);
+    leaves.sort((a,b)=>(b.D||0)-(a.D||0));
+    for(const l of leaves) if(!l.off&&l.D>=5) leaf(l, dark?.7:1);         /* far ones drift among the hills, behind the animals */
     if(img){ stepSamaras(dt); drawSamaras(false,dark); }
     for(const m of motes) if(m.L===0) drawMote(m);
     if(img){ ctx.globalAlpha=1; drawGeese(dt,dark); drawRaptors(dt,dark); drawSpook(dt,dark); drawEagle(dt,dark); ctx.globalAlpha=1;
@@ -6838,7 +6847,7 @@ const ambient=(function(){
       turkeyQueue(dt,dark,L); tomQueue(dt,dark,L);
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }
     for(const m of motes) if(m.L===1) drawMote(m);
-    for(const l of leaves) if(l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
+    for(const l of leaves) if(!l.off&&l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     if(img) drawSamaras(true,dark);
     for(const m of motes) if(m.L===2) drawMote(m);
     if(img) drawWeb(dt,dark);
