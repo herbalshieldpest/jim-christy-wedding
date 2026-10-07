@@ -5367,7 +5367,7 @@ const ambient=(function(){
         add([[...a,.016],[...v3.l(a,up,.85),.008]],C(mulv(G,.8),.55),{bias:fb-.012}); add([[...a,.016],[...v3.l(a,dn,.85),.008]],C(mulv(G,.8),.55),{bias:fb-.012}); } }   /* and the side veins, like a real leaf */
     return out; }
   let mantF=null, nextMantF=rnd(140,260); const mfCv=document.createElement("canvas"), mfCx=mfCv.getContext("2d");
-  function startMantF(kind){ kind=kind||"mantis"; const kt=kind==="katydid", F=H*.5, cx=W/2, cy=H*.52, s=Math.random()<.5? -1 : 1, z=kt? rnd(.125,.14) : rnd(.2,.235), psx=W*(s<0? rnd(.16,.3) : rnd(.7,.84)), psy=H*rnd(.62,.7);
+  function startMantF(kind){ kind=kind||"mantis"; const kt=kind==="katydid", F=H*.5, cx=W/2, cy=H*.52, s=nA>.3? 1 : Math.random()<.5? -1 : 1,   /* at night the near grass grows on the right, clear of the campfire on the left */ z=kt? rnd(.125,.14) : rnd(.2,.235), psx=W*(s<0? rnd(.16,.3) : rnd(.7,.84)), psy=H*rnd(.62,.7);
     const C=[(psx-cx)*z/F,-(psy-cy)*z/F,z], lean=rnd(-.22,.22), cs=Math.random()<.5? -1 : 1, Bp=basisFrom([lean,1,-.1],[cs,0,-.32]), K=kt? .0058 : .01, off=kt? .78 : .95, stem=v3.a(C,v3.s(Bp.u,-off*K));
     const z0=6, s0=[W*(s<0? rnd(.55,.95) : rnd(.05,.45)),H*rnd(.16,.34)], S0=[(s0[0]-cx)*z0/F,-(s0[1]-cy)*z0/F,z0];
     mantF={kind,off,singT:rnd(1,2.5),rasp:0,t:0,K,Bp,cs,lean,stem,S0,c1:[lerp(S0[0],C[0],.55)+s*.5,lerp(S0[1],C[1],.5)+.3,2.2],c2:v3.a(C,[-cs*.14,-.05,.16]),Ta:kt? 3.8 : 3.4,Tp:kt? rnd(10,14) : rnd(9,12),beat:0,hy:0,hp:0,hyT:0,hpT:0,sacT:0,gr:0,grAt:rnd(3,5.5),grS:Math.random()<.5?-1:1,kick:0,kv:0,sa:0,

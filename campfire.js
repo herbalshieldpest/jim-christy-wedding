@@ -137,31 +137,36 @@ class Person{
       const hairM=new T.MeshStandardMaterial({color:0xffffff,map:strandTex,roughness:.5,metalness:0,side:T.DoubleSide}), hairIn=new T.MeshStandardMaterial({color:0x8a5a48,map:strandTex,roughness:.7,metalness:0,side:T.BackSide});
       hairM.map.repeat.set(3,1);
       M(h,new T.SphereGeometry(.107,32,18,0,Math.PI*2,0,1.15),hairM,0,.1,-.004,1.03,1.1,1.08);                         /* the crown */
-      M(h,new T.SphereGeometry(.109,32,22,Math.PI*.82,Math.PI*1.36,0,2.2),hairM,0,.1,-.008,1.05,1.1,1.09);               /* down over the sides and back of her head, her face left clear */
       M(h,sph(16,10),hairM,.04,.205,.03,.065,.024,.055,0,0,-.22);                                                       /* the lift at her side part */
       const hp=this.hairPivot=G(h,0,.16,-.02);
       const hb=this.hairBack=G(this.chest,0,.388,-.004);   /* the long hair hangs from her shoulders, not her head, so tipping her head never swings it into her back */
-      { const NU=56, NV=30, pos=[], uv=[], idx=[], S0=Math.random()*6;
+      { const NU=56, NV=40, pos=[], uv=[], idx=[], S0=Math.random()*6, AX=.108, AY=.115, AZ=.113;
         const sstep=(a,b,x)=>{ const k=clamp((x-a)/(b-a),0,1); return k*k*(3-2*k); };
         for(let j=0;j<=NV;j++){ const v=j/NV;
-          for(let i=0;i<=NU;i++){ const u=i/NU, yEnd0=-.55;
-            const yy=lerp(.05,yEnd0,v), th=(u-.5)*2*lerp(2.15,1.1,sstep(-.1,-.25,yy));   /* round her head beside her face, then gathering behind her shoulders as it falls */
-            const side=Math.abs(Math.sin(th));
-            const y=yy*(1-.08*side)+(.03*Math.sin(th*5+S0)+.018*Math.sin(th*11))*sstep(.8,1,v);   /* a little shorter at the sides; an uneven, wavy hem */
-            const tuck=lerp(.102,.124,sstep(.05,-.04,y)), rBack=tuck+(.172-.124)*sstep(-.04,-.2,y)+.02*sstep(-.3,-.5,y), rSide=tuck+.008*sstep(-.02,-.12,y)+.1*sstep(-.15,-.27,y);   /* close round her head, then out past the backs of her shoulders */
-            let r=lerp(rBack,rSide,side);
-            r+=(.007*(.5+.5*Math.sin(th*5+v*9+S0))+.003*(.5+.5*Math.sin(th*9-v*5)))*sstep(.15,.6,v)+.01*sstep(.85,1,v);   /* soft, long waves that only ever lift it away from her */   /* waves, and the ends turning out a little */
+          for(let i=0;i<=NU;i++){ const u=i/NU, yEnd0=-.55, VU=.26;
+            let th, y, r;
+            if(v<=VU){ /* over the back and sides of her head: starting up under the crown and following the shape of her head down to its widest point */
+              const ph=lerp(.9,Math.PI/2,ease(v/VU)); th=(u-.5)*2*2.15; const a=1/Math.sqrt((Math.sin(th)/AX)**2+(Math.cos(th)/AZ)**2);
+              y=AY*Math.cos(ph); r=a*Math.sin(ph)*lerp(.98,1.03,sstep(.9,1.5,ph)); }
+            else { /* and from there straight down: close beside her face, gathering behind her shoulders, down her back */
+              const w=(v-VU)/(1-VU), yy=lerp(0,yEnd0,w); th=(u-.5)*2*lerp(2.15,1.1,sstep(-.1,-.25,yy));
+              const side=Math.abs(Math.sin(th)), a=1/Math.sqrt((Math.sin(th)/AX)**2+(Math.cos(th)/AZ)**2)*1.03;
+              y=yy*(1-.08*side)+(.03*Math.sin(th*5+S0)+.018*Math.sin(th*11))*sstep(.8,1,w);   /* a little shorter at the sides; an uneven, wavy hem */
+              const rBack=.124+(.172-.124)*sstep(-.04,-.2,y)+.02*sstep(-.3,-.5,y), rSide=.124+.008*sstep(-.02,-.12,y)+.1*sstep(-.15,-.27,y);
+              r=lerp(a,lerp(rBack,rSide,side),sstep(0,-.14,y));
+              r+=(.007*(.5+.5*Math.sin(th*5+w*9+S0))+.003*(.5+.5*Math.sin(th*9-w*5)))*sstep(.15,.6,w)+.01*sstep(.85,1,w); }   /* soft, long waves that only ever lift it away from her */
             pos.push(Math.sin(th)*r, y, -Math.cos(th)*r); uv.push(u,1-v); } }
         for(let j=0;j<NV;j++) for(let i=0;i<NU;i++){ const a2=j*(NU+1)+i, b2=a2+NU+1; idx.push(a2,b2,a2+1,b2,b2+1,a2+1); }
         const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3)); g.setAttribute("uv",new T.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals();
-        const fall=new T.Mesh(g,hairM); fall.castShadow=true; fall.receiveShadow=true; hb.add(fall);
+        const fall=new T.Mesh(g,hairM); fall.castShadow=true; fall.receiveShadow=true; hb.add(fall); this.hairSkin=[g];
         const under=new T.Mesh(g,hairIn); under.scale.set(.965,1,.965); hb.add(under);
         /* a soft lock either side, from beside her face forward over the shoulder, lying on her sweater */
         for(const sd of [1,-1]){ const P=[[.1,-.04,.0],[.112,-.13,.035],[.135,-.22,.08],[.13,-.3,.116],[.118,-.37,.128]].map(([x,y,z])=>new V3(sd*x,y,z)), c=new T.CatmullRomCurve3(P), N=24, M2=6, ps=[], us=[], ix=[];
           for(let k=0;k<=N;k++){ const t=k/N, p=c.getPoint(t), tg=c.getTangent(t), o=new V3(p.x*.4,0,1).normalize(); o.addScaledVector(tg,-o.dot(tg)).normalize(); const sv=new V3().crossVectors(tg,o).normalize(), wv=lerp(.018,.026,ease(Math.min(1,t*1.6)))*(t>.85? (1-t)/.15*.7+.3 : 1);
             for(let m=0;m<=M2;m++){ const a3=m/M2*Math.PI*2, q=p.clone().addScaledVector(sv,Math.cos(a3)*wv).addScaledVector(o,Math.sin(a3)*.009); ps.push(q.x,q.y,q.z); us.push(m/M2*.3,1-t); } }
           for(let k=0;k<N;k++) for(let m=0;m<M2;m++){ const a4=k*(M2+1)+m, b4=a4+M2+1; ix.push(a4,b4,a4+1,b4,b4+1,a4+1); }
-          const g2=new T.BufferGeometry(); g2.setAttribute("position",new T.Float32BufferAttribute(ps,3)); g2.setAttribute("uv",new T.Float32BufferAttribute(us,2)); g2.setIndex(ix); g2.computeVertexNormals(); const lk=new T.Mesh(g2,hairM); lk.castShadow=true; hb.add(lk); } } }
+          const g2=new T.BufferGeometry(); g2.setAttribute("position",new T.Float32BufferAttribute(ps,3)); g2.setAttribute("uv",new T.Float32BufferAttribute(us,2)); g2.setIndex(ix); g2.computeVertexNormals(); const lk=new T.Mesh(g2,hairM); lk.castShadow=true; hb.add(lk); this.hairSkin.push(g2); }
+        for(const gg of this.hairSkin){ const P=gg.attributes.position; gg.userData.p0=Float32Array.from(P.array); const W=new Float32Array(P.count); for(let k=0;k<P.count;k++){ const y=P.getY(k), q=clamp((-.02-y)/.14,0,1); W[k]=1-q*q*(3-2*q); } gg.userData.w=W; } } }
   }
   /* body-local point -> world */
   local(x,y,z,out){ return (out||new V3()).set(x,y,z).applyMatrix4(this.root.matrixWorld); }
@@ -273,7 +278,16 @@ class Person{
     const plumb=_q1.invert().multiply(_q2); hp.quaternion.identity().slerp(plumb,.8);   /* the hair hangs from the crown as if the head were upright: it falls straight down when she looks down */
     hp.quaternion.multiply(_q2.setFromEuler(_eu.set(clamp(this.hairS.x,-.18,.18),0,clamp(this.hairS.z,-.18,.18))));
     /* the back of her hair rests on her back: it keeps to the line of her shoulders whichever way she turns or tips her head, swaying a little */
-    const hb=this.hairBack; if(hb) hb.quaternion.setFromEuler(_eu.set(clamp(this.hairS.x*.35,-.06,.06),0,clamp(this.hairS.z*.4,-.07,.07))); }
+    const hb=this.hairBack; if(hb) hb.quaternion.setFromEuler(_eu.set(clamp(this.hairS.x*.35,-.06,.06),0,clamp(this.hairS.z*.4,-.07,.07)));
+    /* the hair over her head moves with her head, its length with her shoulders, blended smoothly between, so it reads as one */
+    if(hb&&this.hairSkin){ hb.updateMatrixWorld(true); this.head.updateMatrixWorld(true);
+      const A=this._hA||(this._hA=new T.Matrix4()); A.copy(hb.matrixWorld).invert().multiply(this.head.matrixWorld).multiply(_m1.makeTranslation(0,.1,0));
+      const e=A.elements;
+      for(const g of this.hairSkin){ const P=g.attributes.position, a=P.array, p0=g.userData.p0, W=g.userData.w;
+        for(let k=0,n=P.count;k<n;k++){ const w=W[k], i3=k*3, x=p0[i3], y=p0[i3+1], z=p0[i3+2]; if(w<=0){ a[i3]=x; a[i3+1]=y; a[i3+2]=z; continue; }
+          const hx=e[0]*x+e[4]*y+e[8]*z+e[12], hy=e[1]*x+e[5]*y+e[9]*z+e[13], hz=e[2]*x+e[6]*y+e[10]*z+e[14];
+          a[i3]=x+(hx-x)*w; a[i3+1]=y+(hy-y)*w; a[i3+2]=z+(hz-z)*w; }
+        P.needsUpdate=true; g.computeVertexNormals(); } } }
   /* ---- the arms: hands go to their targets (world points) along a gentle arc, or hang and swing ---- */
   restHand(side,out){ const s=side===L_?1:-1, hand=this.hands[side]; if(hand) hand.swingSoft=this.walk&&this.walk.moving;
     if(this.walk&&this.walk.moving){ const w=this.walk, spd=clamp(w.vNow/1.2,0,1), sr=Math.sin(2*Math.PI*(w.phi-.33)+(side===L_?0:Math.PI)), sw=sr>0? sr : sr*.7;   /* each arm swings with the opposite leg */
