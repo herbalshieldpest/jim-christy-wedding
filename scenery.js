@@ -3606,13 +3606,32 @@ const ambient=(function(){
     const tp=[-21,-26], ta=-(o.flick||0)*.32, tc=Math.cos(ta), ts=Math.sin(ta), tl=q=>{ const dx=q[0]-tp[0], dy=q[1]-tp[1]; return [tp[0]+dx*tc-dy*ts, tp[1]+dx*ts+dy*tc]; };
     const br=1+(o.breath||0)*.012, cr=o.crouch||0, bd=q=>[q[0]*(q[1]>-30? br : 1), q[1]*(1-cr*.08)];
     const blur=k=>{ x.filter=`blur(${Math.max(.4,k*S).toFixed(1)}px)`; };
+    const SPN=o.spread||0, LG=o.legs==null? 1 : o.legs;
     x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
+    if(o.rot){ x.translate(4,-28); x.rotate(o.rot); x.translate(-4,28); }   /* the whole bird pitched: level in flight, swung upright in the flare */
+    /* a spread wing seen from the side: drawn fully raised, then its height scaled by the sine of its elevation, so it foreshortens to a thin edge as it
+       passes level and opens again below; the near wing shows its upper side going up and its pale underside coming down */
+    const spreadWing=(near)=>{ if(SPN<.02) return; const el=o.el||0, se=Math.sin(el), sh=near? [9,-39] : [11,-41.5], Lw=40*(near? 1 : .94), dk=near? 1 : .72;
+      const W2=(dx,dy)=>[sh[0]+dx, sh[1]+dy*se];   /* dy is the raised height (negative = up) */
+      const lead=[], trail=[]; for(let i=0;i<=10;i++){ const t=i/10; lead.push(W2(Math.sin(t*Math.PI)*3.4-t*7,-t*Lw)); }
+      for(let i=10;i>=0;i--){ const t=i/10, c=t>.55? 6+(1-t)*14 : 13+ (1-t)*6, notch=t>.55? Math.max(0,Math.sin(t*44))*1.6 : 0; trail.push(W2(-t*7-c-notch*.6+(t>.55? (t-.55)*5 : 0),-t*Lw+(t>.9? 2 : 0))); }
+      const pts=[...lead,...trail,W2(-17,0),W2(-6,1.5)], under=near? se<0 : se>0;
+      x.save(); x.globalAlpha=Math.min(1,SPN*1.5); x.fillStyle=under? L(mixv(C.belly,C.wing,.45),dk*.95) : L(C.wing,dk); x.beginPath(); cmPath(x,pts,true); x.fill();
+      x.save(); x.beginPath(); cmPath(x,pts,true); x.clip();
+      { const a=W2(0,0), b=W2(-10,-Lw); const g=x.createLinearGradient(a[0],a[1],b[0],b[1]); if(under){ g.addColorStop(0,A(mixv(C.belly,C.wing,.35),.9)); g.addColorStop(.55,A(mixv(C.belly,C.tips,.45),.9)); g.addColorStop(1,A(mixv(C.tips,[150,150,150],.3),1)); } else { g.addColorStop(0,A(C.wing2,.9)); g.addColorStop(.35,A(C.wing,1)); g.addColorStop(.7,A(C.deep,1)); g.addColorStop(1,A(C.tips,1)); } x.fillStyle=g; x.fillRect(-80,-120,140,240); }
+      /* the flight feathers: long primaries out to the tip, secondaries along the trailing edge, each a line of shade with a paler edge */
+      for(let i=0;i<9;i++){ const t=.15+i*.105, a=W2(-t*7+1,-t*Lw), c=t>.55? 6+(1-t)*14 : 13+(1-t)*6, b=W2(-t*7-c+1.5,-t*Lw+(t>.55? 1.5 : .8)); x.strokeStyle=A(under? [70,70,76] : [0,0,0],.28); x.lineWidth=.55; x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke();
+        x.strokeStyle=A([250,246,236],under? .25 : .16); x.lineWidth=.35; x.beginPath(); x.moveTo(a[0]-.6,a[1]); x.lineTo(b[0]-.4,b[1]); x.stroke(); }
+      if(!under){ for(let r=0;r<2;r++) for(let i=0;i<6;i++){ const t=.08+i*.08, q=W2(-t*7-2-r*4,-t*Lw-.5); x.fillStyle=A(mixv(C.wing2,C.back,.3),.5); x.beginPath(); x.ellipse(q[0],q[1],2.2,Math.max(.4,1.4*Math.abs(se)),0,0,6.283); x.fill(); }   /* the coverts */
+        if(C.bars){ x.strokeStyle=L(C.bars,.95); x.lineWidth=1.6; x.beginPath(); x.moveTo(...W2(-6,-1)); x.lineTo(...W2(-10,-Lw*.5)); x.stroke(); } }
+      x.restore(); x.restore(); };
+    spreadWing(false);
     /* ---- the far leg ---- */
     const leg=(lx,dark)=>{ x.strokeStyle=L(C.leg,dark? .7 : 1); x.lineWidth=1.55; x.beginPath(); x.moveTo(lx,-9*(1-cr*.4)); x.lineTo(lx+.6,-.6); x.stroke();
       x.lineWidth=1.1; for(const [ex,ey] of [[lx+7,1.4],[lx+5.5,2.8]]){ x.beginPath(); x.moveTo(lx+.6,-.4); x.quadraticCurveTo(lx+4,-1.4,ex,ey); x.stroke(); }
       x.beginPath(); x.moveTo(lx+.6,-.4); x.quadraticCurveTo(lx-3.5,-1.2,lx-4.5,1.8); x.stroke();
       x.strokeStyle=A([30,24,20],.9); x.lineWidth=.8; for(const [ex,ey] of [[lx+7,1.4],[lx+5.5,2.8],[lx-4.5,1.8]]){ x.beginPath(); x.moveTo(ex,ey); x.lineTo(ex+(ex>lx? -.6 : .6),ey+1.4); x.stroke(); } };
-    leg(-3.2,true);
+    if(LG>.02){ x.save(); x.globalAlpha=LG; leg(-3.2,true); x.restore(); }
     /* ---- the tail: long closed feathers, the outer ones edged, a notch on the finch ---- */
     const tlen=sp.tail, tt=[[-19,-29],[-21,-24],[-21-30*tlen,4*tlen-1],[-21-33*tlen,1.5*tlen],[-21-33.5*tlen,-1+(sp.notch?2:0)],[-21-31*tlen,-4*tlen],[-17,-31]].map(tl);
     x.fillStyle=L(C.tail); x.beginPath(); cmPath(x,tt,true); x.fill();
@@ -3652,6 +3671,7 @@ const ambient=(function(){
     /* ---- the folded wing ---- */
     const wf=o.wflick||0, wl=q=>[q[0],q[1]-wf*(q[0]<0? -q[0]*.15 : 0)];
     const wing=[[15,-42],[8,-44.5],[-3,-40.5],[-15,-31],[-26,-20],[-34-4*tlen,-9],[-29,-10.5],[-19,-16],[-7,-21.5],[5,-26],[12,-32]].map(wl);
+    x.save(); x.globalAlpha=1-SPN; if(SPN<.98){
     x.save(); blur(1.2); x.fillStyle="rgba(10,6,4,.35)"; x.beginPath(); cmPath(x,wing.map(q=>[q[0]+.8,q[1]+1.6]),true); x.save(); x.clip(body); x.fill(); x.restore(); x.restore();   /* its shadow on the flank */
     x.fillStyle=L(C.wing); x.beginPath(); cmPath(x,wing,true); x.fill();
     x.save(); x.beginPath(); cmPath(x,wing,true); x.clip();
@@ -3669,7 +3689,8 @@ const ambient=(function(){
     if(C.bars){ x.strokeStyle=L(C.bars,.96); for(const [x0,y0,x1,y1,w] of C.kind==="finch"? [[8,-41,1,-28,2.3],[1.5,-38,-5,-25,1.7]] : [[6,-40,0,-27,2.1]]){ x.lineWidth=w; x.beginPath(); x.moveTo(...wl([x0,y0])); x.quadraticCurveTo(...wl([(x0+x1)/2+1.4,(y0+y1)/2]),...wl([x1,y1])); x.stroke(); } }   /* crisp white wing bars */
     { const g=x.createLinearGradient(0,-46,0,-10); g.addColorStop(0,"rgba(255,236,200,.14)"); g.addColorStop(1,"rgba(20,12,8,.2)"); x.fillStyle=g; x.fillRect(-60,-60,80,60); }
     x.restore();
-    leg(1.6,false);
+    } x.restore();   /* (folded wing) */
+    if(LG>.02){ x.save(); x.globalAlpha=LG; leg(1.6,false); x.restore(); }
     /* ---- the head: eye, bill, face ---- */
     const ec=hd([25.5,-48.5]), er=2.25*hs;
     if(C.ring){ x.fillStyle=A(C.ring,C.arcs? .95 : .6); if(C.arcs){ x.beginPath(); x.arc(ec[0],ec[1],er*1.55,Math.PI*1.15,Math.PI*1.85); x.arc(ec[0],ec[1],er*1.1,Math.PI*1.85,Math.PI*1.15,true); x.fill(); x.beginPath(); x.arc(ec[0],ec[1],er*1.55,Math.PI*.15,Math.PI*.85); x.arc(ec[0],ec[1],er*1.1,Math.PI*.85,Math.PI*.15,true); x.fill(); } else { x.beginPath(); x.arc(ec[0],ec[1],er*1.35,0,6.283); x.fill(); } }
@@ -3683,6 +3704,7 @@ const ambient=(function(){
       x.strokeStyle="rgba(255,255,255,.28)"; x.lineWidth=.5; x.beginPath(); x.moveTo(b0[0]+1,b0[1]+.5); x.quadraticCurveTo(cul[0],cul[1]+.6,tip[0]-1.2,tip[1]); x.stroke();
       x.strokeStyle="rgba(20,14,12,.55)"; x.lineWidth=.35; x.beginPath(); x.moveTo(...gp); x.lineTo(tip[0]-.4,tip[1]+.3); x.stroke();
       x.fillStyle="rgba(20,14,12,.45)"; const nn=hd([35.5,-49]); x.beginPath(); x.ellipse(nn[0],nn[1],.8,.4,-.2,0,6.283); x.fill(); }   /* the nostril */
+    spreadWing(true);
     x.restore(); }
   let grainC=null; let pbird=null; const pbCv=document.createElement("canvas"), pbCx=pbCv.getContext("2d");
   /* the branch: reaching in from the edge of the frame well in behind the names, so it reads as a near tree's bough with the field beyond */
@@ -3694,8 +3716,8 @@ const ambient=(function(){
       leaves:Array.from({length:16},(_,i)=>({u:.12+i*.055+rnd(-.02,.02),up:Math.random()<.55?-1:1,a:rnd(.35,1.2),l:rnd(.7,1.15),tw:rnd(-.3,.3),c:pick([[188,128,44],[164,74,30],[206,158,62],[132,118,50],[184,96,38],[150,46,28],[214,176,74]]),hole:Math.random()<.3}))};
     br.at=u=>[lerp(ex,tipx,u), lerp(ey,tipy,u)-Math.sin(u*Math.PI)*br.bend];
     const uP=rnd(.8,.88), C=Object.assign({kind},PB[kind]);   /* out toward the tip, well in from the edge of the frame */
-    const s0=[side<0? W*rnd(.75,1.15) : W*rnd(-.15,.25),-H*rnd(.08,.18)], z0=4.2;
-    pbird={kind,C,t:0,phase:"in",dur:rnd(3.2,3.8),z0,s0,z,br,uP,side,face:-side,look:0,lookT:.6,tail:0,tailUp:0,gape:0,singT:rnd(1.4,2.6),stay:rnd(12,18),flap:rnd(0,6),ph:rnd(0,6),fold:0,turnT:rnd(5,9)}; }
+    const s0=[side<0? W*rnd(.5,.66) : W*rnd(.34,.5),H*rnd(.02,.14)], z0=3;   /* in out of the sky over the field, toward the branch */
+    pbird={fcur:side,kind,C,t:0,phase:"in",dur:rnd(3.2,3.8),z0,s0,z,br,uP,side,face:-side,look:0,lookT:.6,tail:0,tailUp:0,gape:0,singT:rnd(1.4,2.6),stay:rnd(12,18),flap:rnd(0,6),ph:rnd(0,6),fold:0,turnT:rnd(5,9)}; }
   function drawBranch(br,dark,front){ const lt=dark? .42 : 1, sp=sun(), sdx=Math.sign(sp.x-(br.ex+br.tipx)/2)||1;
     const at=u=>{ const p=br.at(u), w=Math.pow(u,1.7)*br.k*H*.07+Math.sin(t*.9+u*2)*Math.pow(u,2)*H*.0025; return [p[0],p[1]+w]; }, wd=u=>lerp(H*.024,H*.0035,Math.pow(u,.75));
     ctx.save(); ctx.globalAlpha=br.sa; ctx.lineCap="round"; ctx.lineJoin="round";
@@ -3746,7 +3768,7 @@ const ambient=(function(){
       P=path(e); const vel=v3.m(path(Math.min(1,e+.01)),path(Math.max(0,e-.01))), fl=v3.n([vel[0],vel[1]*.6,vel[2]]);
       const flare=Math.max(0,(u-.72)/.28), fe=flare*flare*(3-2*flare);                                                               /* the landing flare */
       f=v3.n(v3.l(fl,v3.n([hd[0]*.35,-.95,hd[2]*.35]),fe*.85)); o.fold=0; o.amp=1+fe*.5; o.tail=fe; o.tailUp=-fe*.4; o.legs=Math.max(0,(u-.6)/.25); o.blur=1;
-      const glideNow=u<.6&&Math.sin(b.t*2.1)>.45; b.flap+=dt*(glideNow? 0 : 15+fe*9); if(glideNow){ o.amp=.12; }
+      const glideNow=u<.55&&Math.sin(b.t*2.1)>.45; b.glideNow=glideNow; b.fe=fe; b.flap+=dt*(glideNow? 0 : 15+fe*9); if(glideNow){ o.amp=.12; }
       if(u>.9) o.feet=[v3.a(grip,v3.s(bdir,-Kw*.9)),v3.a(grip,v3.s(bdir,Kw*.9))].map(q=>v3.l(v3.a(P,[0,4.1*Kw,0]),q,(u-.9)/.1)); o.bdir=bdir; o.brad=brad; o.bwPx=bwPx;
       if(u>=1){ b.phase="land"; b.tL=b.t; br.kv+=2.4*(sz0); } }
     else if(b.phase==="land"||b.phase==="perch"){ const T=b.t-(b.tL||0), ls=Math.min(1,T/.55);
@@ -3754,13 +3776,13 @@ const ambient=(function(){
       b.fold=Math.min(1,T/.5); o.fold=b.fold; b.flap+=dt*(T<.35? 22 : 0); o.amp=Math.max(0,1-T/.35)*.9;
       o.tail=Math.max(0,1-T/.6)*.8; b.tailUp+=((T<.8? Math.sin(T*9)*.35*(1-T/.8) : 0)-b.tailUp)*Math.min(1,dt*12);                    /* the tail pumps to balance */
       const bob=Math.exp(-T*5)*Math.sin(T*16)*.6; const R0=restP(Math.max(0,bob)*.5); P=R0.P; f=R0.f; o.legs=1;
-      if(b.phase==="land"&&T>.9) b.phase="perch";
+      if(b.phase==="land"&&T>.9){ b.phase="perch"; if(b.fcur!==b.face) b.turnT=rnd(.5,1.2); }   /* it lands facing the way it flew, then hops round to face the field */
       if(b.phase==="perch"){ /* sitting: quick head turns, tail flicks, singing; now and then it hops round to face the other way */
         b.lookT-=dt; if(b.lookT<=0){ b.lookT=rnd(.4,1.5); b.lookTo=pick([-.7,-.4,-.15,0,.2,.45,.7]); } b.look+=((b.lookTo||0)-b.look)*Math.min(1,dt*16);
         if(Math.random()<dt*(C.kind==="cardinal"||C.kind==="blue"? .6 : .3)) b.flick=1; b.flick=Math.max(0,(b.flick||0)-dt*5); b.tailUp=Math.sin(b.flick*Math.PI)*.9;
         b.singT-=dt; if(b.singT<=0){ b.singT=rnd(3.5,6.5); b.singing=1.4; try{ if(C.kind==="blue"&&natureSfx.bluebird) natureSfx.bluebird(b.side*.5); else natureSfx.sing&&natureSfx.sing(C.sk,b.side*.5); }catch(e){} }
         b.singing=Math.max(0,(b.singing||0)-dt); b.gape= b.singing>0? Math.abs(Math.sin(b.t*15))*.8 : 0; o.gape=b.gape; o.headUp=b.singing>0? .8 : 0;
-        b.turnT-=dt; if(b.turnT<=0&&!b.hop){ b.turnT=rnd(6,10); b.hop=.001; } if(b.hop){ b.hop+=dt/.3; if(b.hop>=1){ b.hop=0; br.kv+=.6; } }   /* a little hop in place, resettling its grip (it keeps facing in, toward the field) */
+        b.turnT-=dt; if(b.turnT<=0&&!b.hop){ b.turnT=rnd(6,10); b.hop=.001; } if(b.hop){ b.hop+=dt/.3; if(b.hop>=.5&&b.fcur!==b.face){ b.fcur=b.face; } if(b.hop>=1){ b.hop=0; br.kv+=.6; } }   /* a little hop in place, resettling its grip (it keeps facing in, toward the field) */
         if(b.hop){ const h=Math.sin(b.hop*Math.PI); P=v3.a(P,[0,-h*1.6*Kw,0]); o.fold=1-h*.25; o.legs=1; }
         o.look=b.look; o.tailUp=b.tailUp; o.fold=Math.min(o.fold,1-(b.wflick||0)); if(Math.random()<dt*.12) b.wflick=.18; b.wflick=Math.max(0,(b.wflick||0)-dt*1.2);   /* a quick wing-flick */
         if(T-0.9>b.stay){ b.phase="crouch"; b.tC=b.t; } }
@@ -3778,12 +3800,20 @@ const ambient=(function(){
     const cw=Math.ceil(W), ch=Math.ceil(H); if(pbCv.width!==cw||pbCv.height!==ch){ pbCv.width=cw; pbCv.height=ch; }
     const x=pbCx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch);
     if(P[2]<.06) return;
-    /* in the air it's the 3-D bird; once its feet are on the bough it settles into the fully painted bird, sitting side-on */
-    const onB=b.phase==="land"||b.phase==="perch"||b.phase==="crouch", Tl=b.phase==="land"? b.t-(b.tL||0) : 9, k2=onB? Math.max(0,Math.min(1,(Tl-.12)/.32)) : 0;
-    if(k2<1){ x.globalAlpha=1-k2; songbird3D(x,P,B,o,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],Kw,sunL,C); x.globalAlpha=1; }
-    if(k2>0){ const S=21*Kw*F/z/100, fs=Math.sign(hd[0])||b.face, hopY=b.hop? Math.sin(b.hop*Math.PI)*S*3 : 0;
-      x.save(); x.globalAlpha=k2; x.translate(pS[0],pS[1]-lerp(H*.024,H*.0035,Math.pow(b.uP,.75))*.42-hopY); x.rotate(Math.atan(Math.tan(tang))*.5); x.scale(fs,1);   /* lean with the slope of the bough, whichever way it runs */
-      perchBird2D(x,C,S,{t:b.t,look:b.look||0,nod:(o.headUp||0)*-.5,flick:b.phase==="perch"? Math.max(0,b.tailUp||0) : Math.max(0,(o.tailUp||0)),gape:b.gape||0,breath:Math.sin(b.t*1.9),crouch:o.crouch||0,wflick:b.wflick||0,sunSide:(Math.sign(sp.x-pS[0])||1)*fs,glow:Math.max(0,1-Math.abs(sp.x-pS[0])/(W*.5))});
+    /* one bird the whole way: the painted bird, side-on, flying in with its wings beating, flaring, gripping, folding, sitting, and leaving */
+    { const fs=b.fcur||1, ph=b.phase, crch=o.crouch||0, feetW=v3.a(P,[0,(4.1-crch*1.2)*Kw,0]), fsx=cx+feetW[0]*F/feetW[2], fsy=cy+feetW[1]*F/feetW[2], S=21*Kw*F/P[2]/100;
+      const vx=b.lx==null? fs : fsx-b.lx, vy=b.ly==null? 0 : fsy-b.ly; b.lx=fsx; b.ly=fsy; const sl=Math.max(-.6,Math.min(.6,Math.atan2(vy,Math.abs(vx)+1e-6)));
+      b.flyRot=(b.flyRot==null? .45 : b.flyRot)+((.45+sl*.55)-(b.flyRot==null? .45 : b.flyRot))*Math.min(1,dt*6);
+      let rot=0, spread=0, el=.3, legs=1, lean=Math.atan(Math.tan(tang))*.5;
+      const flapEl=()=>1.2*Math.sin(b.flap)+.3;
+      if(ph==="in"){ const fe=b.fe||0; rot=lerp(b.flyRot,-.25,fe); spread=1; el=b.glideNow? .32 : flapEl(); legs=o.legs||0; lean*=fe; }
+      else if(ph==="land"){ const T=b.t-(b.tL||0); rot=lerp(-.25,0,Math.min(1,T/.35))+Math.exp(-T*5)*Math.sin(T*16)*.06; spread=Math.max(0,1-T/.45); el= T<.35? flapEl() : lerp(.3,1.2,Math.min(1,(T-.35)/.1)); }
+      else if(ph==="perch"){ spread=(b.wflick||0)*.0; }
+      else if(ph==="crouch"){ rot=crch*.12; }
+      else if(ph==="out"){ const T=b.t-b.tO; rot=lerp(.12,b.flyRot,Math.min(1,T/.35)); spread=Math.min(1,T/.08); el=flapEl(); legs=o.legs||0; lean*=Math.max(0,1-T/.2); }
+      x.save(); x.translate(fsx,fsy); x.rotate(lean); x.scale(fs,1);
+      perchBird2D(x,C,S,{t:b.t,look:ph==="perch"? b.look||0 : 0,nod:(o.headUp||0)*-.5,flick:ph==="perch"? Math.max(0,b.tailUp||0) : Math.max(0,(o.tailUp||0)),gape:b.gape||0,breath:Math.sin(b.t*1.9),crouch:crch,wflick:b.wflick||0,
+        rot,spread,el,legs,sunSide:(Math.sign(sp.x-fsx)||1)*fs,glow:Math.max(0,1-Math.abs(sp.x-fsx)/(W*.5))});
       x.restore(); }
     const sx=cx+P[0]*F/P[2], sy=cy+P[1]*F/P[2]; b.sx=sx; b.sy=sy;
     if(b.phase!=="in"&&b.phase!=="out"){ /* its shadow on the bough */ }
