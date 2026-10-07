@@ -457,13 +457,14 @@ const ambient=(function(){
       return c; };
     const PALS=[{seed:7,w0:[150,94,56],w1:[196,148,92],w2:[218,182,128],v:[110,66,40],e:[104,58,36],s:[136,74,46]},{seed:19,w0:[160,74,52],w1:[200,120,82],w2:[222,170,128],v:[120,56,40],e:[112,48,34],s:[146,64,44]}];
     samSpr=PALS.map(pal=>{ const base=paint(pal,0,false), h1=paint(pal,.35,false), h2=paint(pal,.65,false), glow=paint(pal,0,true), bl=document.createElement("canvas"); bl.width=320; bl.height=120; const bx=bl.getContext("2d"); bx.filter="blur(7px)"; bx.drawImage(base,0,0);
-      return {base:mipChain(base),h1:mipChain(h1),h2:mipChain(h2),glow:mipChain(glow),blur:mipChain(bl)}; });
+      const disc=document.createElement("canvas"); disc.width=disc.height=64; { const dx=disc.getContext("2d"), g=dx.createRadialGradient(32,32,3,32,32,32), c0=pal.w1; g.addColorStop(0,rgb(c0,0)); g.addColorStop(.55,rgb(c0,.2)); g.addColorStop(.92,rgb(c0,.14)); g.addColorStop(1,rgb(c0,0)); dx.fillStyle=g; dx.fillRect(0,0,64,64); }   /* the blur of the whirling wing, made once */
+      return {base:mipChain(base),h1:mipChain(h1),h2:mipChain(h2),glow:mipChain(glow),blur:mipChain(bl),disc}; });
     return samSpr; }
   function newSamara(fresh){ const f=FOC(), vp=vanish(), D=Math.random()<.7? .3+Math.pow(Math.random(),1.2)*1.7 : 2+Math.random()*5;   /* most come down from the trees right over you; a few drift far out over the field */
     const s={D,X:rnd(-1.2,1.2)*(W/2/f)*D,Y:0,vY:rnd(.042,.07),vX:rnd(.012,.06),vD:rnd(-.05,.08),th:rnd(0,6.283),om:(Math.random()<.5? -1 : 1)*rnd(19,32),cone:rnd(.16,.32),pitch:rnd(.5,.78),
       L:rnd(.015,.02),pal:Math.random()<.3? 1 : 0,ph:rnd(0,6.283),wob:rnd(.004,.012)};
     s.Y= fresh? ((rnd(-.05,.95)*H-vp[1])/f)*D : ((rnd(-120,-30)-vp[1])/f)*D; return s; }
-  function stepSamaras(dt){ const n=MOBILE()? 22 : 54; while(SAMS.length<n) SAMS.push(newSamara(true)); if(SAMS.length>n) SAMS.length=n;
+  function stepSamaras(dt){ const n=MOBILE()? 18 : 42; while(SAMS.length<n) SAMS.push(newSamara(true)); if(SAMS.length>n) SAMS.length=n;
     const f=FOC(), vp=vanish(), gust=.6+.4*Math.sin(t*.13)+.25*Math.sin(t*.41+1);
     for(let i=0;i<SAMS.length;i++){ const s=SAMS[i]; s.ph+=dt; s.th+=s.om*dt; s.Y+=s.vY*(.9+.2*Math.sin(s.ph*1.7))*dt; s.X+=(s.vX*gust+Math.sin(s.ph*.9)*s.wob)*dt; s.D+=s.vD*dt;
       const sx=vp[0]+s.X*f/s.D, sy=vp[1]+s.Y*f/s.D; s.sx=sx; s.sy=sy;
@@ -476,11 +477,10 @@ const ambient=(function(){
       const set=samSpr[s.pal], spr= air>.55? set.h2 : air>.2? set.h1 : set.base;
       const el=Math.max(.34,Math.min(.9,Math.abs(s.Y)/Math.max(.05,s.D)+s.cone*1.4));   /* how much of the spin disc we see, looking up at it */
       /* the blur of the whirling wing: a faint disc swept out round the seed */
-      { const g=ctx.createRadialGradient(s.sx,s.sy,Lpx*.1,s.sx,s.sy,Lpx*1.05); const c0=mixv(s.pal? [196,120,84] : [196,148,92],[206,178,138],air*.7); g.addColorStop(0,rgb(c0,0)); g.addColorStop(.55,rgb(c0,.2*fade)); g.addColorStop(.92,rgb(c0,.14*fade)); g.addColorStop(1,rgb(c0,0));
-        ctx.globalAlpha=1; ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Lpx*1.05,Lpx*1.05*el,0,0,6.283); ctx.fill(); }
+      { const dc=set.disc; ctx.globalAlpha=fade*(1-air*.5); ctx.drawImage(dc,s.sx-Lpx*1.05,s.sy-Lpx*1.05*el,Lpx*2.1,Lpx*2.1*el); }
       /* the wing itself, caught at a few angles through the turn as the eye sees it: sharp now, ghosted just behind */
       const n=mipPick(spr,Lpx/SAM_L), R=Math.pow(2,n), im=spr[n];
-      for(const [lag,al] of [[.55,.16],[.27,.32],[0,.82]]){ const th=s.th-Math.sign(s.om)*lag, ct=Math.cos(th), st=Math.sin(th), cp=Math.cos(s.pitch), spp=Math.sin(s.pitch);
+      for(const [lag,al] of (Lpx>14? [[.5,.22],[.25,.36],[0,.82]] : [[.4,.3],[0,.85]])){ const th=s.th-Math.sign(s.om)*lag, ct=Math.cos(th), st=Math.sin(th), cp=Math.cos(s.pitch), spp=Math.sin(s.pitch);
         const A=[ct*Lpx,(-Math.sin(s.cone)*el*0-Math.sin(s.cone))*Lpx+st*Lpx*el*.0], Ax=ct*Lpx, Ay=-Math.sin(s.cone)*Lpx+st*Lpx*el, Bx=-st*cp*Lpx*(SAM_C/SAM_L)*1.8, By=(-spp+ct*cp*el)*Lpx*(SAM_C/SAM_L)*1.8;
         const bm=Math.hypot(Bx,By), bmin=Lpx*(SAM_C/SAM_L)*1.8*.55; let Bx2=Bx, By2=By; if(bm<bmin){ const sg=By<0? -1 : 1; By2=sg*Math.sqrt(Math.max(0,bmin*bmin-Bx*Bx)); }   /* the papery blade is never quite edge-on: it is pitched and cupped */
         const a=Ax/SAM_L, b=Ay/SAM_L, c=Bx2/SAM_C, d=By2/SAM_C;
