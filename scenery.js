@@ -1639,8 +1639,8 @@ const ambient=(function(){
       for(let yy=Math.max(0,Math.floor((y0-F.y)/rows)*rows); yy<Math.min(F.h,y0+h-F.y); yy+=rows){ const hgt=1-yy/F.h, lean=Math.pow(hgt,1.7);
         for(let c=0;c<cols;c++){ const cx0=F.x+c*cw; if(cx0>x0+w+10||cx0+cw<x0-10) continue;
           const ph=t*1.05+o0-c*(o0? .3 : .32), gust=.55*Math.sin(ph)+.3*Math.sin(ph*2.3+1)+.15*Math.sin(ph*5.1+2);
-          for(let sx=0;sx<cw;sx+=6){ const px=cx0+sx, near=Math.exp(-Math.pow((px-cx)/(w*.3),2)), dx=((gust*base+.35)*amp+Math.sin(t*fr+c*1.7+yy*.05)*wob)*lean+shake*near*Math.sin(t*15+px*.21+yy*.11)*(.4+.6*(1-(yy+F.y-y0)/h));
-            x.drawImage(F.c,c*cw+sx,yy,Math.min(6,cw-sx),rows,px+dx-x0,F.y+yy-y0,Math.min(6,cw-sx),rows); } } } }
+          for(let sx=0;sx<cw;sx+=6){ const px=cx0+sx, near=Math.exp(-Math.pow((px-cx)/(w*.3),2)), dx=((gust*base+.35)*amp+Math.sin(t*fr+c*1.7+yy*.05)*wob)*lean+shake*near*Math.sin(t*9+px*.035+yy*.04)*(.4+.6*(1-(yy+F.y-y0)/h));
+            const sw2=Math.min(10,F.w-(c*cw+sx)); if(sw2>0) x.drawImage(F.c,c*cw+sx,yy,sw2,rows+1,px+dx-x0-1,F.y+yy-y0,sw2,rows+1); } } } }   /* strips overlap, and the shake varies smoothly across them, so no slivers or seams open up */
     x.globalCompositeOperation="destination-in"; const g=x.createLinearGradient(0,0,0,Math.min(h,26)); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.55,"rgba(0,0,0,.75)"); g.addColorStop(1,"#000"); x.fillStyle=g; x.fillRect(0,0,w,h);
     const g2=x.createLinearGradient(0,0,w,0); g2.addColorStop(0,"rgba(0,0,0,0)"); g2.addColorStop(.18,"#000"); g2.addColorStop(.82,"#000"); g2.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=g2; x.fillRect(0,0,w,h);
     x.globalCompositeOperation="source-over"; ctx.drawImage(bpC,0,0,w,h,x0,y0,w,h); }
