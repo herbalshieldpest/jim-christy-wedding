@@ -2841,11 +2841,19 @@ const ambient=(function(){
   }
   /* the luna moth in true 3D: each wing is a flat painted sheet hinged at the body, beating up and down about the body's axis,
      the body pitched up as moths fly, heading the way it's moving, all projected with perspective */
-  const lunaSpr={}; const LR=6, LX0=0, LY0=-16;
+  const lunaSpr={}; const LR=18, LX0=0, LY0=-16;
   /* luna moths aren't all alike: some fresh and finely marked, some paler and worn soft, some a deeper green with long sweeping tails */
   const LUNAV=[{}, {g:[208,222,170],g2:[192,212,160],rim:[232,228,186],vein:.35,eye:.75,tail:.85,cw:.7}, {g:[168,206,150],g2:[150,192,136],costa:[118,64,96],vein:1.3,eye:1.2,tail:1.25,cw:1.2}, {g:[200,214,140],g2:[184,204,132],rim:[236,226,160],vein:.7,eye:.9,tail:1.05}];
   function lunaSprite(v){ v=v||0; if(lunaSpr[v]) return lunaSpr[v]; const c=document.createElement("canvas"); c.width=31*LR; c.height=60*LR; const x=c.getContext("2d");
-    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true,LUNAV[v]); return lunaSpr[v]=mipChain(c); }
+    x.setTransform(LR,0,0,LR,-LX0*LR,-LY0*LR); lunaWings(x,0,true,LUNAV[v]);
+    /* the detail that only shows up close: thousands of overlapping pale-green scales, a net of faint cross-veins, the downy hair at the wing root */
+    let sd=v*977+13; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+    x.globalCompositeOperation="source-atop";
+    for(let i=0;i<7000;i++){ const px=.5+RN()*28, py=-10+RN()*52, a=Math.atan2(py,px), k=RN(); x.fillStyle= k<.42? `rgba(40,60,30,${(.04+RN()*.05).toFixed(3)})` : `rgba(250,255,230,${(.05+RN()*.08).toFixed(3)})`; x.beginPath(); x.ellipse(px,py,.2,.11,a,0,6.283); x.fill(); }
+    x.strokeStyle="rgba(110,136,90,.18)"; x.lineWidth=.12; for(let i=0;i<60;i++){ const px=2+RN()*22, py=-7+RN()*36, a=RN()*6.283, l=.8+RN()*1.4; x.beginPath(); x.moveTo(px,py); x.quadraticCurveTo(px+Math.cos(a+.6)*l*.5,py+Math.sin(a+.6)*l*.5,px+Math.cos(a)*l,py+Math.sin(a)*l); x.stroke(); }
+    for(let i=0;i<220;i++){ const a=-1.4+RN()*2.9, l=RN()*4.2, px=1+Math.cos(a)*l*.5, py=-1+Math.sin(a)*l*.6; x.strokeStyle=`rgba(${RN()<.5?"246,244,232":"214,226,190"},${(.25+RN()*.35).toFixed(2)})`; x.lineWidth=.1; x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(a)*(.6+RN()*.9),py+Math.sin(a)*(.6+RN()*.9)); x.stroke(); }
+    x.globalCompositeOperation="source-over";
+    return lunaSpr[v]=mipChain(c); }
   function luna3D(x,P,V,flap,proj,o){ o=o||{};
     const nrm=v=>{ const l=Math.hypot(v[0],v[1],v[2])||1; return [v[0]/l,v[1]/l,v[2]/l]; }, crs=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
     const v=nrm(V), f=nrm([v[0],v[1]-.55,v[2]]), r=nrm(crs(f,[0,-1,0])), u=crs(r,f), K=.0068*(o.k||1);               /* nose pitched up into the climb */
@@ -2861,9 +2869,14 @@ const ambient=(function(){
     wingAt(far);
     /* white furry body, maroon band at the shoulders, feathery antennae */
     const hd=S(W3(9,0,0)), th=S(W3(2,0,0)), ab=S(W3(-8,0,0)), wd=Math.max(1,Math.hypot(...[0,1].map(i=>S(W3(2,2.6,0))[i]-th[i])));
-    x.lineCap="round"; x.strokeStyle=rgb([222,220,204]); x.lineWidth=wd*1.5; x.beginPath(); x.moveTo(ab[0],ab[1]); x.lineTo(th[0],th[1]); x.stroke();
-    x.strokeStyle=rgb([244,242,230]); x.lineWidth=wd*2; x.beginPath(); x.moveTo(th[0],th[1]); x.lineTo(hd[0]*.4+th[0]*.6,hd[1]*.4+th[1]*.6); x.stroke();
+    x.lineCap="round"; for(let i=0;i<6;i++){ const a0=1-i*1.55, p0=S(W3(a0,0,0)), p1=S(W3(a0-1.5,0,0)); x.strokeStyle=rgb(i%2? [214,212,196] : [230,228,214]); x.lineWidth=wd*(2.1-i*.22); x.beginPath(); x.moveTo(p0[0],p0[1]); x.lineTo(p1[0],p1[1]); x.stroke(); }   /* the plump abdomen, ring by ring */
+    x.strokeStyle=rgb([244,242,230]); x.lineWidth=wd*2.6; x.beginPath(); x.moveTo(th[0],th[1]); x.lineTo(hd[0]*.45+th[0]*.55,hd[1]*.45+th[1]*.55); x.stroke();   /* the big furry thorax */
     x.strokeStyle=rgb([196,160,104]); x.lineWidth=Math.max(.6,wd*.5); for(const sd of [-1,1]){ const a0=S(W3(6,sd*.8,0)), a1=S(W3(13,sd*4,2.5)); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.stroke(); }
+    if(wd>1.5){ /* up close: the long white fur all over the body, the pinkish legs folded under, the dark eyes, and the broad feathered antennae */
+      x.lineWidth=Math.max(.3,wd*.1); for(let i=0;i<110;i++){ const a=Math.abs(Math.sin(i*12.9898)*43758.5453%1), b=Math.sin(i*78.233)*12345.678%1, ax=-8+a*15, sd2=b<0? -1 : 1, rr=ax>1? 2.3 : 1.7*(1-(1-ax)/14), p0=S(W3(ax,sd2*rr*.8,.3)), p1=S(W3(ax-.5,sd2*(rr+.4+Math.abs(b)*.8),.5+a*.8)); x.strokeStyle=i%4? "rgba(248,246,236,.75)" : "rgba(214,212,196,.7)"; x.beginPath(); x.moveTo(p0[0],p0[1]); x.lineTo(p1[0],p1[1]); x.stroke(); }
+      x.strokeStyle=rgb([196,140,140]); x.lineWidth=Math.max(.35,wd*.24); for(const sd2 of [-1,1]) for(const [a,k] of [[4.4,1],[2.8,.95],[1.2,.9]]){ const p0=S(W3(a,sd2*1.2,-.9)), p1=S(W3(a+.5,sd2*2.2*k,-1.8)), p2=S(W3(a-.4,sd2*2.5*k,-2.8)); x.beginPath(); x.moveTo(p0[0],p0[1]); x.lineTo(p1[0],p1[1]); x.lineTo(p2[0],p2[1]); x.stroke(); }
+      for(const sd2 of [-1,1]){ const e=S(W3(8.6,sd2*.9,.3)); x.fillStyle="rgb(36,26,22)"; x.beginPath(); x.arc(e[0],e[1],Math.max(.4,wd*.3),0,6.283); x.fill(); }
+      x.strokeStyle="rgba(206,172,116,.85)"; x.lineWidth=Math.max(.25,wd*.08); for(const sd2 of [-1,1]) for(let j=1;j<12;j++){ const u2=j/12, c0=[6+7*u2,sd2*(.8+3.2*u2),2.5*u2], w2=Math.sin(u2*Math.PI)*1.3+.2, q0=S(W3(...c0)), q1=S(W3(c0[0]+.3,c0[1]+sd2*w2*.7,c0[2]+w2)), q2=S(W3(c0[0]+.3,c0[1]-sd2*w2*.5,c0[2]-w2*.3)); x.beginPath(); x.moveTo(q1[0],q1[1]); x.lineTo(q0[0],q0[1]); x.lineTo(q2[0],q2[1]); x.stroke(); } }
     wingAt(-far);
   }
   function mothWings(x,sp,flap){
@@ -3556,7 +3569,7 @@ const ambient=(function(){
   /* ---- monarch butterflies: a few drifting over the field and the lawn in 3D, flapping and then sailing on wings held in a shallow V ---- */
   function mipChain(c){ const out=[c]; let cur=c; for(let i=0;i<5&&cur.width>8;i++){ const n=document.createElement("canvas"); n.width=Math.max(1,Math.round(cur.width/2)); n.height=Math.max(1,Math.round(cur.height/2)); const x=n.getContext("2d"); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high"; x.drawImage(cur,0,0,n.width,n.height); out.push(n); cur=n; } return out; }
   function mipPick(chain,pxPerSprPx){ let n=0; while(n<chain.length-1&&pxPerSprPx*Math.pow(2,n)<.75) n++; return n; }
-  const MR=14, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
+  const MR=24, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
   /* ---- the other butterflies of these hills, painted on the same wing frame as the monarch: each wing an outline, borders laid inside it, spot rows stepped in from the margin ---- */
   const BFLY={monarch:{k:1,name:"Monarch butterfly"},tiger:{k:1.18,name:"Eastern tiger swallowtail",body:[30,26,18]},spice:{k:1.08,name:"Spicebush swallowtail",body:[18,18,20]},frit:{k:1.02,name:"Great spangled fritillary",body:[60,40,24]},
     admiral:{k:.84,name:"Red admiral",body:[24,20,18]},cloak:{k:1.06,name:"Mourning cloak",body:[40,24,20]},sulphur:{k:.7,name:"Clouded sulphur",body:[120,110,60]},diana:{k:1.12,name:"Diana fritillary",body:[40,30,24]},rosy:{k:.72,name:"Rosy maple moth",body:[236,206,90]}};
@@ -3616,8 +3629,11 @@ const ambient=(function(){
     const vein=(a,S,f,col,w0,w1)=>{ const b=at(S,f), m=[(a[0]+b[0])/2+(b[1]-a[1])*.06,(a[1]+b[1])/2-(b[0]-a[0])*.06], N=8; x.strokeStyle=C(col);
       for(let i=0;i<N;i++){ const t0=i/N, t1=(i+1)/N, q=t=>{ const u=1-t; return [u*u*a[0]+2*u*t*m[0]+t*t*b[0],u*u*a[1]+2*u*t*m[1]+t*t*b[1]]; }, p0=q(t0), p1=q(t1); x.lineWidth=w0+(w1-w0)*(t0+t1)/2; x.beginPath(); x.moveTo(p0[0],p0[1]); x.lineTo(p1[0],p1[1]); x.stroke(); } };
     const veins=(P,V,cell,col,w0,w1,cw)=>clip(P,()=>{ for(const v of V) vein(v[0],v[1],v[2],col,w0,w1); x.strokeStyle=C(col); x.lineWidth=cw==null? w0*.8 : cw; x.beginPath(); x.moveTo(cell[0][0],cell[0][1]); x.lineTo(cell[1][0],cell[1][1]); x.lineTo(cell[2][0],cell[2][1]); x.lineTo(cell[3][0],cell[3][1]); x.stroke(); });
+    /* the scales themselves: thousands of tiny overlapping tiles, laid in rows fanning out from the body, each catching the light a little differently */
+    const tiles=(amt,light)=>{ const N=Math.round(5200*amt); for(let i=0;i<N;i++){ const px=.6+RN()*24, py=-13+RN()*35, a=Math.atan2(py,px), k=RN();
+        x.fillStyle= k<.45? `rgba(0,0,0,${(.04+RN()*.06).toFixed(3)})` : `rgba(${light||"255,250,235"},${(.035+RN()*.07).toFixed(3)})`; x.beginPath(); x.ellipse(px,py,.17,.1,a,0,6.283); x.fill(); } };
     /* the fine grain of the scales, laid in rows out from the body, and the soft hair at the wing root */
-    const scales=(P,amt,light)=>clip(P,()=>{ const N=Math.round(900*amt); x.lineWidth=.11; for(let i=0;i<N;i++){ const px=RN()*24, py=-13+RN()*35, a=Math.atan2(py,px)+(RN()-.5)*.3, l=.25+RN()*.35, k=RN();
+    const scales=(P,amt,light)=>clip(P,()=>{ tiles(amt,light); const N=Math.round(900*amt); x.lineWidth=.11; for(let i=0;i<N;i++){ const px=RN()*24, py=-13+RN()*35, a=Math.atan2(py,px)+(RN()-.5)*.3, l=.25+RN()*.35, k=RN();
         x.strokeStyle= k<.5? `rgba(0,0,0,${(.05+RN()*.07).toFixed(3)})` : `rgba(${light||"255,250,235"},${(.04+RN()*.08).toFixed(3)})`; x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l); x.stroke(); } });
     const hair=(P,col,r)=>clip(P,()=>{ for(let i=0;i<160;i++){ const a=-1.2+RN()*2.6, l=RN()*r, px=.8+Math.cos(a)*l*.4, py=-.6+Math.sin(a)*l*.5; x.strokeStyle=C(col,.25+RN()*.3); x.lineWidth=.12; x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(a)*(.6+RN()),py+Math.sin(a)*(.6+RN())); x.stroke(); } });
     /* the fringe of fine scales along the outer edge: chequered where it should be */
@@ -3735,6 +3751,11 @@ const ambient=(function(){
     x.lineCap="round"; for(let i=0;i<6;i++){ const a0=-1.2-i*1.45; seg2(a0,a0-1.3,1.7-i*.18,mulv(bc,i%2? .8 : 1.15)); }   /* the abdomen, ring by ring */
     seg2(3.2,-1.2,2.3,bc); seg2(2.6,-.6,1.4,mixv(bc,[150,130,110],.25)); seg2(5,4.2,1.7,bc);   /* thorax, its fur catching the light, and the head */
     if(kind==="monarch"||!kind){ x.fillStyle="rgba(240,236,224,.9)"; for(const [a,b] of [[2.4,.5],[1.2,-.6],[4.6,.4],[2.2,-.9]]){ const q=S(W3(a,b,.6)); x.beginPath(); x.arc(q[0],q[1],Math.max(.25,wd*.22),0,6.283); x.fill(); } }   /* the monarch's white-spotted thorax and head */
+    if(wd>1.6){ /* close enough to see the little things: the hairs on the thorax, the legs tucked under it, the eyes and the coiled tongue */
+      const hc=mixv(bc,[200,180,150],.3); x.lineWidth=Math.max(.3,wd*.08); for(let i=0;i<34;i++){ const a=Math.sin(i*12.9898)*43758.5453%1, b=Math.sin(i*78.233)*12345.678%1, ax=-1+Math.abs(a)*4.4, sd=b<0? -1 : 1, p0=S(W3(ax,sd*Math.abs(b)*.9,.3)), p1=S(W3(ax-.4,sd*(1.1+Math.abs(b)*.6),.9+Math.abs(a)*.5)); x.strokeStyle=rgb(i%3? bc : hc,.7); x.beginPath(); x.moveTo(p0[0],p0[1]); x.lineTo(p1[0],p1[1]); x.stroke(); }
+      x.strokeStyle=rgb(mulv(bc,.8)); x.lineWidth=Math.max(.35,wd*.2); for(const sd of [-1,1]) for(const [a,k] of [[2.6,1],[1.2,.9],[-.2,.8]]){ const p0=S(W3(a,sd*.6,-.6)), p1=S(W3(a+.7,sd*1.4*k,-1.4)), p2=S(W3(a-.3,sd*1.7*k,-2.2)); x.beginPath(); x.moveTo(p0[0],p0[1]); x.lineTo(p1[0],p1[1]); x.lineTo(p2[0],p2[1]); x.stroke(); }
+      for(const sd of [-1,1]){ const e=S(W3(5.3,sd*.75,.2)); x.fillStyle="rgb(14,12,12)"; x.beginPath(); x.arc(e[0],e[1],Math.max(.4,wd*.42),0,6.283); x.fill(); x.fillStyle="rgba(255,255,255,.5)"; x.beginPath(); x.arc(e[0]-wd*.12,e[1]-wd*.14,Math.max(.2,wd*.12),0,6.283); x.fill(); }
+      const pc=S(W3(5.4,0,-1.1)), pr=Math.max(.6,wd*.5); x.strokeStyle=rgb(mixv(bc,[60,40,30],.4)); x.lineWidth=Math.max(.25,wd*.09); x.beginPath(); for(let i=0;i<=22;i++){ const a=i/22*Math.PI*3.4, r=pr*(1-i/26); i? x.lineTo(pc[0]+Math.cos(a)*r,pc[1]+Math.sin(a)*r) : x.moveTo(pc[0]+r,pc[1]); } x.stroke(); }
     x.strokeStyle=rgb(bc); x.lineWidth=Math.max(.35,wd*.28); for(const sd of [-1,1]){ const a0=S(W3(5.2,sd*.5,.4)), a1=S(W3(12.5,sd*3.6,1.6)); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.stroke(); x.fillStyle=rgb(bc); x.beginPath(); x.arc(a1[0],a1[1],Math.max(.4,wd*.5),0,6.283); x.fill(); }
     wingAt(-far);
   }
