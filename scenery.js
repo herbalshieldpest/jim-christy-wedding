@@ -4320,9 +4320,9 @@ const ambient=(function(){
     const LEGS=[[.32,6,6.2,6.4],[.62,5.4,5.3,5.5],[1.75,3.4,3.2,3],[2.55,5.3,5.5,6]];
     for(const sd of [-1,1]) LEGS.forEach(([a0,l1,l2,l3],i)=>{ const st=walking? Math.sin(legPh+i*1.6+(sd>0? 0 : Math.PI))*.22 : Math.sin(legPh*.3+i)*.02, a=(a0+st)*sd, bend=(i<2? .55 : i===2? .9 : -.5)*sd;
       const p0=[Math.sin(a)*1.4,2.8+Math.cos(a)*1.4], d1=[Math.sin(a+bend*.6),Math.cos(a+bend*.6)], p1=[p0[0]+d1[0]*l1,p0[1]+d1[1]*l1], d2=[Math.sin(a-bend*.15),Math.cos(a-bend*.15)], p2=[p1[0]+d2[0]*l2,p1[1]+d2[1]*l2], d3=[Math.sin(a-bend*.5),Math.cos(a-bend*.5)], p3=[p2[0]+d3[0]*l3,p2[1]+d3[1]*l3];
-      const seg=(a,b,w0,w1,c)=>{ x.strokeStyle=c; x.lineWidth=(w0+w1)/2*1.35; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.strokeStyle=`rgba(255,214,150,${(.45*lit).toFixed(2)})`; x.lineWidth=(w0+w1)/2*.4; x.beginPath(); x.moveTo(a[0],a[1]-.15); x.lineTo(b[0],b[1]-.15); x.stroke(); };   /* each leg segment with the sun catching its upper edge */
+      const seg=(a,b,w0,w1,c)=>{ x.strokeStyle="rgba(10,6,4,.55)"; x.lineWidth=(w0+w1)/2*2.2; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.strokeStyle=c; x.lineWidth=(w0+w1)/2*1.7; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.strokeStyle=`rgba(255,226,170,${(.7*lit).toFixed(2)})`; x.lineWidth=(w0+w1)/2*.5; x.beginPath(); x.moveTo(a[0],a[1]-.15); x.lineTo(b[0],b[1]-.15); x.stroke(); };   /* each leg segment with the sun catching its upper edge */
       seg(p0,p1,.8,.65,L([186,92,40])); seg(p1,[lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],.6,.52,L([118,72,36])); seg([lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],p2,.52,.46,L([236,188,58])); seg(p2,p3,.42,.22,L([128,84,42]));   /* reddish femur, black and yellow-banded tibia, black tarsus */
-      x.fillStyle=L([30,24,18]); for(const q of [p1,p2]){ x.beginPath(); x.arc(q[0],q[1],.34,0,6.283); x.fill(); }
+      x.fillStyle=L([30,24,18]); for(const q of [p1,p2]){ x.beginPath(); x.arc(q[0],q[1],.46,0,6.283); x.fill(); x.fillStyle=`rgba(255,236,190,${(.6*lit).toFixed(2)})`; x.beginPath(); x.arc(q[0]-.12,q[1]-.15,.17,0,6.283); x.fill(); x.fillStyle=L([30,24,18]); }   /* glossy knee joints */
       if(sc>1.4){ x.strokeStyle=rgb(mulv([60,50,40],lit),.6); x.lineWidth=.08; for(let k=0;k<6;k++){ const u=(k+.5)/6, q=[lerp(p1[0],p3[0],u),lerp(p1[1],p3[1],u)]; x.beginPath(); x.moveTo(q[0],q[1]); x.lineTo(q[0]+d2[1]*.5*sd,q[1]-d2[0]*.5*sd); x.stroke(); } } });   /* fine spines along the legs, when she's close */
     /* the abdomen: egg-shaped, broadest near the front */
     const ab=new Path2D(); ab.moveTo(0,.4); ab.bezierCurveTo(3.7,.2,3.9,-4.6,2.4,-8.4); ab.bezierCurveTo(1.2,-10.6,-1.2,-10.6,-2.4,-8.4); ab.bezierCurveTo(-3.9,-4.6,-3.7,.2,0,.4); ab.closePath();
@@ -4333,11 +4333,14 @@ const ambient=(function(){
     const sh=x.createRadialGradient(-sunS*1.4,-5.4,.4,0,-4.6,5.6); sh.addColorStop(0,"rgba(255,246,220,.28)"); sh.addColorStop(.45,"rgba(0,0,0,0)"); sh.addColorStop(1,"rgba(0,0,0,.5)"); x.fillStyle=sh; x.fillRect(-5,-12,10,13);   /* round, glossy */
     x.restore();
     x.save(); x.clip(ab); x.strokeStyle=`rgba(255,200,120,${(.55*lit).toFixed(2)})`; x.lineWidth=.55; x.translate(sunS*.35,0); x.stroke(ab); x.restore();   /* the warm rim where the low sun catches her edge */
-    x.fillStyle="rgba(255,250,236,.35)"; x.beginPath(); x.ellipse(-sunS*1.1,-5.8,.3,.55,.3,0,6.283); x.fill();   /* a glint of light on the glossy back */
+    { const hg=x.createRadialGradient(-sunS*1.2,-6.2,0,-sunS*1.2,-6.2,2.2); hg.addColorStop(0,"rgba(255,250,236,.55)"); hg.addColorStop(.35,"rgba(255,240,210,.18)"); hg.addColorStop(1,"rgba(255,240,210,0)"); x.save(); x.clip(ab); x.fillStyle=hg; x.fillRect(-5,-12,10,13); x.restore(); }
+    x.fillStyle="rgba(255,252,240,.8)"; x.beginPath(); x.ellipse(-sunS*1.15,-6.4,.28,.6,.3,0,6.283); x.fill();   /* the bright spot of sky on her glossy back, and its soft sheen round it */
+    x.save(); x.clip(ab); x.strokeStyle="rgba(0,0,0,.35)"; x.lineWidth=1.4; x.translate(-sunS*.5,.4); x.stroke(ab); x.restore();   /* her shadowed side */   /* a glint of light on the glossy back */
     /* the cephalothorax: silver, furred, with the dark eye-cluster at the front */
     const cg=x.createRadialGradient(-.5,2.2,.2,0,2.9,2.6); cg.addColorStop(0,L([206,204,196])); cg.addColorStop(.7,L([150,148,140])); cg.addColorStop(1,L([90,86,80])); x.fillStyle=cg; x.beginPath(); x.ellipse(0,2.9,2.05,2.35,0,0,6.283); x.fill();
     x.strokeStyle=rgb(mulv([246,244,236],lit),.5); x.lineWidth=.1; for(let i=0;i<16;i++){ const aa=i/16*6.283; x.beginPath(); x.moveTo(Math.cos(aa)*1.4,2.9+Math.sin(aa)*1.7); x.lineTo(Math.cos(aa)*2.3,2.9+Math.sin(aa)*2.6); x.stroke(); }   /* the silky hairs */
     x.fillStyle=L([28,22,18]); x.beginPath(); x.ellipse(0,4.8,.7,.42,0,0,6.283); x.fill();
+    x.fillStyle="rgba(255,255,250,.55)"; x.beginPath(); x.ellipse(-sunS*.6,2.2,.45,.7,.2,0,6.283); x.fill(); for(const e of [-.35,.35]){ x.fillStyle="rgba(255,255,255,.7)"; x.beginPath(); x.arc(e,4.65,.12,0,6.283); x.fill(); }   /* light on the silvery carapace, and the glint of her eyes */
     /* set back into the air of the photo */
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop"; x.fillStyle=rgb(haze,.16); x.fillRect(0,0,S*2,S*2); x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=A; ctx.translate(cx,cy); ctx.rotate(ang); ctx.filter="none"; ctx.drawImage(spC,0,0,S*2,S*2,-S,-S,S*2,S*2); ctx.restore(); ctx.filter="none"; }
@@ -4391,7 +4394,7 @@ const ambient=(function(){
     const torn=(th,r)=>{ if(!w.tear) return false; const du=Math.cos(th)*r-w.tear[0], dv=Math.sin(th)*r-w.tear[1]; return du*du+dv*dv<.09; };   /* where the bird tore through */
     /* the threads: almost invisible silk, except where a run of it turns square to the low sun and lights up, so the web shows as a soft cross of
        light through the spokes and spiral rather than as a drawn net */
-    const sunPerp=sunA+Math.PI/2, bins=[[],[],[],[]], put=(q0,q1,dir)=>{ const g=Math.pow(Math.abs(Math.cos(dir-sunPerp)),10), k=g>.6? 3 : g>.25? 2 : g>.06? 1 : 0; bins[k].push(q0,q1); };
+    const sunPerp=sunA+Math.PI/2+Math.sin(w.t*.55)*.45+Math.sin(w.t*1.3)*.15, bins=[[],[],[],[]], hub=P(0,0), put=(q0,q1,dir)=>{ const rr=Math.hypot(q0[0]-hub[0],q0[1]-hub[1])/R, rip=.55+.45*Math.sin(w.t*2.4-rr*9+dir*2), g=Math.pow(Math.abs(Math.cos(dir-sunPerp)),8)*(.5+.6*rip), k=g>.55? 3 : g>.22? 2 : g>.05? 1 : 0; bins[k].push(q0,q1); };   /* the web shimmers: the light slides across the silk as it sways, rippling out from the hub */
     for(let i=0;i<30;i++){ const th=i/30*6.283; let rEnd=w.rim[i]; if(w.tear){ for(let r=.1;r<rEnd;r+=.05) if(torn(th,r)){ rEnd=r; break; } }
       let r0=.05; for(let s2=0;s2<4;s2++){ const r1=r0+(rEnd-r0)/(4-s2), q0=P(Math.cos(th)*r0,Math.sin(th)*r0), q1=P(Math.cos(th)*r1,Math.sin(th)*r1); put(q0,q1,Math.atan2(-(q1[1]-q0[1]),q1[0]-q0[0])); r0=r1; }
       if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); bins[1].push(o,[back[0]-R*.02,back[1]+R*.2]); } }
