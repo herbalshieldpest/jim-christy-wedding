@@ -3584,6 +3584,106 @@ const ambient=(function(){
     wings(-farS);
     return W3(8.4,0,.8);
   }
+  /* ---- the perched songbird, painted the way a bird painter builds one up: a single flowing silhouette from the crown down the back to the tail and
+     round under the belly and up the breast to the chin, so head and body are one bird; the colour laid in soft-edged zones within it; the folded wing
+     as its feather groups (scaly lesser coverts, a row of greater coverts, the tertials, the long primaries crossing the rump); the tail; the legs and
+     toes gripping the bough; the eye and the bill; then the form light, the feather texture and the air. Units: 100 = bill tip to tail tip, feet at 0,0,
+     facing right; y up is negative. ---- */
+  const SPP={   /* each species' shape: head size, bill (length, depth, conical), tail length, crest, body fullness */
+    robin:{head:1,bl:11,bd:3.2,cone:0,tail:1,full:1.06,upright:1},
+    blue:{head:1.06,bl:8,bd:3,cone:0,tail:.86,full:1.04,upright:.9},
+    cardinal:{head:1.04,bl:8.5,bd:6.4,cone:1,tail:1.2,full:1,crest:1,upright:.95},
+    bunting:{head:1.04,bl:7,bd:4.6,cone:1,tail:.92,full:1,upright:.95},
+    tanager:{head:1,bl:7.6,bd:4.8,cone:.7,tail:.9,full:1.04,upright:.9},
+    finch:{head:1.08,bl:6.6,bd:4.8,cone:1,tail:.88,full:1.08,upright:.95,notch:1},
+    oriole:{head:.98,bl:10.5,bd:3.6,cone:.3,tail:1.02,full:.98,upright:.95}};
+  function cmPath(c,P,closed){ const n=P.length, g=i=>P[closed? (i+n)%n : Math.max(0,Math.min(n-1,i))]; c.moveTo(P[0][0],P[0][1]);
+    for(let i=0;i<(closed? n : n-1);i++){ const p0=g(i-1), p1=g(i), p2=g(i+1), p3=g(i+2); c.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]); } if(closed) c.closePath(); }
+  function perchBird2D(x,C,S,o){   /* o: {look (-1..1), nod, flick, gape, breath, crouch, wflick, lit (0..1 how much the sun-side shows), sunSide (+1 right / -1 left in bird space)} */
+    const sp=SPP[C.kind]||SPP.robin, hs=sp.head, T=o.t||0, L=(c,k)=>rgb(mulv(c,k==null?1:k)), A=(c,a)=>rgb(c,a);
+    const piv=[13,-45], la=(o.look||0)*.1+(o.nod||0)*.12, cl=Math.cos(la), sl=Math.sin(la);
+    const hd=q=>{ const dx=(q[0]-piv[0])*hs, dy=(q[1]-piv[1])*hs; return [piv[0]+dx*cl-dy*sl, piv[1]+dx*sl+dy*cl]; };   /* the head turns and nods on the neck */
+    const tp=[-21,-26], ta=-(o.flick||0)*.32, tc=Math.cos(ta), ts=Math.sin(ta), tl=q=>{ const dx=q[0]-tp[0], dy=q[1]-tp[1]; return [tp[0]+dx*tc-dy*ts, tp[1]+dx*ts+dy*tc]; };
+    const br=1+(o.breath||0)*.012, cr=o.crouch||0, bd=q=>[q[0]*(q[1]>-30? br : 1), q[1]*(1-cr*.08)];
+    const blur=k=>{ x.filter=`blur(${Math.max(.4,k*S).toFixed(1)}px)`; };
+    x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
+    /* ---- the far leg ---- */
+    const leg=(lx,dark)=>{ x.strokeStyle=L(C.leg,dark? .7 : 1); x.lineWidth=1.55; x.beginPath(); x.moveTo(lx,-9*(1-cr*.4)); x.lineTo(lx+.6,-.6); x.stroke();
+      x.lineWidth=1.1; for(const [ex,ey] of [[lx+7,1.4],[lx+5.5,2.8]]){ x.beginPath(); x.moveTo(lx+.6,-.4); x.quadraticCurveTo(lx+4,-1.4,ex,ey); x.stroke(); }
+      x.beginPath(); x.moveTo(lx+.6,-.4); x.quadraticCurveTo(lx-3.5,-1.2,lx-4.5,1.8); x.stroke();
+      x.strokeStyle=A([30,24,20],.9); x.lineWidth=.8; for(const [ex,ey] of [[lx+7,1.4],[lx+5.5,2.8],[lx-4.5,1.8]]){ x.beginPath(); x.moveTo(ex,ey); x.lineTo(ex+(ex>lx? -.6 : .6),ey+1.4); x.stroke(); } };
+    leg(-3.2,true);
+    /* ---- the tail: long closed feathers, the outer ones edged, a notch on the finch ---- */
+    const tlen=sp.tail, tt=[[-19,-29],[-21,-24],[-21-30*tlen,4*tlen-1],[-21-33*tlen,1.5*tlen],[-21-33.5*tlen,-1+(sp.notch?2:0)],[-21-31*tlen,-4*tlen],[-17,-31]].map(tl);
+    x.fillStyle=L(C.tail); x.beginPath(); cmPath(x,tt,true); x.fill();
+    x.save(); x.beginPath(); cmPath(x,tt,true); x.clip(); { const g=x.createLinearGradient(...tl([-20,-27]),...tl([-21-33*tlen,0])); g.addColorStop(0,A(C.tail2,.0)); g.addColorStop(1,A(C.tail2,.55)); x.fillStyle=g; x.fillRect(-120,-80,200,120); }
+      x.strokeStyle=A(mixv(C.tail,[255,250,240],.25),.35); x.lineWidth=.5; for(let i=0;i<4;i++){ const a=tl([-21,-29+i*1.6]), b=tl([-21-32*tlen,-3+i*1.7]); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); }
+      if(C.kind==="oriole"){ x.fillStyle=L(C.tail2); x.beginPath(); cmPath(x,[tl([-20,-27]),tl([-21-25*tlen,-6]),tl([-21-24*tlen,-3]),tl([-21,-24.5])],true); x.fill(); }   /* the oriole: orange outer tail, dark centre */
+      x.restore();
+    /* ---- the silhouette: crown, nape, back, rump, under the tail, belly, breast, throat, chin ---- */
+    const crest=sp.crest? [[29,-55],[24,-62],[17,-71],[13,-66],[12,-58]] : [[30,-53.5],[24,-57],[17,-55.5]];
+    const head0=[[33.5,-49.5],...crest,[11,-51]].map(hd), full=sp.full, up=sp.upright;
+    const bodyPts=[...head0,[3,-46.5],[-8,-39.5*up],[-17,-31],[-21.5,-26],[-19,-19],[-11,-12],[-1,-7.5],[9.5*full,-10.5],[19*full,-19],[25*full,-29],[29,-37.5],...[[31.5,-42.5],[33.5,-45.8]].map(hd)].map(bd);
+    const body=new Path2D(); cmPath(body,bodyPts,true);
+    x.save(); blur(.7); x.fillStyle=L(mixv(C.back,C.breast,.5),.7); x.fill(body); x.filter="none"; x.restore();   /* the soft fluff of the outline */
+    x.fillStyle=L(C.back); x.fill(body);
+    x.save(); x.clip(body);
+    /* colour zones, each with a soft edge as feathers have */
+    const zone=(pts,col,soft,a)=>{ x.save(); blur(soft); x.fillStyle=A(col,a==null?1:a); x.beginPath(); cmPath(x,pts,true); x.fill(); x.restore(); };
+    zone([[37,-46],[31,-43],[21,-41],[10,-34],[-2,-21],[-14,-10],[-2,-2],[24,-8],[38,-30]].map((q,i)=>i<3? hd(q) : q),C.breast,1.6);                                      /* breast */
+    zone([[30,-36],[22,-30],[12,-22],[4,-14],[12,-8],[26,-16]],C.breast2,2.4,.5);                                                                                          /* the light on the full chest */
+    zone([[-4,-16],[-14,-13],[-20,-18],[-14,-4],[2,-2],[8,-8]],C.belly,1.8);                                                                                                // belly & vent
+    if(C.hood) zone([[38,-44],[30,-41],[22,-43],[12,-47],[0,-46],[4,-60],[34,-62]].map(hd),C.head,1.1);                                                                       /* the dark hood */
+    else zone([[38,-47],[30,-45.5],[22,-46],[12,-48.5],[6,-51],[10,-62],[34,-62]].map(hd),C.head,1.4,.85);                                                                 /* crown and nape */
+    if(C.kind==="robin"){ zone([[34,-45],[30,-41],[27,-42.5],[30,-46]].map(hd),[236,232,224],.5,.9); x.strokeStyle=A([30,26,24],.8); x.lineWidth=.6; for(let i=0;i<4;i++){ const a=hd([31.5-i*.9,-45+i*.5]), b=hd([30.5-i*1.0,-41.5+i*.6]); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); } }   /* the white throat, streaked */
+    if(C.kind==="oriole"||C.kind==="tanager") zone([[2,-47],[-12,-40],[-20,-31],[-8,-30],[4,-40]],C.kind==="oriole"? C.back : C.back,1);
+    if(C.cap) zone([[35.5,-50.2],[32.5,-54.8],[26,-57.6],[21,-56.6],[24.5,-52.2],[31,-49.6]].map(hd),C.cap,.35);                                                                              /* the goldfinch's black cap */
+    if(C.mask) zone([[37,-52.5],[29,-53],[23.5,-50.5],[22,-45.5],[23.5,-38],[27.5,-32.5],[32,-35],[37,-46]].map(hd),[10,6,6],.3,1);                                                                          /* the cardinal's black face */
+    /* form light: lit from above and from the sun's side, shading round the belly */
+    { const g=x.createLinearGradient(0,-58,0,-2); g.addColorStop(0,"rgba(255,236,200,.16)"); g.addColorStop(.45,"rgba(255,236,200,0)"); g.addColorStop(.75,"rgba(20,12,8,.08)"); g.addColorStop(1,"rgba(20,12,8,.32)"); x.fillStyle=g; x.fillRect(-60,-80,120,90); }
+    { const ss=o.sunSide||1, g=x.createLinearGradient(-26*ss,0,34*ss,0); g.addColorStop(0,"rgba(10,8,14,.18)"); g.addColorStop(.6,"rgba(255,200,130,0)"); g.addColorStop(1,`rgba(255,196,120,${(.18+(o.glow||0)*.3).toFixed(2)})`); x.fillStyle=g; x.fillRect(-60,-80,120,90); }
+    { const g=x.createRadialGradient(...hd([24,-38]),0,...hd([24,-38]),9); g.addColorStop(0,"rgba(10,6,4,.2)"); g.addColorStop(1,"rgba(10,6,4,0)"); x.fillStyle=g; x.fillRect(0,-60,50,50); }   /* shadow under the chin */
+    /* the plumage: small feathers in rows, flowing back from the bill and down the body, each lit on its upper edge */
+    { let s2=17; const RN=()=>{ s2=(s2*1664525+1013904223)>>>0; return s2/4294967296; }; const n=Math.min(1400,Math.round(S*S*260));
+      for(let i=0;i<n;i++){ const px=-22+RN()*58, py=-60+RN()*58, head=px>10&&py<-40, r2=head? .7 : 1.1+RN()*.5, an=Math.atan2(head? .15 : .55,-1)+(RN()-.5)*.3;
+        x.lineWidth=head? .25 : .3; x.strokeStyle="rgba(255,248,236,.06)"; x.beginPath(); x.arc(px,py,r2,an-1.15,an+1.15); x.stroke();
+        x.strokeStyle="rgba(0,0,0,.05)"; x.beginPath(); x.arc(px+Math.cos(an)*r2*.45,py+Math.sin(an)*r2*.45,r2,an-1,an+1); x.stroke(); } }
+    x.restore();
+    /* ---- the folded wing ---- */
+    const wf=o.wflick||0, wl=q=>[q[0],q[1]-wf*(q[0]<0? -q[0]*.15 : 0)];
+    const wing=[[15,-42],[8,-44.5],[-3,-40.5],[-15,-31],[-26,-20],[-34-4*tlen,-9],[-29,-10.5],[-19,-16],[-7,-21.5],[5,-26],[12,-32]].map(wl);
+    x.save(); blur(1.2); x.fillStyle="rgba(10,6,4,.35)"; x.beginPath(); cmPath(x,wing.map(q=>[q[0]+.8,q[1]+1.6]),true); x.save(); x.clip(body); x.fill(); x.restore(); x.restore();   /* its shadow on the flank */
+    x.fillStyle=L(C.wing); x.beginPath(); cmPath(x,wing,true); x.fill();
+    x.save(); x.beginPath(); cmPath(x,wing,true); x.clip();
+    { const g=x.createLinearGradient(14,-40,-34,-10); g.addColorStop(0,A(C.wing2,.9)); g.addColorStop(.35,A(C.wing,1)); g.addColorStop(.7,A(C.deep,1)); g.addColorStop(1,A(C.tips,1)); x.fillStyle=g; x.fillRect(-60,-60,80,60); }
+    /* the primaries: long, narrow, overlapping, crossing the rump to the tip, each with a pale edge */
+    for(let i=0;i<6;i++){ const y0=-25+i*1.5, a=wl([-6-i*1.4,y0]), b=wl([-34-4*tlen+i*1.6,-9.5+i*.25]); x.strokeStyle=A(mixv(C.tips,C.deep,i/6),1); x.lineWidth=2.2; x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke();
+      x.strokeStyle=A(mixv(C.wing2,[240,236,226],.35),.35); x.lineWidth=.45; x.beginPath(); x.moveTo(a[0],a[1]-1); x.lineTo(b[0]+.4,b[1]-.9); x.stroke(); }
+    /* the tertials and secondaries: broad feathers lying over the primaries, edged paler */
+    for(let i=0;i<4;i++){ const q=[wl([4-i*3.2,-27+i*1.6]),wl([-4-i*3.4,-24+i*1.9]),wl([-12-i*3.2,-19+i*1.6]),wl([-8-i*3,-17+i*1.4]),wl([2-i*3,-22+i*1.3])];
+      x.fillStyle=A(mixv(C.wing,C.deep,.25+i*.12),1); x.beginPath(); cmPath(x,q,true); x.fill(); x.strokeStyle=A(mixv(C.wing2,[244,238,226],.45),.5); x.lineWidth=.6; x.beginPath(); x.moveTo(...q[1]); x.quadraticCurveTo(...q[2],...q[3]); x.stroke(); }
+    /* the greater coverts: a row of rounded feather tips across the wing, a wing bar on the species that have one */
+    for(let i=0;i<7;i++){ const c0=wl([10-i*3.1,-34.5+i*1.9]); x.fillStyle=A(mixv(C.wing,C.wing2,.5),1); x.globalAlpha=.55; x.beginPath(); x.ellipse(c0[0],c0[1],2.3,1.35,.62,0,6.283); x.fill(); x.globalAlpha=1; { x.strokeStyle=A(mixv(C.wing2,[244,238,226],.4),.5); x.lineWidth=.45; x.beginPath(); x.ellipse(c0[0],c0[1],2.6,1.6,.62,.2,2.6); x.stroke(); } }
+    /* the lesser coverts: small and scaly at the shoulder */
+    for(let i=0;i<14;i++){ const c0=wl([12-(i%5)*2.6-Math.floor(i/5)*1.3,-41+(i%5)*.9+Math.floor(i/5)*2.4]); x.fillStyle=A(mixv(C.wing2,C.back,.4),.45); x.beginPath(); x.ellipse(c0[0],c0[1],1.4,.9,.6,0,6.283); x.fill(); x.strokeStyle=A([0,0,0],.15); x.lineWidth=.3; x.beginPath(); x.ellipse(c0[0],c0[1],1.5,1,.6,.4,2.6); x.stroke(); }
+    if(C.bars){ x.strokeStyle=L(C.bars,.96); for(const [x0,y0,x1,y1,w] of C.kind==="finch"? [[8,-41,1,-28,2.3],[1.5,-38,-5,-25,1.7]] : [[6,-40,0,-27,2.1]]){ x.lineWidth=w; x.beginPath(); x.moveTo(...wl([x0,y0])); x.quadraticCurveTo(...wl([(x0+x1)/2+1.4,(y0+y1)/2]),...wl([x1,y1])); x.stroke(); } }   /* crisp white wing bars */
+    { const g=x.createLinearGradient(0,-46,0,-10); g.addColorStop(0,"rgba(255,236,200,.14)"); g.addColorStop(1,"rgba(20,12,8,.2)"); x.fillStyle=g; x.fillRect(-60,-60,80,60); }
+    x.restore();
+    leg(1.6,false);
+    /* ---- the head: eye, bill, face ---- */
+    const ec=hd([25.5,-48.5]), er=2.25*hs;
+    if(C.ring){ x.fillStyle=A(C.ring,C.arcs? .95 : .6); if(C.arcs){ x.beginPath(); x.arc(ec[0],ec[1],er*1.55,Math.PI*1.15,Math.PI*1.85); x.arc(ec[0],ec[1],er*1.1,Math.PI*1.85,Math.PI*1.15,true); x.fill(); x.beginPath(); x.arc(ec[0],ec[1],er*1.55,Math.PI*.15,Math.PI*.85); x.arc(ec[0],ec[1],er*1.1,Math.PI*.85,Math.PI*.15,true); x.fill(); } else { x.beginPath(); x.arc(ec[0],ec[1],er*1.35,0,6.283); x.fill(); } }
+    x.fillStyle="rgba(8,6,6,.98)"; x.beginPath(); x.arc(ec[0],ec[1],er,0,6.283); x.fill();
+    { const g=x.createRadialGradient(ec[0]+er*.2,ec[1]+er*.3,0,ec[0],ec[1],er); g.addColorStop(0,"rgba(90,60,40,.55)"); g.addColorStop(.6,"rgba(30,20,14,.2)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=g; x.beginPath(); x.arc(ec[0],ec[1],er,0,6.283); x.fill(); }
+    x.fillStyle="rgba(255,252,244,.92)"; x.beginPath(); x.arc(ec[0]+er*.35,ec[1]-er*.38,er*.3,0,6.283); x.fill(); x.fillStyle="rgba(170,200,240,.35)"; x.beginPath(); x.arc(ec[0]-er*.3,ec[1]+er*.35,er*.2,0,6.283); x.fill();
+    { const b0=hd([33,-50.2]), gp=hd([33.2,-46.3]), tip=hd([33+sp.bl*hs,-47.8+sp.cone*.6]), cul=hd([33+sp.bl*.55*hs,-50.2+sp.bd*.12-(sp.cone? sp.bd*.15 : 0)]), g=(o.gape||0);
+      const lb=hd([33.2,-46.1+sp.bd*.12]), lt=hd([33+(sp.bl-.8)*hs,-47.2+sp.cone*.6+g*2.2]), ch=hd([33,-46.1+sp.bd*.45]);
+      x.fillStyle=L(C.bill,.82); x.beginPath(); x.moveTo(...lb); x.quadraticCurveTo(lt[0]-2,lt[1]+1,...lt); x.quadraticCurveTo(lt[0]-sp.bl*.4,ch[1]+.2,...ch); x.closePath(); x.fill();   /* lower mandible */
+      x.fillStyle=L(C.bill); x.beginPath(); x.moveTo(...b0); x.quadraticCurveTo(...cul,...tip); x.quadraticCurveTo(tip[0]-sp.bl*.5,gp[1]+.6,...gp); x.closePath(); x.fill();         /* upper mandible, the culmen curving down to the tip */
+      x.strokeStyle="rgba(255,255,255,.28)"; x.lineWidth=.5; x.beginPath(); x.moveTo(b0[0]+1,b0[1]+.5); x.quadraticCurveTo(cul[0],cul[1]+.6,tip[0]-1.2,tip[1]); x.stroke();
+      x.strokeStyle="rgba(20,14,12,.55)"; x.lineWidth=.35; x.beginPath(); x.moveTo(...gp); x.lineTo(tip[0]-.4,tip[1]+.3); x.stroke();
+      x.fillStyle="rgba(20,14,12,.45)"; const nn=hd([35.5,-49]); x.beginPath(); x.ellipse(nn[0],nn[1],.8,.4,-.2,0,6.283); x.fill(); }   /* the nostril */
+    x.restore(); }
   let grainC=null; let pbird=null; const pbCv=document.createElement("canvas"), pbCx=pbCv.getContext("2d");
   /* the branch: reaching in from the edge of the frame well in behind the names, so it reads as a near tree's bough with the field beyond */
   function startPerchBird(kind){ const side=Math.random()<.5? -1 : 1, F=H*.5, cx=W/2, cy=H*.52, z=.34;
@@ -3678,7 +3778,13 @@ const ambient=(function(){
     const cw=Math.ceil(W), ch=Math.ceil(H); if(pbCv.width!==cw||pbCv.height!==ch){ pbCv.width=cw; pbCv.height=ch; }
     const x=pbCx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch);
     if(P[2]<.06) return;
-    songbird3D(x,P,B,o,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],Kw,sunL,C);
+    /* in the air it's the 3-D bird; once its feet are on the bough it settles into the fully painted bird, sitting side-on */
+    const onB=b.phase==="land"||b.phase==="perch"||b.phase==="crouch", Tl=b.phase==="land"? b.t-(b.tL||0) : 9, k2=onB? Math.max(0,Math.min(1,(Tl-.12)/.32)) : 0;
+    if(k2<1){ x.globalAlpha=1-k2; songbird3D(x,P,B,o,(X3,Y3,Z3)=>[cx+X3*F/Math.max(.05,Z3),cy+Y3*F/Math.max(.05,Z3)],Kw,sunL,C); x.globalAlpha=1; }
+    if(k2>0){ const S=21*Kw*F/z/100, fs=Math.sign(hd[0])||b.face, hopY=b.hop? Math.sin(b.hop*Math.PI)*S*3 : 0;
+      x.save(); x.globalAlpha=k2; x.translate(pS[0],pS[1]-lerp(H*.024,H*.0035,Math.pow(b.uP,.75))*.42-hopY); x.rotate(Math.atan(Math.tan(tang))*.5); x.scale(fs,1);   /* lean with the slope of the bough, whichever way it runs */
+      perchBird2D(x,C,S,{t:b.t,look:b.look||0,nod:(o.headUp||0)*-.5,flick:b.phase==="perch"? Math.max(0,b.tailUp||0) : Math.max(0,(o.tailUp||0)),gape:b.gape||0,breath:Math.sin(b.t*1.9),crouch:o.crouch||0,wflick:b.wflick||0,sunSide:(Math.sign(sp.x-pS[0])||1)*fs,glow:Math.max(0,1-Math.abs(sp.x-pS[0])/(W*.5))});
+      x.restore(); }
     const sx=cx+P[0]*F/P[2], sy=cy+P[1]*F/P[2]; b.sx=sx; b.sy=sy;
     if(b.phase!=="in"&&b.phase!=="out"){ /* its shadow on the bough */ }
     perchPost(x,cw,ch,P[2],dark,sx,sy,b);
