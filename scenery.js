@@ -511,6 +511,55 @@ const ambient=(function(){
     try{ const hot=SC.sun(); if(hot && SC.shown() && hot.strength>=.08){ const s=Math.max(W/hot.iw,H/hot.ih), dw=hot.iw*s, dh=hot.ih*s; return {x:(W-dw)/2+hot.x*dw, y:(H-dh)/2+hot.y*dh}; } }catch(e){}
     return {x:W*.2,y:-H*.05};
   }
+  /* ---- leaves in 3D: every leaf is a curved sheet, not a flat cut-out. Each has its own cupping across the midrib (a taco fold, either way),
+     a curl along its length, and a twist, and it tumbles on all three axes. It is drawn as a small grid of patches mapped onto that curved
+     surface, each patch lit by which way it faces, showing the paler, darker-veined underside wherever the leaf turns its back to you ---- */
+  const leafSprC={}, hexRGB=c=>{ const h=(c||"#9c6a32").replace("#",""); return [0,2,4].map(i=>parseInt(h.substr(i,2),16)); };
+  const LFK=110, LFX0=1.15, LFY0=1.15, LFW=2.3, LFH=2.95;
+  function leafSprites(kind,col){ const key=kind+col; if(leafSprC[key]) return leafSprC[key];
+    const lc=hexRGB(col), p=SH[kind]||SH.birch; let sd=0; for(const ch of key) sd=(sd*31+ch.charCodeAt(0))>>>0; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+    const mk=(mode)=>{ const c=document.createElement("canvas"); c.width=Math.ceil(LFW*LFK); c.height=Math.ceil(LFH*LFK); const x=c.getContext("2d"); x.setTransform(LFK,0,0,LFK,LFX0*LFK,LFY0*LFK);
+      if(mode==="sil"){ x.fillStyle="#000"; x.fill(p); x.lineWidth=.03; x.strokeStyle="#000"; x.stroke(p); return c; }
+      const back=mode==="back", base= back? mixv(mulv(lc,.86),[214,196,150],.22) : lc;
+      x.fillStyle=rgb(base); x.fill(p); x.save(); x.clip(p);
+      const sd0=RN(); for(let i=0;i<9;i++){ const mx=RN()*1.6-.8, my=RN()*2.2-.9, mr=.12+RN()*.3, dk=RN()<.55, g=x.createRadialGradient(mx,my,0,mx,my,mr); g.addColorStop(0,dk? "rgba(50,24,8,.22)" : "rgba(255,214,150,.16)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=g; x.fillRect(mx-mr,my-mr,mr*2,mr*2); }   /* weathering */
+      const eg=x.createRadialGradient(0,.25,.3,0,.25,1.5); eg.addColorStop(0,"rgba(0,0,0,0)"); eg.addColorStop(1,back? "rgba(40,20,6,.18)" : "rgba(40,18,4,.26)"); x.fillStyle=eg; x.fillRect(-1.3,-1.3,2.6,3.2);   /* the margins a little darker */
+      const vein= back? rgb(mulv(base,.6),.6) : rgb(mixv(lc,[255,226,170],.3),.45); x.strokeStyle=vein; x.lineCap="round";
+      x.lineWidth=.035; x.beginPath(); x.moveTo(0,-.85); x.lineTo(0,1.4);
+      if(kind==="maple"){ for(const [a,b] of [[-.62,-.45],[.62,-.45],[-.7,.35],[.7,.35]]){ x.moveTo(0,.22); x.lineTo(a,b); } }
+      else if(kind==="oak"){ for(const [y0,Lw] of [[-.42,.56],[.04,.62],[.46,.42]]) for(const s2 of [-1,1]){ x.moveTo(0,y0+.12); x.quadraticCurveTo(s2*Lw*.45,y0-.02,s2*Lw*.95,y0-.16); } }
+      else { for(let i=0;i<7;i++){ const yy=-.7+i*.26, w=.5*Math.sqrt(Math.max(0,1-yy*yy)); x.moveTo(0,yy+.08); x.quadraticCurveTo(w*.5,yy-.02,w,yy-.14); x.moveTo(0,yy+.08); x.quadraticCurveTo(-w*.5,yy-.02,-w,yy-.14); } }
+      x.stroke(); x.lineWidth=.014; x.strokeStyle=back? rgb(mulv(base,.62),.3) : rgb(mixv(lc,[255,226,170],.2),.22); x.beginPath();
+      for(let i=0;i<70;i++){ const a=RN()*1.8-.9, b=RN()*2.2-.9, ang=RN()*6.283, l2=.06+RN()*.1; x.moveTo(a,b); x.lineTo(a+Math.cos(ang)*l2,b+Math.sin(ang)*l2); } x.stroke();   /* the fine net between the veins */
+      x.restore(); x.save(); x.clip(p); x.strokeStyle=rgb(mulv(base,.55),.3); x.lineWidth=.05; x.stroke(p); x.restore();   /* the curled, darker rim */
+      { const b0=kind==="maple"? .3 : .92; x.strokeStyle=rgb(mulv(lc,.62)); x.lineWidth=.05; x.beginPath(); x.moveTo(0,b0); x.lineTo(0,b0+.32); x.stroke(); }   /* the stem */
+      return c; };
+    return leafSprC[key]={f:mipChain(mk("front")),b:mipChain(mk("back")),s:mipChain(mk("sil"))}; }
+  const lsc=document.createElement("canvas"), lsx=lsc.getContext("2d");
+  function leafShape(l){ if(l.fold==null){ l.fold=(Math.random()<.5? -1 : 1)*rnd(.15,.7); l.curl=rnd(-.65,.65); l.twist=rnd(-.6,.6); l.tilt0=rnd(0,6.283); l.vt=(Math.random()<.5? -1 : 1)*rnd(.25,1.1); } }
+  /* draws leaf l at (x,y), S pixels per leaf unit; o: {alpha, mist, blur, glow (0..1), toSun (screen angle), tint} */
+  function drawLeaf3D(l,x,y,S,o){ leafShape(l); const spr=leafSprites(l.kind,l.c||"#9c6a32"), NU=S<14? 3 : S<45? 5 : 8, NV=S<14? 4 : S<45? 7 : 11;
+    const R=Math.ceil(S*2.4)+4, D2=R*2; if(lsc.width<D2||lsc.height<D2){ lsc.width=Math.max(lsc.width,D2); lsc.height=Math.max(lsc.height,D2); }
+    const X=lsx; X.setTransform(1,0,0,1,0,0); X.globalCompositeOperation="source-over"; X.globalAlpha=1; X.clearRect(0,0,D2,D2);
+    const cr=Math.cos(l.rot), sr=Math.sin(l.rot), tilt=(l.tilt??l.tilt0)+(l.tilt==null? t*l.vt : 0), cf=Math.cos(l.flip), sf=Math.sin(l.flip), ct=Math.cos(tilt), st=Math.sin(tilt);
+    const node=(u,v)=>{ const z0=l.fold*u*u+l.curl*(v-.3)*(v-.3)*.55, a=l.twist*(v-.3), xa=u*Math.cos(a)-z0*Math.sin(a), za=u*Math.sin(a)+z0*Math.cos(a);
+      const x2=xa*cf+za*sf, z2=-xa*sf+za*cf, y3=v*ct-z2*st, z3=v*st+z2*ct; return [R+(x2*cr-y3*sr)*S,R+(x2*sr+y3*cr)*S,z3]; };
+    const G=[]; for(let j=0;j<=NV;j++){ const row=[]; for(let i=0;i<=NU;i++) row.push(node(-LFX0+LFW*i/NU,-LFY0+LFH*j/NV)); G.push(row); }
+    const n=mipPick(spr.f,S/LFK), sc=Math.pow(2,n), lsS=sp=>sp[n], fw=LFW*LFK/sc/NU, fh=LFH*LFK/sc/NV, Ls=[.35*(o.sunSide||1),-.55,-.75];
+    const cells=[]; for(let j=0;j<NV;j++) for(let i=0;i<NU;i++){ const P0=G[j][i], P1=G[j][i+1], P2=G[j+1][i], P3=G[j+1][i+1], ax=P1[0]-P0[0], ay=P1[1]-P0[1], az=P1[2]-P0[2], bx=P2[0]-P0[0], by=P2[1]-P0[1], bz=P2[2]-P0[2];
+      let nx=ay*bz-az*by, ny=az*bx-ax*bz, nz=ax*by-ay*bx; const nl=Math.hypot(nx,ny,nz)||1; nx/=nl; ny/=nl; nz/=nl;
+      cells.push({i,j,P0,P1,P2,z:(P0[2]+P3[2])/2,front:nz<0,lam:Math.abs(nx*Ls[0]+ny*Ls[1]+nz*Ls[2])}); }
+    cells.sort((a,b)=>b.z-a.z);   /* the far side of a curl first, so the near side lies over it */
+    for(const c of cells){ const a=c.P1[0]-c.P0[0], b=c.P1[1]-c.P0[1], cc=c.P2[0]-c.P0[0], d=c.P2[1]-c.P0[1];
+      X.setTransform(a/fw,b/fw,cc/fh,d/fh,c.P0[0],c.P0[1]); const im=(c.front? spr.f : spr.b)[n], sx=c.i*fw, sy=c.j*fh;
+      X.globalAlpha=1; X.drawImage(im,sx,sy,fw,fh,-.02*fw,-.02*fh,fw*1.04,fh*1.04);
+      const sh=(1-c.lam)*.5+(c.front? 0 : .08); if(sh>.04){ X.globalAlpha=sh; X.drawImage(spr.s[n],sx,sy,fw,fh,-.02*fw,-.02*fh,fw*1.04,fh*1.04); } }   /* each patch shaded by how it faces the light */
+    X.setTransform(1,0,0,1,0,0); X.globalAlpha=1; X.globalCompositeOperation="source-atop";
+    if(o.glow>.05&&o.toSun!=null){ const gx=Math.cos(o.toSun), gy=Math.sin(o.toSun), g3=X.createLinearGradient(R-gx*S,R-gy*S,R+gx*S,R+gy*S); g3.addColorStop(.5,"rgba(255,170,70,0)"); g3.addColorStop(1,`rgba(255,180,80,${(.3*o.glow).toFixed(2)})`); X.fillStyle=g3; X.fillRect(0,0,D2,D2); }   /* the sun glowing through its edge */
+    if(o.mist>.02){ X.fillStyle=`rgba(236,210,166,${Math.min(.6,o.mist).toFixed(2)})`; X.fillRect(0,0,D2,D2); }   /* the air between us and it */
+    const tn=tint(); if(tn.a>0){ X.globalAlpha=tn.a; X.fillStyle=tn.c; X.fillRect(0,0,D2,D2); X.globalAlpha=1; }
+    X.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=o.alpha; if(o.blur>.3) ctx.filter=`blur(${o.blur.toFixed(1)}px)`; ctx.drawImage(lsc,0,0,D2,D2,x-R,y-R,D2,D2); ctx.restore(); ctx.filter="none"; }
   function leaf(l,dim){
     const pk=1, inten=l.in3??1, mist=l.mi3??0, d=l.near3??1;
     ctx.save(); ctx.translate(l.x,l.y); ctx.rotate(l.rot);
@@ -524,21 +573,8 @@ const ambient=(function(){
       ctx.globalAlpha=l.a*dim*inten; ctx.fillStyle="#7a5530"; ctx.beginPath(); ctx.ellipse(0,s*.1,s*.075,s*.15,0,0,6.283); ctx.fill();
       ctx.restore(); return;
     }
-    const sx=Math.cos(l.flip), back=sx<0;
-    const ls=l.s*pk;
-    ctx.scale(Math.max(.12,Math.abs(sx))*ls,ls);
-    ctx.globalAlpha=Math.min(1,l.a*(.55+.6*d))*dim*inten*(back?.82:1);
-    const p=SH[l.kind]||SH.birch;
-    ctx.fillStyle=l.c; ctx.fill(p);
-    if(back){ ctx.fillStyle="rgba(40,20,0,.2)"; ctx.fill(p); }
-    if(mist>.03){ ctx.fillStyle=`rgba(236,214,172,${mist.toFixed(2)})`; ctx.fill(p); }   /* far off, the air washes the color out */
-    ctx.strokeStyle=`rgba(60,30,10,${(.35*(.4+.6*d)).toFixed(2)})`; ctx.lineWidth=.7/ls;
-    ctx.save(); ctx.clip(p);                                                                   /* veins stay inside the leaf */
-    ctx.beginPath(); ctx.moveTo(0,-.8); ctx.lineTo(0,1.35);
-    if(l.kind==="maple"){ ctx.moveTo(0,.2); ctx.lineTo(-.62,-.45); ctx.moveTo(0,.2); ctx.lineTo(.62,-.45); ctx.moveTo(0,.25); ctx.lineTo(-.7,.35); ctx.moveTo(0,.25); ctx.lineTo(.7,.35); }
-    ctx.stroke(); ctx.restore();
-    { const b0=l.kind==="maple"? .3 : .92; ctx.beginPath(); ctx.moveTo(0,b0); ctx.lineTo(0,b0+.28); ctx.stroke(); }   /* just a short stem */
     ctx.restore();
+    const sp=sun(); drawLeaf3D(l,l.x,l.y,l.s*pk,{alpha:Math.min(1,l.a*(.55+.6*d))*dim*inten,mist,blur:0,glow:0,sunSide:Math.sign(sp.x-l.x)||1});
   }
   /* ---- now and then one big leaf of each kind in turn: tumbling right up past the lens, or blown out from behind you into the scene ---- */
   let bigL=null, nextBig=rnd(8,16), bigKind=Math.floor(Math.random()*4);
@@ -561,31 +597,8 @@ const ambient=(function(){
     const mist=Math.max(0,Math.min(.45,(l.D-1.2)/8)), sp=sun(), toSun=Math.atan2(sp.y-y,sp.x-x);
     ctx.save(); ctx.globalAlpha=A*.94; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`;
     if(l.kind==="milkweed"){ const m={kind:"milkweed",x,y,s:S*.9,rot:Math.sin(l.ph)*.4,a:.9,in3:1,mi3:mist,near3:1}; leaf(m,1); ctx.restore(); ctx.filter="none"; return; }
-    ctx.translate(x,y); ctx.rotate(l.rot);
-    const fx=Math.cos(l.flip), fy=.35+.65*Math.abs(Math.cos(l.tilt)), back=fx<0;            /* tumbling on two axes */
-    ctx.scale(Math.max(.1,Math.abs(fx))*S,fy*S);
-    const p=SH[l.kind]||SH.birch, lit=Math.cos(toSun-l.rot-Math.PI/2);
-    ctx.fillStyle=l.c; ctx.fill(p);
-    const g=ctx.createLinearGradient(-1,-1,1,1); g.addColorStop(0,`rgba(255,226,160,${(.32+.16*lit).toFixed(2)})`); g.addColorStop(.45,"rgba(255,220,150,0)"); g.addColorStop(1,"rgba(30,14,4,.5)"); ctx.fillStyle=g; ctx.fill(p);   /* curled: light on one side, shade on the other */
-    if(back){ ctx.fillStyle="rgba(60,34,12,.25)"; ctx.fill(p); }
-    const lc=(c=>{ const h=c.replace("#",""); return [0,2,4].map(i=>parseInt(h.substr(i,2),16)); })(l.c||"#9c6a32");
-    const vein= back? rgb(mulv(lc,.62),.55) : rgb(mixv(lc,[255,226,170],.28),.42);                                               /* veins: a shade lighter than the leaf on its face, darker on its back */
-    ctx.save(); ctx.clip(p);
-    if(!l.mot) l.mot=Array.from({length:7},()=>[rnd(-.4,.4),rnd(-.8,.8),rnd(.12,.3),Math.random()<.5]);                       /* weathering: darker and lighter patches */
-    for(const [mx,my,mr,dk] of l.mot){ const g2=ctx.createRadialGradient(mx,my,0,mx,my,mr); g2.addColorStop(0,dk? "rgba(50,24,8,.22)" : "rgba(255,210,140,.14)"); g2.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g2; ctx.fillRect(mx-mr,my-mr,mr*2,mr*2); }
-    ctx.strokeStyle=vein; ctx.lineWidth=1.1/S; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(0,-.85); ctx.lineTo(0,1.4);
-    if(l.kind==="maple"){ for(const [a,b] of [[-.62,-.45],[.62,-.45],[-.7,.35],[.7,.35]]){ ctx.moveTo(0,.22); ctx.lineTo(a,b); } }
-    else if(l.kind==="oak"){ for(const [y0,Lw,dy] of [[-.42,.56,0],[.04,.62,0],[.46,.42,0]]) for(const sd of [-1,1]){ const yy=y0+(sd<0?.05:0); ctx.moveTo(0,yy+.12); ctx.quadraticCurveTo(sd*Lw*.45,yy-.02,sd*Lw*.95,yy-.16); } ctx.moveTo(0,-.6); ctx.lineTo(.12,-.82); ctx.moveTo(0,-.6); ctx.lineTo(-.12,-.82); }   /* a vein out to each lobe tip */
-    else { for(let i=0;i<6;i++){ const yy=-.65+i*.28, w=(l.kind==="oak"?.36:.5)*Math.sqrt(Math.max(0,1-yy*yy)); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(w*.5,yy-.02,w,yy-.14); ctx.moveTo(0,yy+.08); ctx.quadraticCurveTo(-w*.5,yy-.02,-w,yy-.14); } }
-    ctx.stroke(); ctx.restore();
-    { const b0=l.kind==="maple"? .3 : .92; ctx.strokeStyle=rgb(mulv(lc,.7)); ctx.lineWidth=1.6/S; ctx.beginPath(); ctx.moveTo(0,b0); ctx.lineTo(0,b0+.3); ctx.stroke(); }   /* a short stem */
-    ctx.save(); ctx.clip(p); ctx.strokeStyle=rgb(mulv(lc,.55),.22); ctx.lineWidth=1.1/S; ctx.stroke(p); ctx.restore();                                                   /* the curled, darker rim */
-    if(lit>.2&&!back){ ctx.save(); ctx.clip(p); ctx.globalCompositeOperation="screen"; const g3=ctx.createLinearGradient(Math.cos(toSun-l.rot)*-1,Math.sin(toSun-l.rot)*-1,Math.cos(toSun-l.rot),Math.sin(toSun-l.rot)); g3.addColorStop(.55,"rgba(255,170,70,0)"); g3.addColorStop(1,`rgba(255,180,80,${(.3*lit).toFixed(2)})`); ctx.fillStyle=g3; ctx.fillRect(-1.5,-1.5,3,3); ctx.restore(); }   /* the sun glowing through its edge */
-    { const am=.06+mist; ctx.save(); ctx.clip(p); ctx.fillStyle=`rgba(214,188,150,${am.toFixed(2)})`; ctx.fillRect(-1.5,-1.5,3,3); ctx.restore(); }                    /* the evening air between us and it */
-    ctx.globalCompositeOperation="source-atop";
-    if(mist>.02){ ctx.fillStyle=`rgba(236,206,160,${mist.toFixed(2)})`; ctx.fill(p); }
-    const tn=tint(); if(tn.a>0){ ctx.globalAlpha=A*tn.a; ctx.fillStyle=tn.c; ctx.fill(p); }
     ctx.restore(); ctx.filter="none";
+    const lit=Math.cos(toSun-l.rot-Math.PI/2); drawLeaf3D(l,x,y,S,{alpha:A*.94,mist:.06+mist,blur,glow:Math.max(0,lit),toSun,sunSide:Math.sign(sp.x-x)||1});
   }
   /* ---- geese: V's flown level in 3D at different distances and heights, so the formation foreshortens as it crosses ---- */
   let flocks=[], nextFlock=3, lastTier=-1;
