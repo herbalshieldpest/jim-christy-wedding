@@ -140,17 +140,17 @@ class Person{
       M(h,new T.SphereGeometry(.109,32,18,Math.PI*.82,Math.PI*1.36,0,1.95),hairM,0,.1,-.008,1.05,1.1,1.09);               /* down over the sides and back of her head, her face left clear */
       M(h,sph(16,10),hairM,.04,.205,.03,.065,.024,.055,0,0,-.22);                                                       /* the lift at her side part */
       const hp=this.hairPivot=G(h,0,.16,-.02);
-      const hb=this.hairBack=G(h,0,.1,0);
+      const hb=this.hairBack=G(this.chest,0,.388,-.004);   /* the long hair hangs from her shoulders, not her head, so tipping her head never swings it into her back */
       { const NU=56, NV=30, pos=[], uv=[], idx=[], S0=Math.random()*6;
         const sstep=(a,b,x)=>{ const k=clamp((x-a)/(b-a),0,1); return k*k*(3-2*k); };
         for(let j=0;j<=NV;j++){ const v=j/NV;
           for(let i=0;i<=NU;i++){ const u=i/NU, yEnd0=-.55;
-            const yy=lerp(.0,yEnd0,v), th=(u-.5)*2*lerp(2.15,1.2,sstep(-.1,-.25,yy));   /* round her head beside her face, then gathering behind her shoulders as it falls */
+            const yy=lerp(.0,yEnd0,v), th=(u-.5)*2*lerp(2.15,1.1,sstep(-.1,-.25,yy));   /* round her head beside her face, then gathering behind her shoulders as it falls */
             const side=Math.abs(Math.sin(th));
             const y=yy*(1-.08*side)+(.03*Math.sin(th*5+S0)+.018*Math.sin(th*11))*sstep(.8,1,v);   /* a little shorter at the sides; an uneven, wavy hem */
-            const rBack=lerp(.124,.142,sstep(-.05,-.2,y)), rSide=lerp(.124,.132,sstep(-.02,-.12,y))+.075*sstep(-.15,-.27,y);   /* close round her head, then out past the backs of her shoulders */
+            const rBack=lerp(.126,.172,sstep(-.04,-.2,y))+.02*sstep(-.3,-.5,y), rSide=lerp(.124,.132,sstep(-.02,-.12,y))+.1*sstep(-.15,-.27,y);   /* close round her head, then out past the backs of her shoulders */
             let r=lerp(rBack,rSide,side);
-            r+=(.011*Math.sin(th*6+v*16+S0)+.006*Math.sin(th*13-v*9))*sstep(.15,.6,v)+.012*sstep(.85,1,v);   /* waves, and the ends turning out a little */
+            r+=Math.abs(.011*Math.sin(th*6+v*16+S0)+.006*Math.sin(th*13-v*9))*sstep(.15,.6,v)+.012*sstep(.85,1,v);   /* the waves only ever lift it away from her */   /* waves, and the ends turning out a little */
             pos.push(Math.sin(th)*r, y, -Math.cos(th)*r); uv.push(u,1-v); } }
         for(let j=0;j<NV;j++) for(let i=0;i<NU;i++){ const a2=j*(NU+1)+i, b2=a2+NU+1; idx.push(a2,b2,a2+1,b2,b2+1,a2+1); }
         const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3)); g.setAttribute("uv",new T.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals();
@@ -273,7 +273,7 @@ class Person{
     const plumb=_q1.invert().multiply(_q2); hp.quaternion.identity().slerp(plumb,.8);   /* the hair hangs from the crown as if the head were upright: it falls straight down when she looks down */
     hp.quaternion.multiply(_q2.setFromEuler(_eu.set(clamp(this.hairS.x,-.18,.18),0,clamp(this.hairS.z,-.18,.18))));
     /* the back of her hair rests on her back: it keeps to the line of her shoulders whichever way she turns or tips her head, swaying a little */
-    const hb=this.hairBack; if(hb){ this.chest.updateMatrixWorld(true); this.head.getWorldQuaternion(_q1).invert(); this.chest.getWorldQuaternion(_q2); hb.quaternion.copy(_q1.multiply(_q2)); hb.quaternion.multiply(_q2.setFromEuler(_eu.set(clamp(this.hairS.x*.35,-.06,.06),0,clamp(this.hairS.z*.4,-.07,.07)))); } }
+    const hb=this.hairBack; if(hb) hb.quaternion.setFromEuler(_eu.set(clamp(this.hairS.x*.35,-.06,.06),0,clamp(this.hairS.z*.4,-.07,.07))); }
   /* ---- the arms: hands go to their targets (world points) along a gentle arc, or hang and swing ---- */
   restHand(side,out){ const s=side===L_?1:-1, hand=this.hands[side]; if(hand) hand.swingSoft=this.walk&&this.walk.moving;
     if(this.walk&&this.walk.moving){ const w=this.walk, spd=clamp(w.vNow/1.2,0,1), sr=Math.sin(2*Math.PI*(w.phi-.33)+(side===L_?0:Math.PI)), sw=sr>0? sr : sr*.7;   /* each arm swings with the opposite leg */
