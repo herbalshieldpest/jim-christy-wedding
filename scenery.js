@@ -4371,10 +4371,10 @@ const ambient=(function(){
   function drawWeb(dt,dark){
     if(!web){ nextWeb-=(lull>0?0:dt); if(nextWeb<=0&&nA<.3){ nextWeb=rnd(200,340); startWeb(); } return; }
     const w=web; w.t+=dt; const out=w.t>w.life; w.alpha= out? Math.max(0,w.alpha-dt*.5) : Math.min(1,w.alpha+dt*.5); if(out&&w.alpha<=0){ web=null; return; }
-    w.jolt=Math.max(0,w.jolt-dt*.6);
-    const sway=Math.sin(w.t*.9)*.05+Math.sin(w.t*2.3)*.015+Math.sin(w.t*7)*w.jolt*.12, a=w.a+sway*.6, ca=Math.cos(a), sa=Math.sin(a), R=w.R, tilt=sway*.06;
+    w.jolt=Math.max(0,w.jolt-dt*.45); const jo=w.jolt*w.jolt, wob=Math.sin(w.t*8.5)*jo, wob2=Math.sin(w.t*5.3+1)*jo;   /* the snatch sets the whole tuft whipping back and forth, settling over a couple of seconds */
+    const sway=Math.sin(w.t*.9)*.05+Math.sin(w.t*2.3)*.015+Math.sin(w.t*7)*w.jolt*.12, a=w.a+sway*.6+wob2*.5, ca=Math.cos(a), sa=Math.sin(a), R=w.R, tilt=sway*.06+wob*.09;
     const base=[w.sx+(w.left? -1 : 1)*R*.6,H+8], rot=(p)=>{ const dx=p[0]-base[0], dy=p[1]-base[1], c=Math.cos(tilt), s=Math.sin(tilt); return [base[0]+dx*c-dy*s, base[1]+dx*s+dy*c]; };
-    const P=(u,v)=>{ const zz=u*sa*.22, f=1/(1+zz); return rot([w.sx+u*ca*R*f, w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01]); };   /* the web's plane, turned a little toward or away from you */
+    const P=(u,v)=>{ const zz=u*sa*.22, f=1/(1+zz); return rot([w.sx+u*ca*R*f+wob*R*.12*(1-v*.3), w.sy-v*R*f+Math.sin(w.t*1.4)*R*.01+wob2*R*.08*(1+u*.4)]); };   /* the web bellies and bounces on its lines */   /* the web's plane, turned a little toward or away from you */
     const sp=sun(), sunA=Math.atan2(-(sp.y-w.sy),(sp.x-w.sx)), lit=dark? .35 : 1, A=w.alpha*(1-.6*nA);
     const x=ctx; x.save(); x.globalAlpha=A; x.globalCompositeOperation="source-over"; x.filter="none"; x.lineCap="round";
     const drawT=img=>{ x.save(); x.translate(base[0],base[1]); x.rotate(tilt); x.translate(-base[0],-base[1]); x.drawImage(img,w.tx0,w.ty0); x.restore(); };
