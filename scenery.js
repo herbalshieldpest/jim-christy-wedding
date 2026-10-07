@@ -1482,7 +1482,7 @@ const ambient=(function(){
   }
   function deerPose(d){
     const s=d.s, w=1-s, X=w*w*d.a.X+2*w*s*d.m.X+s*s*d.e.X, Z=w*w*d.a.Z+2*w*s*d.m.Z+s*s*d.e.Z, Dw=Z*GF/FOC(), sc=toScreen(X,Dw);
-    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.62+.7*(1-(d.fa??1)))-(d.u<.28? Math.sin(d.u/.28*Math.PI)*.28 : d.u>.95? Math.sin((d.u-.95)/.05*Math.PI*.5)*.12 : 0)*(1-(d.fa??1)),leapU:d.u,q:0,ph:0};   /* in the brush each bound arcs up out of it and the deer sinks back down into it, gathering, before the next */
+    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.62+.7*(1-(d.fa??1)))-(d.u<.28? Math.sin(d.u/.28*Math.PI)*.28 : d.u>.95? Math.sin((d.u-.95)/.05*Math.PI*.5)*.12 : 0)*(1-(d.fa??1)),leapU:d.u,pitchK:1+.25*(1-(d.fa??1)),q:0,ph:0};   /* in the brush each bound arcs up out of it and the deer sinks back down into it, gathering, before the next */
   }
   function stepHerd(dt){
     if(!herd.length){ nextDeer-=(lull>0?0:dt); if(nextDeer<=0) startDeer(); deer=null; return; }
@@ -1501,14 +1501,14 @@ const ambient=(function(){
   }
 
   /* a whitetail's bound, keyframed: land on the forelegs, gather, drive off the hind legs, sail with the forelegs tucked, reach for the ground */
-  const BOUND=[[0,-.18,[.55,.45,.4],[.9,.1,.5]],[.15,-.05,[-.25,-.35,-.3],[.75,-.3,.25]],[.3,.25,[.3,-1.4,-1.9],[-.45,-1.0,-1.2]],[.6,.02,[.9,-1.6,-2.2],[-.3,-.9,-.6]],[.85,-.15,[.9,.3,.4],[.5,-.6,.1]],[1,-.18,[.55,.45,.4],[.9,.1,.5]]];
+  const BOUND=[[0,-.32,[.55,.45,.4],[.9,.1,.5]],[.15,-.08,[-.25,-.35,-.3],[.75,-.3,.25]],[.3,.34,[.3,-1.4,-1.9],[-.45,-1.0,-1.2]],[.6,.06,[.9,-1.6,-2.2],[-.3,-.9,-.6]],[.85,-.26,[.9,.3,.4],[.5,-.6,.1]],[1,-.32,[.55,.45,.4],[.9,.1,.5]]];   /* the body rocks through each bound: rump high as the forelegs land, forequarters thrown up as the hind legs drive, level in the air, nose down reaching for the ground */
   function boundKey(u){ u=((u%1)+1)%1; let i=0; while(i<BOUND.length-2&&u>BOUND[i+1][0]) i++; const a=BOUND[i], b=BOUND[i+1], e0=(u-a[0])/(b[0]-a[0]), e=e0*e0*(3-2*e0), L=(x,y)=>x+(y-x)*e;
     return {pitch:L(a[1],b[1]), f:a[2].map((v,j)=>L(v,b[2][j])), h:a[3].map((v,j)=>L(v,b[3][j]))}; }
   const boundLift=u=>u>=.28&&u<=.95? Math.sin(Math.PI*(u-.28)/.67) : 0;
   function deerParts(p,yaw,C){
     const leap=p.leapU!=null, walk=!!p.walk, stand=!!p.stand||walk, q=p.q||0, parts=[], far=z=>z*Math.cos(yaw)>0;
     const K=leap? boundKey(p.leapU) : null;
-    const bounce=leap||stand? (walk?Math.abs(Math.sin(q*2))*.35:0) : Math.max(0,Math.sin(q))*2.4, pitchB=stand? 0 : leap? K.pitch : Math.sin(q+.6)*.07;
+    const bounce=leap||stand? (walk?Math.abs(Math.sin(q*2))*.35:0) : Math.max(0,Math.sin(q))*2.4, pitchB=stand? 0 : leap? K.pitch*(p.pitchK||1) : Math.sin(q+.6)*.07;
     const T=(x,y)=>{ const c=Math.cos(pitchB), s=Math.sin(pitchB), dy=y-25; return [x*c-dy*s, 25+bounce+x*s+dy*c]; };
     const B=(x,y,z,r)=>{ const t=T(x,y); return [t[0],t[1],z,r]; };
     /* legs: slim, knobbed at the joints, lighter toward the hooves */
@@ -1530,7 +1530,7 @@ const ambient=(function(){
     parts.push({p:tor.map(([a,b,r])=>B(a,b,0,r)),c:C.coat,sh:C.sh});
     parts.push({p:[B(-15.9,27.6,0,2.0),B(-17.1,24.6,0,2.9),B(-16.5,21.2,0,2.1)],c:C.white});
     /* neck thick at the shoulders, head high and alert, nodding with the bounds */
-    const hd=p.hd||0, hc0=T(lerp(16.4,19,hd),lerp(39+(leap?1:stand?0:Math.sin(q)*.6),13,hd)), hc=[hc0[0],hc0[1],0];
+    const hd=p.hd||0, hc0=T(lerp(16.4-(leap? pitchB*3 : 0),19,hd),lerp(39+(leap?1+pitchB*5:stand?0:Math.sin(q)*.6),13,hd)), hc=[hc0[0],hc0[1],0];   /* and the head goes with it: tossed up on the drive, reaching forward and down on the landing */
     const n0=B(10.6,28.4,0,5.6), n1=[lerp(n0[0],hc[0],.38)-.3,lerp(n0[1],hc[1],.38),0,4.3], n2=[lerp(n0[0],hc[0],.72)-.2,lerp(n0[1],hc[1],.72),0,3.3];
     parts.push({p:[n0,n1,n2,[hc[0]-.5,hc[1]-.5,0,2.9]],c:C.coat,sh:C.sh});
     parts.push({p:[[n2[0]+1.9,n2[1]-1.2,0,1.05],[n2[0]+1.5,n2[1]+.6,0,.95]],c:C.white,bias:-.5});
