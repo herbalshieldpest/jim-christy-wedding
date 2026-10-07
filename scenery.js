@@ -4404,9 +4404,11 @@ const ambient=(function(){
     [[.3,lw],[.4,lw],[.58,lw*1.05],[.9,lw*1.2]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
     /* the stabilimentum: a white zigzag band above and below the hub */
     x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.3*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.006); x.beginPath();
-    if(!w.zz) w.zz=Array.from({length:40},()=>[rnd(.6,1.4),rnd(.7,1.3)]);
-    x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.16*A).toFixed(3)})`;
-    for(const sg of [1,-1]){ let n=0; for(let j=0;j<=18;j++){ const z=w.zz[j+(sg>0? 0 : 20)], v=sg*(.12+j*.02*z[1]), u=(j%2? .024 : -.024)*z[0]*(1-j/26), q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke();   /* the zigzag silk band, uneven and faint */
+    /* the stabilimentum: the garden spider's dense white zigzag ribbon running straight up and down from the hub, a broad band of silk
+       stitched back and forth across the spokes, a few strands laid over each other, thickest near the hub */
+    if(!w.zz) w.zz=Array.from({length:200},()=>[rnd(.75,1.25),rnd(.8,1.2),rnd(-.006,.006)]);
+    for(let pass=0;pass<3;pass++){ x.lineWidth=Math.max(.7,R*(pass? .0045 : .011)); x.strokeStyle=`rgba(${Math.round(252*lit)},${Math.round(250*lit)},${Math.round(240*lit)},${((pass? .55 : .16)*A).toFixed(3)})`; x.beginPath();
+      for(const sg of [1,-1]){ for(let j=0;j<=26;j++){ const z=w.zz[(j+pass*27+(sg>0? 0 : 100))%200], v=sg*(.07+j*.016*z[1]), wide=.075*(1-j/34)*z[0], u=(j%2? wide : -wide)+z[2]+(pass-1)*.006, q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke(); }
     /* dew, sparkling now and then */
     for(const [th,rr,ph] of w.dew){ if(torn(th,rr)) continue; const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=.25+.75*Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),10); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
     /* ---- the spider: waits at the hub, then walks out along a spoke ---- */
