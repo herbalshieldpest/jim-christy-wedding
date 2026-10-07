@@ -237,6 +237,9 @@ body.paneled .count{opacity:.12}
 }
 .xs-hide{display:inline}
 @media (max-width:420px){ .xs-hide{display:none} nav.nav a{letter-spacing:.15em;padding:8px 9px 8px calc(9px + .15em)} nav.nav a::after{left:9px;right:9px} }
+/* five tabs now (Our Town at the end): tighten them on phones so the row still fits across the screen */
+@media (max-width:520px){ nav.nav a{font-size:11px;letter-spacing:.09em;padding:8px 6px 8px calc(6px + .09em)} nav.nav a::after{left:6px;right:6px} }
+@media (max-width:350px){ nav.nav a{font-size:10px;letter-spacing:.05em;padding:8px 4px 8px calc(4px + .05em)} nav.nav a::after{left:4px;right:4px} }
 /* the park map and the Grantsville welcome poster, under the details; tap either to see it large */
 .pics{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;margin-top:6px;padding-top:22px;border-top:1px solid rgba(255,250,242,.16)}
 .pic.map{width:100%}
@@ -264,6 +267,7 @@ body.paneled .count{opacity:.12}
 /* Travel: the Grantsville poster beside "While you're here" */
 .town{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:28px;align-items:center;margin:16px 0 16px;padding-top:20px;border-top:1px solid rgba(255,250,242,.16)}
 .town .town-text h3{margin-top:0}
+.town.town-page{border-top:0;padding-top:4px;margin-top:6px}
 .town .town-text p:last-child{margin-bottom:0}
 @media (max-width:640px){.town{grid-template-columns:minmax(0,1fr);gap:22px;max-width:420px;margin:12px auto 14px;padding-top:16px}}
 .lightbox{position:fixed;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box;background:var(--panel-deep);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:cardIn .3s ease}
@@ -330,7 +334,7 @@ body.paneled .lockup,body.paneled .veil{opacity:.12;transition:opacity .4s}
 <path d="M86 20 C84 13 86 9 90 8"/><circle cx="91" cy="7" r="1.6"/><path d="M96 23 C99 30 97 34 94 36"/><circle cx="93.5" cy="37.5" r="1.6"/>
 <g transform="translate(176 23)"><circle r="2"/><path d="M0 -2 C-3 -7 3 -7 0 -2"/><path d="M1.9 -.6 C7 -2 5.2 3.6 1.9 -.6" /><path d="M1.2 1.6 C4.5 6 -1 7 1.2 1.6"/><path d="M-1.2 1.6 C1 7 -4.5 6 -1.2 1.6"/><path d="M-1.9 -.6 C-5.2 3.6 -7 -2 -1.9 -.6"/></g>
 <path d="M164 18 C166 12 170 9 174 9"/><circle cx="175.5" cy="9" r="1.4"/>
-</g></svg><a href="#details" data-panel="details"><span class="xs-hide">Event </span>Details</a><span class="orn" aria-hidden="true"></span><a href="#weekend" data-panel="weekend">Weekend</a><span class="orn" aria-hidden="true"></span><a href="#rsvp" data-panel="rsvp">RSVP</a><span class="orn" aria-hidden="true"></span><a href="#travel" data-panel="travel">Travel</a><svg class="vine" viewBox="0 0 220 44" aria-hidden="true" preserveAspectRatio="xMinYMid meet"><g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+</g></svg><a href="#details" data-panel="details"><span class="xs-hide">Event </span>Details</a><span class="orn" aria-hidden="true"></span><a href="#weekend" data-panel="weekend">Weekend</a><span class="orn" aria-hidden="true"></span><a href="#rsvp" data-panel="rsvp">RSVP</a><span class="orn" aria-hidden="true"></span><a href="#travel" data-panel="travel">Travel</a><span class="orn" aria-hidden="true"></span><a href="#town" data-panel="town">Our Town</a><svg class="vine" viewBox="0 0 220 44" aria-hidden="true" preserveAspectRatio="xMinYMid meet"><g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">
 <path d="M2 22 C28 16 46 28 74 22 S122 12 150 21 S192 30 202 20 C208 13 200 8 195 13 C192 16 196 20 199 17"/>
 <path d="M30 19 C33 10 42 6 49 7 C46 14 39 19 30 19 Z"/><path d="M31 19 C40 13 44 9 49 7"/>
 <path d="M58 25 C62 33 71 37 78 35 C74 29 67 26 58 25 Z"/><path d="M59 25 C67 29 73 32 78 35"/>
@@ -420,9 +424,6 @@ body.paneled .lockup,body.paneled .veil{opacity:.12;transition:opacity .4s}
     </dl>
     <p class="soon">There's more going on all weekend, from Friday's bonfire to Sunday's breakfast. See <a href="#weekend" data-goto="weekend">the Weekend</a>.</p>
   </div>
-  <div class="pics">
-    <figure class="pic map"><button type="button" class="thumb" data-lb="map" aria-label="Open the whole New Germany State Park map"><span class="frame"><img src="park-map.jpg" alt="Trail map of New Germany State Park near Grantsville, Maryland" width="1560" height="900" loading="lazy"><span class="pin" hidden><span class="halo"></span><svg class="drop" viewBox="0 0 32 42" aria-hidden="true"><path d="M16 41C16 41 2.2 25.2 2.2 15.4A13.8 13.8 0 0 1 29.8 15.4C29.8 25.2 16 41 16 41Z" fill="#7a2318" stroke="#fffaf2" stroke-width="2"/><circle cx="16" cy="15.2" r="5.6" fill="#fffaf2"/><circle cx="16" cy="15.2" r="2.4" fill="#7a2318"/></svg><b>Hagen Cabin</b></span></span></button><figcaption>New Germany State Park<span class="xs-hide"> <span aria-hidden="true">&middot;</span> Hagen Cabin marked</span></figcaption></figure>
-  </div>
 </div></section>
 <section class="panel" id="p-travel" hidden aria-labelledby="h-travel"><div class="card form" role="dialog" aria-modal="false">
   <button type="button" class="close" aria-label="Close">&times;</button>
@@ -452,14 +453,19 @@ body.paneled .lockup,body.paneled .veil{opacity:.12;transition:opacity .4s}
     </div>
   </div>
   <p class="fine c">Drive times are to the cabin. Prices are recent nightly rates and may change.</p>
-  <div class="town">
+  <p class="fine c">Hagen Cabin on Meadow Mountain &middot; 239 Moonridge Lane, Grantsville, MD 21536 &middot; <a href="https://www.google.com/maps/search/?api=1&amp;query=239%20Moonridge%20Lane%2C%20Grantsville%2C%20MD%2021536" target="_blank" rel="noopener">Directions</a></p>
+</div></section>
+<section class="panel" id="p-town" hidden aria-labelledby="h-town"><div class="card form" role="dialog" aria-modal="false">
+  <button type="button" class="close" aria-label="Close">&times;</button>
+  <h2 id="h-town">Our Town</h2>
+  <div class="vinepair divider c" data-vines></div>
+  <div class="town town-page">
     <figure class="pic poster"><button type="button" class="thumb" data-lb="town" aria-label="Open the Welcome to Grantsville poster"><span class="frame"><img src="grantsville.jpg" alt="Illustrated poster of Grantsville, Maryland: the Casselman River bridge, Spruce Forest Artisan Village, Penn Alps and the National Road" width="1600" height="1236" loading="lazy"></span></button><figcaption>Welcome to Grantsville</figcaption></figure>
     <div class="town-text"><h3>While you're here</h3>
       <p>Walk the 1813 stone arch at Casselman River Bridge, browse the craft studios at Spruce Forest Artisan Village, or eat at Penn Alps next door.</p>
       <p class="fine">All three are on the poster. Tap it to see it large.</p>
     </div>
   </div>
-  <p class="fine c">Hagen Cabin on Meadow Mountain &middot; 239 Moonridge Lane, Grantsville, MD 21536 &middot; <a href="https://www.google.com/maps/search/?api=1&amp;query=239%20Moonridge%20Lane%2C%20Grantsville%2C%20MD%2021536" target="_blank" rel="noopener">Directions</a></p>
 </div></section>
 <script>
 /* centre the names by their actual ink, not their text box: the script's swashes reach well outside the letters */
@@ -507,7 +513,7 @@ document.querySelectorAll("[data-vines]").forEach(n=>{ const V=document.getEleme
   links.forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); last=a; show(a.getAttribute("aria-current")==="true"? null : a.dataset.panel); }));
   panels.forEach(p=>{ p.querySelector(".close").onclick=()=>show(null); p.addEventListener("click",e=>{ if(e.target===p) show(null); }); });
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&document.body.classList.contains("paneled")) show(null); });
-  const h=location.hash.slice(1); if(["rsvp","weekend","details","travel"].includes(h)) show(h);
+  const h=location.hash.slice(1); if(["rsvp","weekend","details","travel","town"].includes(h)) show(h);
   document.querySelectorAll("[data-goto]").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); const t=links.find(l=>l.dataset.panel===a.dataset.goto); if(t){ last=t; show(a.dataset.goto); } })); })();
 </script>
 <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Picture">
@@ -523,7 +529,7 @@ const MAP_CROP=[0.390625,0,0.609375,0.510204];
 (function(){
   const lb=document.getElementById("lightbox"), stage=lb.querySelector(".lb-stage"), big=stage.querySelector("img"), bigPin=stage.querySelector(".pin"), bar=lb.querySelector(".lb-bar");
   const thumbPin=document.querySelector('[data-lb="map"] .pin'); const pin=window.HOUSE_PIN; let which=null, back=null;
-  const place=(el,p)=>{ el.hidden=!p; if(!p) return; el.style.left=(p.x*100)+"%"; el.style.top=(p.y*100)+"%"; el.classList.toggle("left",p.x>.78); el.classList.toggle("rt",p.x<.16); };   /* the name sits under the pin, clear of the trails around it */
+  const place=(el,p)=>{ if(!el) return; el.hidden=!p; if(!p) return; el.style.left=(p.x*100)+"%"; el.style.top=(p.y*100)+"%"; el.classList.toggle("left",p.x>.78); el.classList.toggle("rt",p.x<.16); };   /* the name sits under the pin, clear of the trails around it */
   const toFull=p=>p&&{x:MAP_CROP[0]+p.x*MAP_CROP[2], y:MAP_CROP[1]+p.y*MAP_CROP[3]};
   let zoomed=false; const inner=stage.querySelector(".lb-in");
   const setZoom=(z,fx,fy)=>{ zoomed=z; lb.classList.toggle("zoomed",z); if(!z){ inner.style.width=""; stage.scrollTo(0,0); return; }

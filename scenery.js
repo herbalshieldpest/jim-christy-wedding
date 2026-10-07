@@ -896,7 +896,7 @@ const ambient=(function(){
     if(!on||skyActive()||lull>0) return;
     tl.next-=dt; if(tl.next>0) return;
     if(tl.n<tl.max){ const k=pick(DAY_EV.filter(e=>e!==tl.last)); tl.last=k; tl.n++; tl.next=rnd(35,70); skyStart(k); }
-    else beginNight(); }
+    else { beginNight(); try{ if(window.Campfire&&!Campfire.on){ nightCalledAt=performance.now(); Campfire.set(true); } }catch(e){} } }   /* when the day's round comes to the dark, it's a campfire night */
   /* the menu: the called event runs its spell; a night one called by day hands the day back after, a day one ends any night */
   function skyMenu(k){ if(NIGHT_EV.includes(k)){ if(tl.ph==="night") tl.q=tl.q.filter(e=>e!==k); skyStart(k,false); } else { if(tl.ph==="night") tl=newDay(); else tl.next=Math.max(tl.next,40); tl.last=k; skyStart(k,k==="rainbow"); } }
   let duskUntil=-1;
