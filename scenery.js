@@ -4359,7 +4359,9 @@ const ambient=(function(){
     const mk=()=>{ const c=document.createElement("canvas"); c.width=bw; c.height=bh; const x=c.getContext("2d"); x.translate(-x0,-y0); return [c,x]; };
     const [cB,xB]=mk(), [cF,xF]=mk();
     /* kept simple: a couple of slender blades behind, low at the outer side, and one long soft blade at the lens */
-    for(const [o,l,ln] of []){ const b=w.sx+sd*R*o; blade(xB,b,R*l+(H-w.sy)*.55,-sd*ln,R*.026,.55,.85,false); }
+    /* grass at all heights round the two stems: tall blades outside them, short ones low under the web, none crossing it */
+    for(const [o,l,ln,wd,sd2] of [[1.35,1.9,.06,.024,0],[1.6,1.2,-.1,.022,0],[1.95,.7,.12,.026,1],[2.4,1.45,.04,.02,0],[-1.3,1.6,-.05,.022,0],[-1.55,.95,.12,.024,1],[-1.9,.55,-.08,.026,0],[.35,.25,.1,.022,0],[-.5,.32,-.12,.022,0],[.9,.4,.15,.024,0],[-.95,.18,-.1,.02,0]]){
+      const b=w.sx+sd*R*o, L=Math.max(R*.3,R*l+(H-w.sy)*.55-(Math.abs(o)<1.2? (H-w.sy)*.45 : 0)); blade(xB,b,L,-sd*ln,R*wd,rnd(.3,.85),rnd(.7,.95),!!sd2); }
     xF.filter=`blur(${Math.max(4,R*.07).toFixed(1)}px)`; blade(xF,w.sx+sd*R*2.9,R*1.5+(H-w.sy)*.4,-sd*.3,R*.075,.4,.55,false);
     w.tB=cB; w.tF=cF; w.tx0=x0; w.ty0=y0; w.sunS=sunS; }
   function drawWeb(dt,dark){
@@ -4392,8 +4394,8 @@ const ambient=(function(){
       let r0=.05; for(let s2=0;s2<4;s2++){ const r1=r0+(rEnd-r0)/(4-s2), q0=P(Math.cos(th)*r0,Math.sin(th)*r0), q1=P(Math.cos(th)*r1,Math.sin(th)*r1); put(q0,q1,Math.atan2(-(q1[1]-q0[1]),q1[0]-q0[0])); r0=r1; }
       if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); bins[1].push(o,[back[0]-R*.02,back[1]+R*.2]); } }
     let prev=null; for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30, r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); if(torn(th,r1)){ prev=null; continue; } if(prev) put(prev,q,Math.atan2(-(q[1]-prev[1]),q[0]-prev[0])); prev=q; }
-    const lw=Math.max(.6,R*.0036); x.lineWidth=lw;
-    [[.11,lw],[.17,lw],[.28,lw*1.05],[.48,lw*1.1]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
+    const lw=Math.max(.8,R*.0045); x.lineWidth=lw;
+    [[.2,lw],[.28,lw],[.42,lw*1.05],[.7,lw*1.15]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
     /* the stabilimentum: a white zigzag band above and below the hub */
     x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.3*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.006); x.beginPath();
     if(!w.zz) w.zz=Array.from({length:40},()=>[rnd(.6,1.4),rnd(.7,1.3)]);
