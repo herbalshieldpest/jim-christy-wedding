@@ -464,14 +464,18 @@ const ambient=(function(){
     const s={D,X:rnd(-1.2,1.2)*(W/2/f)*D,Y:0,vY:rnd(.042,.07),vX:rnd(.012,.06),vD:rnd(-.05,.08),th:rnd(0,6.283),om:(Math.random()<.5? -1 : 1)*rnd(19,32),cone:rnd(.16,.32),pitch:rnd(.5,.78),
       L:rnd(.011,.014),pal:Math.random()<.15? 1 : 0,ph:rnd(0,6.283),wob:rnd(.004,.012)};
     s.Y= fresh? ((rnd(-.05,.95)*H-vp[1])/f)*D : ((rnd(-120,-30)-vp[1])/f)*D; return s; }
-  function stepSamaras(dt){ const n=MOBILE()? 5 : 11;   /* just a few at a time, now and then */ while(SAMS.length<n) SAMS.push(newSamara(true)); if(SAMS.length>n) SAMS.length=n;
+  /* they come in flurries: a gust shakes the maples and a whole batch whirls down at once, then the air is clear for a while */
+  let samWave={on:false,t:0,next:rnd(18,35),add:0};
+  function stepSamaras(dt){ const W0=samWave; W0.t+=dt;
+    if(!W0.on&&W0.t>W0.next&&nA<.4){ W0.on=true; W0.t=0; W0.dur=rnd(10,18); W0.add=MOBILE()? rnd(8,12) : rnd(18,28); W0.acc=0; }
+    if(W0.on){ W0.acc+=dt*W0.add/(W0.dur*.6); while(W0.acc>=1&&W0.add>0){ W0.acc-=1; W0.add--; SAMS.push(newSamara(false)); } if(W0.t>W0.dur){ W0.on=false; W0.t=0; W0.next=rnd(45,100); } }
     const f=FOC(), vp=vanish(), gust=.6+.4*Math.sin(t*.13)+.25*Math.sin(t*.41+1);
     for(let i=0;i<SAMS.length;i++){ const s=SAMS[i]; s.ph+=dt; s.th+=s.om*dt; s.Y+=s.vY*(.9+.2*Math.sin(s.ph*1.7))*dt; s.X+=(s.vX*gust+Math.sin(s.ph*.9)*s.wob)*dt; s.D+=s.vD*dt;
       const sx=vp[0]+s.X*f/s.D, sy=vp[1]+s.Y*f/s.D; s.sx=sx; s.sy=sy;
-      if(s.Y>=1||s.D<.25||s.D>12||sx<-160||sx>W+160||sy>H+60){ SAMS[i]=newSamara(false); } } }
+      if(s.Y>=1||s.D<.25||s.D>12||sx<-160||sx>W+160||sy>H+60){ SAMS.splice(i,1); i--; } } }   /* landed or gone by: not replaced till the next flurry */
   function drawSamaras(near,dark){ if(!samSpr) samaraSprites(); const f=FOC(), sp=sun(), night=1-.75*nA;
     for(const s of SAMS){ if((s.D<3)!==near) continue; const k=f/s.D, Lpx=s.L*k; if(s.sy<-40) continue;
-      const air=Math.min(1,Math.max(0,(s.D-1.5)/7)), fade=(s.D>9? Math.max(0,1-(s.D-9)/3) : 1)*night*(dark? .8 : 1), focus=s.D<.48? Math.min(1,(.48-s.D)/.2) : 0;
+      const air=Math.min(1,Math.max(0,(s.D-1.5)/7)), fade=(s.D>9? Math.max(0,1-(s.D-9)/3) : 1)*night*(dark? .8 : 1), focus=s.D<.33? Math.min(1,(.33-s.D)/.12)*.8 : 0;
       const glow=Math.max(0,1-Math.hypot(s.sx-sp.x,s.sy-sp.y)/(W*.55))*(1-nA)*(1-air*.6);
       if(Lpx<5){ /* far off: just a fleck of spinning wing, a tiny blur */ ctx.globalAlpha=Math.min(.5,.18+Lpx*.08)*fade; ctx.fillStyle=rgb(mixv([150,128,96],[206,178,138],air*.8)); ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Math.max(.6,Lpx*.85),Math.max(.45,Lpx*(.25+.2*Math.abs(Math.sin(s.th)))),0,0,6.283); ctx.fill(); continue; }
       const set=samSpr[s.pal], spr= air>.55? set.h2 : air>.2? set.h1 : set.base;
@@ -798,7 +802,7 @@ const ambient=(function(){
   }
   /* ---- the ridgelines, traced from the photo: FAR is the first land under the sky (the hazy far ridge across the middle), NEAR the dark wooded ridge in front of it.
      Rain hangs between the two, behind the near ridge and in front of the far one; the night sky sits above the far one ---- */
-  const SKYL={"far":[0.4193,0.4199,0.4208,0.4216,0.4223,0.4228,0.4228,0.4225,0.422,0.4213,0.4207,0.4202,0.42,0.4202,0.4206,0.4212,0.4217,0.422,0.422,0.4218,0.4215,0.4213,0.4211,0.421,0.4209,0.4209,0.421,0.4211,0.4213,0.4216,0.4221,0.4227,0.4235,0.4244,0.4255,0.4267,0.4279,0.429,0.4298,0.4305,0.4311,0.4317,0.4324,0.4333,0.4342,0.4351,0.436,0.4368,0.4375,0.4378,0.438,0.438,0.438,0.4381,0.4383,0.4388,0.4395,0.4403,0.4412,0.4421,0.443,0.4437,0.4444,0.4449,0.4452,0.4455,0.4457,0.4459,0.4462,0.4466,0.4471,0.4477,0.4486,0.4495,0.4504,0.4512,0.4517,0.4522,0.4525,0.4527,0.4529,0.453,0.4531,0.4531,0.4531,0.4531,0.4531,0.4531,0.4531,0.4529,0.4527,0.4524,0.452,0.4515,0.451,0.4504,0.4498,0.4492,0.4487,0.4482,0.4478,0.4476,0.4474,0.4473,0.4473,0.4473,0.4473,0.4473,0.4474,0.4475,0.4477,0.4479,0.4481,0.4482,0.4484,0.4486,0.4488,0.449,0.4491,0.449,0.4488,0.4483,0.4475,0.4463,0.4448,0.4432,0.4414,0.4396,0.4379,0.4361,0.4345,0.4329,0.4316,0.4303,0.4292,0.4281,0.427,0.4261,0.4252,0.4244,0.4237,0.4229,0.4222,0.4217,0.4213,0.4211,0.421,0.4209,0.4209,0.4209,0.4209,0.4209,0.421,0.421,0.4212,0.4214,0.4217,0.4221,0.4227,0.4236,0.4245,0.4256,0.4264,0.4271,0.4276,0.428,0.4282,0.4284,0.4285,0.4286,0.4287,0.4287,0.4287,0.4287,0.4287,0.4287,0.4288,0.4288,0.429,0.4291,0.4293,0.4294,0.4296,0.4296,0.4296,0.4296,0.4294,0.4292,0.429,0.4287,0.4284,0.4282,0.428,0.4279,0.4278,0.4277,0.4276,0.4275,0.4273,0.427,0.4267,0.4263,0.4259,0.4254,0.4248,0.4241,0.4234,0.4225,0.4215,0.4204,0.4192,0.418,0.4168,0.4156,0.4144,0.4131,0.4119,0.4107,0.4094,0.4081,0.4067,0.4052,0.4038,0.4025,0.4013,0.4001,0.3989,0.3978,0.3966,0.3954,0.3942,0.393,0.3919,0.3909,0.3899,0.3891,0.3884,0.3877,0.387,0.3865,0.3862],"near":[0.4203,0.421,0.4222,0.4238,0.4254,0.4263,0.4265,0.4258,0.4243,0.4229,0.4217,0.4206,0.4202,0.4207,0.4225,0.4245,0.4255,0.4254,0.4247,0.4239,0.4232,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.423,0.4235,0.4246,0.4258,0.4273,0.4291,0.4305,0.4316,0.4323,0.4328,0.4333,0.4337,0.4343,0.4356,0.4369,0.4377,0.4386,0.4397,0.4408,0.4413,0.4413,0.4408,0.44,0.4396,0.4396,0.4401,0.4412,0.4423,0.4433,0.4442,0.4452,0.4464,0.4471,0.4473,0.4473,0.4476,0.448,0.4485,0.4489,0.4492,0.4493,0.4496,0.4506,0.4521,0.4535,0.4543,0.4548,0.455,0.4551,0.4551,0.4551,0.4554,0.4561,0.4567,0.4574,0.4584,0.4596,0.4607,0.4616,0.4632,0.4649,0.466,0.4668,0.4675,0.4681,0.469,0.4701,0.4706,0.471,0.4714,0.4719,0.4724,0.4727,0.473,0.4737,0.4746,0.4753,0.4758,0.4763,0.4766,0.4769,0.4776,0.4786,0.4802,0.4824,0.4846,0.4858,0.4862,0.486,0.4856,0.4854,0.4854,0.4854,0.4859,0.4876,0.4904,0.4932,0.4951,0.4962,0.4968,0.4973,0.4979,0.4986,0.4994,0.4998,0.4995,0.4984,0.4967,0.4953,0.4945,0.4942,0.4942,0.4946,0.4958,0.4974,0.4986,0.4989,0.4988,0.4981,0.497,0.4961,0.4952,0.494,0.4931,0.492,0.4901,0.488,0.4859,0.4847,0.4847,0.4851,0.4852,0.4849,0.484,0.4827,0.4816,0.4808,0.4802,0.4798,0.479,0.4769,0.4733,0.4712,0.4709,0.4713,0.4719,0.4718,0.4704,0.4688,0.468,0.4681,0.4692,0.4712,0.4721,0.4711,0.4689,0.4674,0.4669,0.4667,0.4661,0.4648,0.4635,0.4623,0.4609,0.4597,0.4591,0.459,0.459,0.4588,0.4581,0.4568,0.4555,0.454,0.4517,0.448,0.4435,0.441,0.4405,0.4404,0.4404,0.44,0.4385,0.4339,0.4264,0.4207,0.4182,0.4168,0.4155,0.4142,0.4126,0.4109,0.4094,0.4077,0.4059,0.4047,0.4039,0.4027,0.4012,0.3999,0.3987,0.3975,0.3962,0.3948,0.3936,0.3926,0.3918,0.391,0.3899,0.3889,0.3882,0.3879]};
+  const SKYL={"far":[0.4209,0.4219,0.4214,0.4219,0.4219,0.4228,0.4229,0.4238,0.4238,0.4248,0.4267,0.4268,0.4287,0.4287,0.4287,0.4287,0.4287,0.4287,0.4286,0.4277,0.4268,0.4268,0.4248,0.4239,0.4238,0.4238,0.4238,0.4238,0.4229,0.4229,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4228,0.4248,0.4258,0.4268,0.4268,0.4277,0.4277,0.4277,0.4277,0.4277,0.4277,0.4268,0.4258,0.4239,0.4239,0.4239,0.4239,0.4247,0.4247,0.4247,0.4247,0.4221,0.4209,0.4209,0.4209,0.4209,0.4209,0.4236,0.4238,0.4238,0.4238,0.4238,0.4238,0.4238,0.4238,0.4238,0.4247,0.4257,0.4258,0.4258,0.4258,0.4258,0.4239,0.4237,0.4237,0.4237,0.4237,0.4247,0.4248,0.4248,0.4248,0.4258,0.4268,0.4268,0.4277,0.4277,0.4277,0.4277,0.4287,0.4297,0.4307,0.4307,0.4323,0.4326,0.4326,0.4326,0.4334,0.4336,0.4336,0.4336,0.4336,0.4336,0.4344,0.4346,0.4346,0.4346,0.4346,0.4346,0.4346,0.4354,0.4355,0.4355,0.4363,0.4373,0.4375,0.4375,0.4375,0.4375,0.4383,0.4383,0.4383,0.4393,0.4395,0.4402,0.4412,0.4416,0.4416,0.4416,0.4422,0.4422,0.4422,0.4416,0.4415,0.4422,0.4422,0.4415,0.4406,0.4404,0.4404,0.4404,0.4404,0.4404,0.4404,0.4404,0.4404,0.4404,0.4404,0.4412,0.4414,0.4422,0.4451,0.4453,0.4453,0.4453,0.4453,0.4453,0.4446,0.4443,0.4443,0.4443,0.4443,0.4451,0.4463,0.448,0.4492,0.4492,0.4492,0.4492,0.4492,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.449,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4499,0.4502,0.4502,0.4512,0.4519,0.4538,0.4541,0.4541,0.4541,0.4541,0.4544,0.4544,0.4551,0.4561,0.4561,0.457,0.4577,0.4577,0.4577,0.4577,0.457,0.457,0.457,0.457,0.457,0.457,0.4564,0.4561,0.4561,0.4561,0.4561,0.4577,0.458,0.458,0.458,0.458,0.4551,0.4551,0.4551,0.4544,0.4544,0.4544,0.4541,0.4541,0.4541,0.4541,0.4541,0.4541,0.4541,0.4541,0.4541,0.4551,0.4551,0.4551,0.4551,0.4545,0.4541,0.4541,0.4535,0.4531,0.4531,0.4531,0.4525,0.4521,0.4521,0.4521,0.4512,0.4512,0.4512,0.4512,0.4512,0.4512,0.4512,0.4506,0.4502,0.4502,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4482,0.4488,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4492,0.4497,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4502,0.4507,0.4507,0.4507,0.4507,0.4507,0.4492,0.4482,0.4482,0.4478,0.4473,0.4463,0.4453,0.4448,0.4434,0.4429,0.4424,0.4424,0.4414,0.4414,0.4404,0.44,0.439,0.438,0.4375,0.4375,0.4365,0.4355,0.4355,0.4351,0.4336,0.4336,0.4336,0.4326,0.4316,0.4316,0.4316,0.4312,0.4307,0.4307,0.4307,0.4302,0.4302,0.4297,0.4287,0.4277,0.4268,0.4263,0.4258,0.4258,0.4258,0.4258,0.4258,0.4258,0.4258,0.4258,0.4258,0.4252,0.4248,0.4248,0.4234,0.4225,0.4219,0.4219,0.4219,0.4219,0.4219,0.4219,0.4219,0.4219,0.4219,0.4219,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4219,0.4219,0.4219,0.4219,0.4209,0.4209,0.4205,0.4205,0.4205,0.4205,0.4205,0.4205,0.4199,0.4199,0.4199,0.4199,0.4199,0.4199,0.4199,0.4199,0.4199,0.4199,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4209,0.4212,0.4219,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4238,0.4238,0.4238,0.4245,0.4248,0.4248,0.4248,0.4248,0.4248,0.4248,0.4258,0.4258,0.4258,0.4261,0.4268,0.4268,0.4268,0.4268,0.4268,0.4268,0.4268,0.4268,0.4268,0.427,0.4277,0.4287,0.4287,0.4287,0.4287,0.4287,0.4287,0.4287,0.4297,0.4297,0.4297,0.4297,0.4297,0.4299,0.4304,0.4307,0.4307,0.4307,0.4307,0.4309,0.4316,0.4316,0.4316,0.4316,0.4316,0.4316,0.4316,0.4316,0.4316,0.4316,0.4314,0.4304,0.4304,0.4304,0.4304,0.4307,0.4307,0.4307,0.4307,0.4307,0.4307,0.4307,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4297,0.4295,0.4287,0.4287,0.4287,0.4287,0.4289,0.4297,0.4297,0.4297,0.4297,0.4299,0.4299,0.4299,0.4299,0.4297,0.4297,0.4297,0.4295,0.4287,0.4287,0.4287,0.4287,0.4287,0.4287,0.4277,0.4277,0.4277,0.4268,0.4258,0.4258,0.4258,0.4258,0.4258,0.4258,0.4258,0.4248,0.4248,0.4248,0.4237,0.4219,0.4219,0.4219,0.4219,0.4219,0.4218,0.4199,0.4199,0.4199,0.4199,0.4198,0.4197,0.4189,0.4169,0.4159,0.415,0.415,0.415,0.415,0.415,0.4141,0.4131,0.4131,0.4131,0.4131,0.413,0.412,0.4111,0.4102,0.4101,0.4092,0.4092,0.4091,0.4082,0.4081,0.4072,0.4072,0.4051,0.4033,0.4033,0.4033,0.4033,0.4033,0.4033,0.4033,0.4024,0.4023,0.4023,0.4023,0.3994,0.3994,0.3984,0.3984,0.3984,0.3984,0.3984,0.3984,0.3973,0.3955,0.3955,0.3955,0.3946,0.3946,0.3946,0.3945,0.3936,0.3936,0.3926,0.3926,0.3926,0.3916,0.3916,0.3906,0.3906,0.3906,0.3906,0.3906,0.3906,0.3906,0.3896,0.3887,0.3887,0.3877,0.3877,0.3877,0.3877,0.3877,0.3877,0.3867],"near":[0.4206,0.4207,0.4208,0.4211,0.4215,0.4219,0.4224,0.4229,0.4235,0.4241,0.4246,0.4252,0.4256,0.4259,0.4262,0.4264,0.4264,0.4264,0.4263,0.426,0.4257,0.4252,0.4247,0.4242,0.4237,0.4232,0.4227,0.4223,0.4219,0.4215,0.4211,0.4207,0.4205,0.4204,0.4204,0.4204,0.4205,0.4207,0.4214,0.422,0.4227,0.4234,0.4241,0.4246,0.425,0.4253,0.4254,0.4254,0.4254,0.4252,0.425,0.4247,0.4245,0.4242,0.4239,0.4237,0.4234,0.4232,0.4231,0.423,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.4229,0.423,0.423,0.4231,0.4233,0.4235,0.4239,0.4242,0.4246,0.4251,0.4255,0.4259,0.4264,0.427,0.4275,0.4282,0.4288,0.4294,0.4299,0.4304,0.4308,0.4312,0.4315,0.4318,0.4321,0.4323,0.4325,0.4327,0.4328,0.433,0.4332,0.4333,0.4335,0.4336,0.4338,0.434,0.4342,0.4346,0.4351,0.4355,0.436,0.4364,0.4369,0.4372,0.4375,0.4377,0.4381,0.4384,0.4387,0.4391,0.4395,0.4399,0.4403,0.4406,0.4409,0.4411,0.4413,0.4413,0.4413,0.4413,0.4411,0.441,0.4408,0.4405,0.4402,0.44,0.4398,0.4397,0.4396,0.4396,0.4396,0.4397,0.4399,0.44,0.4404,0.4408,0.4411,0.4415,0.4419,0.4423,0.4427,0.443,0.4434,0.4437,0.444,0.4443,0.4447,0.445,0.4454,0.4458,0.4463,0.4466,0.4468,0.4471,0.4472,0.4472,0.4473,0.4473,0.4473,0.4473,0.4474,0.4475,0.4476,0.4478,0.4479,0.4481,0.4483,0.4484,0.4486,0.4487,0.4489,0.449,0.4491,0.4492,0.4492,0.4493,0.4493,0.4494,0.4495,0.4497,0.45,0.4504,0.4508,0.4513,0.4519,0.4524,0.4529,0.4534,0.4537,0.454,0.4543,0.4545,0.4546,0.4548,0.4549,0.4549,0.455,0.455,0.4551,0.4551,0.4551,0.4551,0.4551,0.4551,0.4551,0.4552,0.4553,0.4554,0.4556,0.4558,0.4561,0.4563,0.4565,0.4567,0.457,0.4572,0.4575,0.4579,0.4582,0.4586,0.459,0.4594,0.4599,0.46,0.46,0.46,0.46,0.46,0.4606,0.4616,0.4625,0.4629,0.4639,0.4645,0.4658,0.4668,0.4668,0.4662,0.4658,0.4658,0.4658,0.4664,0.4668,0.4668,0.4668,0.4668,0.4678,0.4684,0.4693,0.4697,0.4707,0.4707,0.4707,0.4707,0.4707,0.4697,0.4697,0.4703,0.4707,0.4713,0.4717,0.4717,0.4717,0.4717,0.4717,0.4717,0.4717,0.4717,0.4717,0.4717,0.4717,0.4722,0.4736,0.4736,0.4736,0.4736,0.4736,0.4752,0.4766,0.4766,0.476,0.4756,0.475,0.4746,0.4746,0.4746,0.4746,0.4746,0.4751,0.4756,0.4756,0.4756,0.4761,0.4766,0.4766,0.4775,0.4775,0.4775,0.4775,0.4795,0.482,0.4824,0.4824,0.4834,0.4849,0.4854,0.4854,0.4854,0.4859,0.4868,0.4873,0.4873,0.4873,0.4863,0.4854,0.4844,0.4844,0.4844,0.4844,0.4844,0.4844,0.4844,0.4844,0.4839,0.4834,0.4834,0.4834,0.4839,0.4844,0.4854,0.4858,0.4878,0.4893,0.4907,0.4912,0.4922,0.4936,0.4946,0.4961,0.4961,0.4961,0.4961,0.4951,0.4951,0.4951,0.4951,0.4951,0.4951,0.4956,0.4971,0.4971,0.4971,0.4971,0.4975,0.4989,0.501,0.501,0.501,0.4996,0.499,0.4986,0.498,0.498,0.4976,0.4971,0.4962,0.4927,0.4908,0.4902,0.4902,0.4893,0.4888,0.4883,0.4883,0.4906,0.4912,0.4912,0.4922,0.4922,0.4922,0.4922,0.4918,0.4912,0.4912,0.4936,0.4959,0.4971,0.4971,0.4971,0.4971,0.4971,0.4971,0.4971,0.4967,0.4961,0.4971,0.4971,0.4971,0.4971,0.4957,0.4947,0.4905,0.4869,0.4863,0.4863,0.4863,0.4884,0.4916,0.4941,0.4941,0.4941,0.4941,0.4941,0.4932,0.4918,0.4909,0.4889,0.4873,0.4863,0.4863,0.4854,0.4837,0.4801,0.4785,0.4775,0.4775,0.4775,0.4775,0.4772,0.4766,0.4766,0.4766,0.4766,0.4766,0.4766,0.4805,0.4814,0.4821,0.4814,0.4802,0.4762,0.4756,0.4756,0.4756,0.4756,0.4756,0.4743,0.4733,0.4727,0.4727,0.4727,0.4727,0.4736,0.4749,0.4756,0.4756,0.4756,0.4769,0.4775,0.4775,0.4753,0.4716,0.4658,0.4658,0.4658,0.4658,0.4648,0.4629,0.4629,0.4632,0.4641,0.4654,0.4678,0.4678,0.4688,0.4688,0.47,0.4717,0.4717,0.4714,0.4704,0.4688,0.4663,0.4639,0.4626,0.4607,0.46,0.46,0.4609,0.4612,0.4622,0.4641,0.4658,0.467,0.468,0.4714,0.4736,0.4736,0.4736,0.4724,0.4696,0.4646,0.4639,0.4629,0.4629,0.4629,0.4641,0.4651,0.4658,0.4658,0.4658,0.4648,0.4648,0.4648,0.4648,0.4639,0.4627,0.4619,0.4619,0.4629,0.4629,0.4629,0.4629,0.4627,0.4619,0.4607,0.459,0.458,0.458,0.458,0.458,0.4582,0.459,0.459,0.459,0.459,0.459,0.459,0.46,0.4601,0.4609,0.4609,0.4608,0.4588,0.4569,0.4561,0.4561,0.4561,0.4561,0.4561,0.4559,0.4549,0.4541,0.4531,0.4531,0.453,0.452,0.451,0.4491,0.4474,0.4413,0.4404,0.4404,0.4414,0.4414,0.4413,0.4404,0.4404,0.441,0.4443,0.4443,0.4434,0.4434,0.4424,0.4414,0.4414,0.4414,0.4414,0.4414,0.4404,0.4404,0.4403,0.4395,0.4395,0.4395,0.4396,0.4404,0.4404,0.4404,0.4404,0.4404,0.4404,0.4403,0.4394,0.4385,0.4375,0.4364,0.4355,0.4346,0.4346,0.4346,0.4336,0.4336,0.4336,0.4336,0.4337,0.4346,0.4346,0.4356,0.4375,0.4375,0.4375,0.4375,0.4374,0.4355,0.4346,0.4346,0.4346,0.4346,0.4355,0.4385,0.4385,0.4385,0.4395,0.4395,0.4404,0.4414,0.4414,0.4414,0.4404,0.4395,0.4395,0.4395,0.4258,0.4004,0.4002,0.3949,0.3949,0.3956,0.416,0.416,0.416,0.416,0.416,0.4141,0.4092,0.4082,0.4082,0.4082,0.4072,0.4072,0.3984,0.3984,0.3984,0.3984,0.4229,0.4229,0.4229,0.4238,0.4287]};
   function ridgePath(c,arr,dy){ const m=cover(), N=arr.length-1, w=m.iw*m.s, h=m.ih*m.s; c.beginPath(); c.moveTo(m.ox-4,-H*2); for(let i=0;i<=N;i++) c.lineTo(m.ox+i/N*w,m.oy+arr[i]*h+(dy||0)); c.lineTo(m.ox+w+4,-H*2); c.closePath(); }
   function ridgeY(arr,fx){ const m=cover(), N=arr.length-1, u=Math.max(0,Math.min(N,fx*N)), i=Math.min(N-1,Math.floor(u)); return m.oy+lerp(arr[i],arr[i+1],u-i)*m.ih*m.s; }
   const IX=f=>{ const m=cover(); return m.ox+f*m.iw*m.s; }, IY=f=>{ const m=cover(); return m.oy+f*m.ih*m.s; };
@@ -1085,9 +1089,11 @@ const ambient=(function(){
     ctx.globalCompositeOperation="source-over"; landPath(ctx); ctx.clip();   /* only on the land, so nothing bands across the sky as night comes on */
     { const y0=ridgeY(SKYL.far,.5), g=ctx.createLinearGradient(0,y0,0,H); g.addColorStop(0,"rgba(5,8,20,0)"); g.addColorStop(.18,`rgba(5,8,20,${(.12*nA).toFixed(3)})`); g.addColorStop(1,`rgba(4,6,16,${(.3*nA).toFixed(3)})`); ctx.fillStyle=g; ctx.fillRect(-W,y0-2,W*3,H*2); }
     ctx.globalCompositeOperation="screen";
-    { const n=72, x0=IX(0), x1=IX(1), sw=(x1-x0)/n;   /* haze holding the moonlight on the far ridges: strip by strip, from each ridge's crest down to the near ridge in front */
-      for(let i=0;i<n;i++){ const fx=(i+.5)/n, y0=ridgeY(SKYL.far,fx), yn=ridgeY(SKYL.near,fx), k=Math.max(0,Math.min(1,(yn-y0-H*.008)/(H*.025))); if(k<=0) continue; const y1=yn+H*.015, g=ctx.createLinearGradient(0,y0,0,y1);   /* only where there's a far ridge standing behind the near one */
-        g.addColorStop(0,`rgba(74,96,146,${(.36*nA*k).toFixed(3)})`); g.addColorStop(.6,`rgba(62,82,128,${(.18*nA*k).toFixed(3)})`); g.addColorStop(1,"rgba(60,80,126,0)"); ctx.fillStyle=g; const l=Math.floor(x0+i*sw), r=Math.floor(x0+(i+1)*sw); ctx.fillRect(l,y0-3,r-l,y1-y0+3); } }
+    ctx.save(); ridgePath(ctx,SKYL.near,.5); ctx.clip();   /* the haze sits between the two ridges and never spills over the near trees */
+    { const n=220, x0=IX(0), x1=IX(1), sw=(x1-x0)/n;   /* haze holding the moonlight on the far ridges: strip by strip, from each ridge's crest down to the near ridge in front */
+      for(let i=0;i<n;i++){ const fx=(i+.5)/n, y0=ridgeY(SKYL.far,fx), yn=ridgeY(SKYL.near,fx), k=Math.max(0,Math.min(1,(yn-y0-H*.004)/(H*.03))); if(k<=0) continue; const y1=yn+2, g=ctx.createLinearGradient(0,y0,0,y1);   /* only where there's a far ridge standing behind the near one */
+        g.addColorStop(0,`rgba(74,96,146,${(.36*nA*k).toFixed(3)})`); g.addColorStop(.6,`rgba(62,82,128,${(.18*nA*k).toFixed(3)})`); g.addColorStop(1,"rgba(60,80,126,0)"); ctx.fillStyle=g; const l=Math.round(x0+i*sw), r=Math.round(x0+(i+1)*sw); ctx.fillRect(l,y0-3,r-l,y1-y0+3); } }   /* edge to edge, no overlaps, so no seams */
+    ctx.restore();
     ctx.restore(); drawNightGlow();
     /* the sky: drawn off to the side and cut along the far ridge with a soft edge, so the ridgeline reads as a silhouette rather than a cut-out */
     if(nsC.width!==Math.ceil(W)||nsC.height!==hz){ nsC.width=Math.ceil(W); nsC.height=Math.max(1,hz); }
@@ -1131,6 +1137,7 @@ const ambient=(function(){
         }
       }
     }
+    if(typeof drawDeer==="function") drawDeer(0,dark,"brush");   /* whitetails bounding through the goldenrod: in front of it, but sunk into it */
     drawFlare(welcome);   /* (the patch that paints out the photo's own flare goes down first, so the night darkens it with everything else) */
     drawCloudShadows(); drawNight(); drawStorm(dark); drawRainbow(dark); drawMoon();   /* after the fields, so the night falls on them too */
     if(welcome) welcomeShade();
@@ -1466,13 +1473,13 @@ const ambient=(function(){
   }
   function deerPose(d){
     const s=d.s, w=1-s, X=w*w*d.a.X+2*w*s*d.m.X+s*s*d.e.X, Z=w*w*d.a.Z+2*w*s*d.m.Z+s*s*d.e.Z, Dw=Z*GF/FOC(), sc=toScreen(X,Dw);
-    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*.62,leapU:d.u,q:0,ph:0};
+    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.62+.7*(1-(d.fa??1))),leapU:d.u,q:0,ph:0};
   }
   function stepHerd(dt){
     if(!herd.length){ nextDeer-=(lull>0?0:dt); if(nextDeer<=0) startDeer(); deer=null; return; }
     for(const d of herd){
       if(d.delay>0){ d.delay-=dt; continue; }
-      const flying=d.u>=.28&&d.u<=.95; d.u+=dt/d.cyc; if(d.u>=1){ d.u-=1; d.cyc=rnd(.88,1.15); }
+      const flying=d.u>=.28&&d.u<=.95; d.u+=dt/(d.cyc*(1+.35*(1-(d.fa??1)))); if(d.u>=1){ d.u-=1; d.cyc=rnd(.88,1.15); }   /* in the brush the bounds are higher and hang longer */
       const sp=d.v*(flying?1.25:.45)*(1-.35*d.s);                    /* each bound covers ground in the air, less on the ground; slows a touch as it tires */
       const s0=d.s; d.s=Math.min(1,d.s+sp*dt/d.L);
       const P0=deerPose(Object.assign({},d,{s:s0})), P1=deerPose(d), dX=P1.Xw-P0.Xw, dZ=trueZ(P1.Dw)-trueZ(P0.Dw);
@@ -1607,9 +1614,27 @@ const ambient=(function(){
     for(const {who,p} of L){
       const fa=who.fa==null?1:who.fa;
       if(layer==="front"){ if(fa>0){ if(ext) ext.push({y:p.y,fn:()=>paintDeer(p,dark,{yaw:who.yaw,alpha:who.alpha*fa})}); else paintDeer(p,dark,{yaw:who.yaw,alpha:who.alpha*fa}); } }
-      else if(fa<1) paintDeer(p,dark,who);
+      else if(layer==="brush"&&fa<1){ paintDeer(p,dark,who);
+        /* then the stalks in front of it are laid back over its legs and belly: taken from the same swaying field, so they move as one,
+           feathered at the top, and thrashing where it crashes through */
+        const k=1-fa, top=p.y-p.g*(.12+.2*k), x0=p.x-p.g*.42, w=p.g*.84, h=p.y+p.g*.06-top, land=who.u!=null? 1-boundLift(who.u) : 0;
+        brushOver(x0,top-6,w,h+6,(1.2+3.2*land)*k,p.x); }
     }
   }
+  /* re-lays the moving field (the right-hand goldenrod, or the far field on the left) over a patch of the scene, faded in from the top, and shaken around cx */
+  const bpC=document.createElement("canvas"), bpX=bpC.getContext("2d");
+  function brushOver(x0,y0,w,h,shake,cx){ w=Math.ceil(w); h=Math.ceil(h); if(w<4||h<4) return; if(bpC.width<w||bpC.height<h){ bpC.width=Math.max(bpC.width,w); bpC.height=Math.max(bpC.height,h); }
+    const x=bpX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,w,h);
+    for(const [F,cols,amp,wob,fr,o0] of [[leftTile,8,2.6,.45,2.4,1.1],[fieldTile,9,6,.9,2.6,0]]){ if(!F) continue; if(x0>F.x+F.w||x0+w<F.x||y0>F.y+F.h||y0+h<F.y) continue;
+      const rows=3, cw=Math.ceil(F.w/cols), base=.6+.4*Math.sin(t*.23);
+      for(let yy=Math.max(0,Math.floor((y0-F.y)/rows)*rows); yy<Math.min(F.h,y0+h-F.y); yy+=rows){ const hgt=1-yy/F.h, lean=Math.pow(hgt,1.7);
+        for(let c=0;c<cols;c++){ const cx0=F.x+c*cw; if(cx0>x0+w+10||cx0+cw<x0-10) continue;
+          const ph=t*1.05+o0-c*(o0? .3 : .32), gust=.55*Math.sin(ph)+.3*Math.sin(ph*2.3+1)+.15*Math.sin(ph*5.1+2);
+          for(let sx=0;sx<cw;sx+=6){ const px=cx0+sx, near=Math.exp(-Math.pow((px-cx)/(w*.3),2)), dx=((gust*base+.35)*amp+Math.sin(t*fr+c*1.7+yy*.05)*wob)*lean+shake*near*Math.sin(t*15+px*.21+yy*.11)*(.4+.6*(1-(yy+F.y-y0)/h));
+            x.drawImage(F.c,c*cw+sx,yy,Math.min(6,cw-sx),rows,px+dx-x0,F.y+yy-y0,Math.min(6,cw-sx),rows); } } } }
+    x.globalCompositeOperation="destination-in"; const g=x.createLinearGradient(0,0,0,Math.min(h,26)); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(.55,"rgba(0,0,0,.75)"); g.addColorStop(1,"#000"); x.fillStyle=g; x.fillRect(0,0,w,h);
+    const g2=x.createLinearGradient(0,0,w,0); g2.addColorStop(0,"rgba(0,0,0,0)"); g2.addColorStop(.18,"#000"); g2.addColorStop(.82,"#000"); g2.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=g2; x.fillRect(0,0,w,h);
+    x.globalCompositeOperation="source-over"; ctx.drawImage(bpC,0,0,w,h,x0,y0,w,h); }
 
   /* ---- a red fox: darts in, stops, sniffs, snaps its head around, darts off another way, toward you and away, then leaves ---- */
   let fox=null, nextFox=45;
@@ -4275,9 +4300,40 @@ const ambient=(function(){
      the white zigzag is stitched above and below the hub. She waits head-down at the hub, then walks out along her web \u2014 and after a few
      seconds a bluebird drops in, snatches her off it and is gone, leaving the web torn and swinging ---- */
   let web=null, nextWeb=rnd(150,280); const wbCv=document.createElement("canvas"), wbCx=wbCv.getContext("2d");
-  function startWeb(){ const left=Math.random()<.5, R=Math.min(W,H)*rnd(.1,.125);
+  /* the golden garden spider herself (Argiope aurantia), painted at whatever size she is on screen: a glossy egg-shaped abdomen, black with the
+     yellow patches down each side; a silvery, hairy cephalothorax; eight long legs, reddish-brown at the base and banded black and yellow,
+     held in pairs. She is lit from behind by the low sun, with a warm rim on her edge, and set back into the evening haze like the rest of the photo */
+  const spC=document.createElement("canvas"), spX=spC.getContext("2d");
+  function drawArgiope(cx,cy,ang,sc,sqx,legPh,walking,lit,A,sunS,haze){ const S=Math.ceil(30*sc)+6; if(spC.width<S*2) spC.width=spC.height=S*2;
+    const x=spX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S*2,S*2); x.translate(S,S); x.scale(sc*sqx,sc); x.lineCap="round"; x.lineJoin="round";
+    const L=c=>rgb(mulv(c,lit));
+    /* legs: [base angle from the head axis, lengths of femur / tibia / tarsus], front pairs reaching ahead together, the third pair short, the fourth pair back */
+    const LEGS=[[.32,5.2,5.4,5.6],[.62,4.7,4.6,4.8],[1.75,3,2.8,2.6],[2.55,4.6,4.8,5.2]];
+    for(const sd of [-1,1]) LEGS.forEach(([a0,l1,l2,l3],i)=>{ const st=walking? Math.sin(legPh+i*1.6+(sd>0? 0 : Math.PI))*.22 : Math.sin(legPh*.3+i)*.02, a=(a0+st)*sd, bend=(i<2? .55 : i===2? .9 : -.5)*sd;
+      const p0=[Math.sin(a)*1.4,2.8+Math.cos(a)*1.4], d1=[Math.sin(a+bend*.6),Math.cos(a+bend*.6)], p1=[p0[0]+d1[0]*l1,p0[1]+d1[1]*l1], d2=[Math.sin(a-bend*.15),Math.cos(a-bend*.15)], p2=[p1[0]+d2[0]*l2,p1[1]+d2[1]*l2], d3=[Math.sin(a-bend*.5),Math.cos(a-bend*.5)], p3=[p2[0]+d3[0]*l3,p2[1]+d3[1]*l3];
+      const seg=(a,b,w0,w1,c)=>{ x.strokeStyle=c; x.lineWidth=(w0+w1)/2; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); };
+      seg(p0,p1,.62,.5,L([138,66,30])); seg(p1,[lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],.48,.42,L([24,20,16])); seg([lerp(p1[0],p2[0],.55),lerp(p1[1],p2[1],.55)],p2,.42,.38,L([206,160,44])); seg(p2,p3,.34,.18,L([22,18,14]));   /* reddish femur, black and yellow-banded tibia, black tarsus */
+      x.fillStyle=L([30,24,18]); for(const q of [p1,p2]){ x.beginPath(); x.arc(q[0],q[1],.34,0,6.283); x.fill(); }
+      if(sc>1.4){ x.strokeStyle=rgb(mulv([60,50,40],lit),.6); x.lineWidth=.08; for(let k=0;k<6;k++){ const u=(k+.5)/6, q=[lerp(p1[0],p3[0],u),lerp(p1[1],p3[1],u)]; x.beginPath(); x.moveTo(q[0],q[1]); x.lineTo(q[0]+d2[1]*.5*sd,q[1]-d2[0]*.5*sd); x.stroke(); } } });   /* fine spines along the legs, when she's close */
+    /* the abdomen: egg-shaped, broadest near the front */
+    const ab=new Path2D(); ab.moveTo(0,.4); ab.bezierCurveTo(3.7,.2,3.9,-4.6,2.4,-8.4); ab.bezierCurveTo(1.2,-10.6,-1.2,-10.6,-2.4,-8.4); ab.bezierCurveTo(-3.9,-4.6,-3.7,.2,0,.4); ab.closePath();
+    x.save(); x.clip(ab); x.fillStyle=L([20,17,14]); x.fillRect(-5,-12,10,13);
+    x.fillStyle=L([238,198,60]); for(const sd of [-1,1]){ for(let i=0;i<5;i++){ const yy=-1.4-i*1.75, xx=sd*(2.15-i*.22); x.beginPath(); x.ellipse(xx,yy,1.4-i*.12,.86-i*.05,sd*(.35+i*.05),0,6.283); x.fill(); } x.beginPath(); x.ellipse(sd*1.2,-.9,1.35,.85,sd*.2,0,6.283); x.fill(); }   /* the yellow patches down each side, and the band across the front */
+    x.fillStyle=L([226,214,170]); for(let i=0;i<4;i++){ x.beginPath(); x.arc(0,-2.6-i*1.8,.22,0,6.283); x.fill(); }   /* the pale dots down the middle */
+    const sh=x.createRadialGradient(-sunS*1.4,-5.4,.4,0,-4.6,5.6); sh.addColorStop(0,"rgba(255,246,220,.28)"); sh.addColorStop(.45,"rgba(0,0,0,0)"); sh.addColorStop(1,"rgba(0,0,0,.5)"); x.fillStyle=sh; x.fillRect(-5,-12,10,13);   /* round, glossy */
+    x.restore();
+    x.save(); x.clip(ab); x.strokeStyle=`rgba(255,200,120,${(.55*lit).toFixed(2)})`; x.lineWidth=.55; x.translate(sunS*.35,0); x.stroke(ab); x.restore();   /* the warm rim where the low sun catches her edge */
+    x.fillStyle="rgba(255,250,236,.35)"; x.beginPath(); x.ellipse(-sunS*1.1,-5.8,.3,.55,.3,0,6.283); x.fill();   /* a glint of light on the glossy back */
+    /* the cephalothorax: silver, furred, with the dark eye-cluster at the front */
+    const cg=x.createRadialGradient(-.5,2.2,.2,0,2.9,2.6); cg.addColorStop(0,L([206,204,196])); cg.addColorStop(.7,L([150,148,140])); cg.addColorStop(1,L([90,86,80])); x.fillStyle=cg; x.beginPath(); x.ellipse(0,2.9,2.05,2.35,0,0,6.283); x.fill();
+    x.strokeStyle=rgb(mulv([246,244,236],lit),.5); x.lineWidth=.1; for(let i=0;i<16;i++){ const aa=i/16*6.283; x.beginPath(); x.moveTo(Math.cos(aa)*1.4,2.9+Math.sin(aa)*1.7); x.lineTo(Math.cos(aa)*2.3,2.9+Math.sin(aa)*2.6); x.stroke(); }   /* the silky hairs */
+    x.fillStyle=L([28,22,18]); x.beginPath(); x.ellipse(0,4.8,.7,.42,0,0,6.283); x.fill();
+    /* set back into the air of the photo */
+    x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop"; x.fillStyle=rgb(haze,.16); x.fillRect(0,0,S*2,S*2); x.globalCompositeOperation="source-over";
+    ctx.save(); ctx.globalAlpha=A; ctx.translate(cx,cy); ctx.rotate(ang); ctx.filter=sc<1.2? "none" : "blur(.35px)"; ctx.drawImage(spC,0,0,S*2,S*2,-S,-S,S*2,S*2); ctx.restore(); ctx.filter="none"; }
+  function startWeb(){ const left=Math.random()<.5, R=Math.min(W,H)*rnd(.14,.17);
     web={left,sx:W*(left? rnd(.12,.2) : rnd(.8,.88)),sy:H*rnd(.7,.76),R,a:(left?1:-1)*rnd(.3,.6),t:0,life:rnd(46,58),alpha:0,ph:"hub",hubT:rnd(5,9),
-      rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:80},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)]),su:0,sv:0,sh:Math.PI/2,leg:0,jolt:0,tear:null};
+      rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:80},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)]),su:0,sv:0,sh:-Math.PI/2,leg:0,jolt:0,tear:null};
     buildTuft(web); }
   /* the tuft, painted once: blades behind the web, and the big soft blades at the lens in front of it */
   function buildTuft(w){ const R=w.R, sd=w.left? -1 : 1, x0=w.sx-R*3.2, x1=w.sx+R*3.2, y0=w.sy-R*2.6, bw=Math.ceil(x1-x0), bh=Math.ceil(H+10-y0);
@@ -4293,12 +4349,9 @@ const ambient=(function(){
       x.restore(); };
     const mk=()=>{ const c=document.createElement("canvas"); c.width=bw; c.height=bh; const x=c.getContext("2d"); x.translate(-x0,-y0); return [c,x]; };
     const [cB,xB]=mk(), [cF,xF]=mk();
-    /* behind: a loose fan of blades and a few seed stems, densest at the outer side, thinning toward the open middle of the frame */
-    for(let i=0;i<30;i++){ const outer=Math.random()<.74, b= outer? w.sx+sd*R*rnd(1.25,3.4) : w.sx-sd*R*rnd(1.35,2.5), L=R*rnd(1.0,2.8)+(H-w.sy)*.6; let lean=(outer? sd : -sd)*rnd(-.12,.32);
-      const tip=b+lean*L*.55; if(Math.abs(tip-w.sx)<R*1.15) lean=-lean;   /* the blades frame the web; none of them cross it */
-      blade(xB,b,L,lean,R*rnd(.018,.042),rnd(.15,.85),rnd(.6,.95),i%6===0); }
-    /* in front, right at the lens: three or four broad blades, soft and out of focus, leaning in from the outer corner */
-    xF.filter=`blur(${Math.max(3,R*.06).toFixed(1)}px)`; for(let i=0;i<4;i++){ const b=w.sx+sd*R*rnd(1.6,3.2), L=R*rnd(1.6,2.8)+(H-w.sy)*.4, lean=-sd*rnd(.15,.45); blade(xF,b,L,lean,R*rnd(.07,.11),rnd(.15,.5),.75,false); }
+    /* kept simple: a couple of slender blades behind, low at the outer side, and one long soft blade at the lens */
+    for(const [o,l,ln] of [[2.0,1.15,.1],[2.45,.85,-.06],[-1.6,.7,.08]]){ const b=w.sx+sd*R*o; blade(xB,b,R*l+(H-w.sy)*.55,-sd*ln,R*.026,.55,.85,false); }
+    xF.filter=`blur(${Math.max(4,R*.07).toFixed(1)}px)`; blade(xF,w.sx+sd*R*2.9,R*1.5+(H-w.sy)*.4,-sd*.3,R*.075,.4,.55,false);
     w.tB=cB; w.tF=cF; w.tx0=x0; w.ty0=y0; w.sunS=sunS; }
   function drawWeb(dt,dark){
     if(!web){ nextWeb-=(lull>0?0:dt); if(nextWeb<=0&&nA<.3){ nextWeb=rnd(200,340); startWeb(); } return; }
@@ -4320,34 +4373,34 @@ const ambient=(function(){
       x.strokeStyle=`rgba(255,232,170,${(.5*A*lit).toFixed(3)})`; x.lineWidth=.6; for(let i=0;i<14;i++){ const yy=hy-R*.2*i/13, s2=i%2? 1 : -1; x.beginPath(); x.moveTo(hx,yy); x.lineTo(hx+s2*R*.06,yy-R*.04); x.stroke(); } };
     stem(sL,[tL[0],tL[1]-R*.15],.4); stem(sR,[tR[0],tR[1]-R*.2],-.4);
     const thread=(al)=>`rgba(${Math.round(255*lit)},${Math.round(242*lit)},${Math.round(214*lit)},${(al*A).toFixed(3)})`;
-    x.lineWidth=Math.max(.5,R*.004); x.strokeStyle=thread(.35); x.beginPath(); const rimPt=i=>{ const th=i/30*6.283; return P(Math.cos(th)*w.rim[i],Math.sin(th)*w.rim[i]); };
+    x.lineWidth=Math.max(.45,R*.003); x.strokeStyle=thread(.14); x.beginPath(); const rimPt=i=>{ const th=i/30*6.283; return P(Math.cos(th)*w.rim[i],Math.sin(th)*w.rim[i]); };
     for(const [q,an] of [[tL,rimPt(11)],[tR,rimPt(3)],[sL,rimPt(19)],[sR,rimPt(25)]]){ x.moveTo(q[0],q[1]); x.lineTo(an[0],an[1]); } x.stroke();
     const torn=(th,r)=>{ if(!w.tear) return false; const du=Math.cos(th)*r-w.tear[0], dv=Math.sin(th)*r-w.tear[1]; return du*du+dv*dv<.09; };   /* where the bird tore through */
-    /* the spokes, each catching the sun at its own angle */
-    for(let i=0;i<30;i++){ const th=i/30*6.283, g=Math.pow(Math.max(0,Math.cos(th-sunA)),6), q0=P(Math.cos(th)*.05,Math.sin(th)*.05); let rEnd=w.rim[i]; if(w.tear){ for(let r=.1;r<rEnd;r+=.05) if(torn(th,r)){ rEnd=r; break; } }
-      const q1=P(Math.cos(th)*rEnd,Math.sin(th)*rEnd); x.strokeStyle=thread(.14+.55*g); x.beginPath(); x.moveTo(q0[0],q0[1]); x.lineTo(q1[0],q1[1]); x.stroke();
-      if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); x.beginPath(); x.moveTo(o[0],o[1]); x.quadraticCurveTo(back[0],back[1]+R*.1,back[0]-R*.02,back[1]+R*.2); x.stroke(); } }   /* broken spokes, their ends hanging */
-    /* the capture spiral: straight runs from spoke to spoke, sagging a hair */
-    x.strokeStyle=thread(.22); x.beginPath(); let pen=false;
-    for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30; const r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); if(torn(th,r1)){ pen=false; continue; } pen? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); pen=true; } x.stroke();
+    /* the threads: almost invisible silk, except where a run of it turns square to the low sun and lights up, so the web shows as a soft cross of
+       light through the spokes and spiral rather than as a drawn net */
+    const sunPerp=sunA+Math.PI/2, bins=[[],[],[],[]], put=(q0,q1,dir)=>{ const g=Math.pow(Math.abs(Math.cos(dir-sunPerp)),10), k=g>.6? 3 : g>.25? 2 : g>.06? 1 : 0; bins[k].push(q0,q1); };
+    for(let i=0;i<30;i++){ const th=i/30*6.283; let rEnd=w.rim[i]; if(w.tear){ for(let r=.1;r<rEnd;r+=.05) if(torn(th,r)){ rEnd=r; break; } }
+      let r0=.05; for(let s2=0;s2<4;s2++){ const r1=r0+(rEnd-r0)/(4-s2), q0=P(Math.cos(th)*r0,Math.sin(th)*r0), q1=P(Math.cos(th)*r1,Math.sin(th)*r1); put(q0,q1,Math.atan2(-(q1[1]-q0[1]),q1[0]-q0[0])); r0=r1; }
+      if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); bins[1].push(o,[back[0]-R*.02,back[1]+R*.2]); } }
+    let prev=null; for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30, r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); if(torn(th,r1)){ prev=null; continue; } if(prev) put(prev,q,Math.atan2(-(q[1]-prev[1]),q[0]-prev[0])); prev=q; }
+    const lw=Math.max(.45,R*.0032); x.lineWidth=lw;
+    [[.04,lw],[.09,lw],[.17,lw],[.3,lw*1.05]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
     /* the stabilimentum: a white zigzag band above and below the hub */
-    x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.55*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.008); x.beginPath();
-    for(const sg of [1,-1]){ for(let j=0;j<=22;j++){ const v=sg*(.1+j*.019), u=(j%2? .022 : -.022)*(1-j/30), q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke();
+    x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.3*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.006); x.beginPath();
+    if(!w.zz) w.zz=Array.from({length:40},()=>[rnd(.6,1.4),rnd(.7,1.3)]);
+    x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.16*A).toFixed(3)})`;
+    for(const sg of [1,-1]){ let n=0; for(let j=0;j<=18;j++){ const z=w.zz[j+(sg>0? 0 : 20)], v=sg*(.12+j*.02*z[1]), u=(j%2? .024 : -.024)*z[0]*(1-j/26), q=P(u,v); j? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1]); } } x.stroke();   /* the zigzag silk band, uneven and faint */
     /* dew, sparkling now and then */
     for(const [th,rr,ph] of w.dew){ if(torn(th,rr)) continue; const q=P(Math.cos(th)*rr,Math.sin(th)*rr), tw=Math.pow(Math.max(0,Math.sin(w.t*1.7+ph)),18); if(tw<.05) continue; x.fillStyle=`rgba(255,250,236,${(tw*.9*A*lit).toFixed(3)})`; x.beginPath(); x.arc(q[0],q[1],Math.max(.4,R*.0055)*(1+tw*.6),0,6.283); x.fill(); }
     /* ---- the spider: waits at the hub, then walks out along a spoke ---- */
     if(w.ph==="hub"){ w.hubT-=dt; if(w.hubT<=0&&!out){ w.ph="walk"; const th=rnd(0,6.283), r=rnd(.45,.62); w.tu=Math.cos(th)*r; w.tv=Math.sin(th)*r; w.walkT=0; w.birdAt=rnd(3,4.5); } }
     if(w.ph==="walk"){ w.walkT+=dt; const du=w.tu-w.su, dv=w.tv-w.sv, d=Math.hypot(du,dv); if(d>.01){ const st=Math.min(d,dt*.11*(1+.5*Math.sin(w.walkT*6))); w.su+=du/d*st; w.sv+=dv/d*st; w.sh=Math.atan2(dv,du); w.leg+=dt*9; }
       else { w.leg+=dt*1.5; } if(w.walkT>w.birdAt&&!w.bird) startWebBird(w,P(w.su,w.sv)); }
-    if(w.ph!=="gone"){ const c0=P(w.su,w.sv), hd=P(w.su+Math.cos(w.sh)*.1,w.sv+Math.sin(w.sh)*.1), ang=Math.atan2(hd[1]-c0[1],hd[0]-c0[0])+Math.PI/2, sc=R*.017, g=Math.sin(w.leg);
-      x.save(); x.translate(c0[0],c0[1]); x.rotate(ang); x.scale(sc*Math.max(.55,Math.abs(ca)),sc);   /* (at the hub she hangs head-down; walking, she faces where she goes) */
-      x.strokeStyle=`rgba(${Math.round(40*lit)},${Math.round(30*lit)},${Math.round(20*lit)},${A.toFixed(3)})`; x.lineWidth=.9;
-      let li=0; for(const sd of [-1,1]) for(const [a0,l1,l2] of [[-.5,6,7.6],[-.25,5,6.2],[.25,4.4,5.4],[.55,5.4,7]]){ const st=(li++%2? 1 : -1)*g*.22*(w.ph==="walk"? 1 : .15), aa=(sd>0?0:Math.PI)+(a0+st)*sd, b1=[Math.cos(aa)*l1,Math.sin(aa)*l1+(a0<0?-1:1)*.6], b2=[b1[0]+Math.cos(aa+sd*(a0<0?.3:-.3))*l2,b1[1]+Math.sin(aa+sd*(a0<0?.3:-.3))*l2]; x.beginPath(); x.moveTo(0,a0<0?-1:1); x.lineTo(b1[0],b1[1]); x.lineTo(b2[0],b2[1]); x.stroke(); }
-      const ab=x.createRadialGradient(-1,-7,0,0,-6,5.5); ab.addColorStop(0,`rgba(${Math.round(250*lit)},${Math.round(214*lit)},${Math.round(70*lit)},${A})`); ab.addColorStop(1,`rgba(${Math.round(200*lit)},${Math.round(150*lit)},${Math.round(30*lit)},${A})`);
-      x.fillStyle=ab; x.beginPath(); x.ellipse(0,-6,3.6,5.4,0,0,6.283); x.fill();
-      x.fillStyle=`rgba(${Math.round(24*lit)},${Math.round(20*lit)},${Math.round(16*lit)},${(.95*A).toFixed(3)})`; x.beginPath(); x.ellipse(0,-6.2,1.1,4.6,0,0,6.283); x.fill(); for(const yy of [-9,-6.5,-4]){ x.beginPath(); x.ellipse(0,yy,3.2,.55,0,0,6.283); x.fill(); }   /* the black saddle and bands */
-      x.fillStyle=`rgba(${Math.round(214*lit)},${Math.round(210*lit)},${Math.round(200*lit)},${A})`; x.beginPath(); x.ellipse(0,1.4,2,2.4,0,0,6.283); x.fill();   /* the silvery front body */
-      x.restore(); web.sx2=c0[0]; web.sy2=c0[1]; }
+    if(w.ph!=="gone"){ const c0=P(w.su,w.sv), hd=P(w.su+Math.cos(w.sh)*.1,w.sv+Math.sin(w.sh)*.1), ang=Math.atan2(hd[1]-c0[1],hd[0]-c0[0])-Math.PI/2;
+      if(!w.haze){ const ip=toImg(c0[0],c0[1]); w.haze=mixv((ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[150,130,90],[230,200,150],.4); }
+      x.save(); x.setTransform(1,0,0,1,0,0); x.restore();
+      drawArgiope(c0[0],c0[1],ang,R*.013,Math.max(.6,Math.abs(ca)),w.leg,w.ph==="walk",lit,A,w.sunS||1,w.haze);
+      web.sx2=c0[0]; web.sy2=c0[1]; }
     drawT(w.tF);   /* the soft blades at the lens, in front of it all */
     x.restore();
     if(w.bird) drawWebBird(w,dt,P);
