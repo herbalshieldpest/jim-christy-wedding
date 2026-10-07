@@ -721,16 +721,16 @@ function drawA(who){ const c=SP.ctx(); if(!built) return; const solo=who&&who.is
   const restore= solo? showOnly(owned(who)) : showOnly(null,[jim,chr].filter(apart).flatMap(owned));
   pass("A"); restore();
   /* set into the photo: a touch of the lens's softness, and the photo's own slightly muted colour */
-  c.save(); c.globalAlpha=1; if("filter" in c) c.filter="blur(.45px) saturate(.88) contrast(.95)"; c.drawImage(cvs,rect.x,rect.y,rect.w,rect.h); c.filter="none"; c.restore();
-  drawGrass(c,solo? who : null); if(!solo) drawSmoke(c); }
+  drawGrass(c,solo? who : null,"back"); c.save(); c.globalAlpha=1; if("filter" in c) c.filter="blur(.45px) saturate(.88) contrast(.95)"; c.drawImage(cvs,rect.x,rect.y,rect.w,rect.h); c.filter="none"; c.restore();
+  drawGrass(c,solo? who : null,"front"); if(!solo) drawSmoke(c); }
 /* a few blades of the lawn's own grass in front of their boots and the chair legs, so they stand in it rather than on it */
-function drawGrass(c,only){ c.save(); c.globalAlpha=only? .9 : S.alpha*.9; c.lineCap="round";
-  const pts=[]; for(const P of [jim,chr]) if(P.root.visible&&(only? P===only : !apart(P))) for(const f of P.feet) pts.push([f.cur.x,f.cur.z,.06]);
-  if(!only){ for(let i=0;i<60;i++){ const a=i/60*6.283+((i*53)%7)*.03, r=.46+((i*37)%11)/11*.3; pts.push([Math.cos(a)*r,Math.sin(a)*r,Math.sin(a)>0? .1 : .07,10]); }   /* tufts all round the ring, growing up between the stones, taller at the front */
+function drawGrass(c,only,part){ c.save(); c.globalAlpha=only? .9 : S.alpha*.9; c.lineCap="round";
+  const pts=[]; for(const P of [jim,chr]) if(P.root.visible&&(only? P===only : !apart(P))) for(const f of P.feet) pts.push([f.cur.x,f.cur.z,.06,7,true]);
+  if(!only){ for(let i=0;i<60;i++){ const a=i/60*6.283+((i*53)%7)*.03, r=.46+((i*37)%11)/11*.3; pts.push([Math.cos(a)*r,Math.sin(a)*r,Math.sin(a)>0? .055 : .07,10]); }   /* tufts all round the ring, growing up between the stones, taller at the front */
     for(let i=0;i<70;i++){ const a=((i*137.5)%360)*Math.PI/180, r=.8+((i*29)%17)/17*1.4; pts.push([Math.cos(a)*r,Math.sin(a)*r*.9+.1,.07,6]); } }   /* and scattered through the grass the fire lights */
-  if(!only) for(const ch of [chairC,chairJ]) for(const [x,z] of [[-.33,.27],[.33,.27]]){ const p=ch.localToWorld(_a.set(x,0,z)); camp.worldToLocal(p); pts.push([p.x,p.z,.05]); }
+  if(!only) for(const ch of [chairC,chairJ]) for(const [x,z] of [[-.33,.27],[.33,.27]]){ const p=ch.localToWorld(_a.set(x,0,z)); camp.worldToLocal(p); pts.push([p.x,p.z,.05,7,true]); }
   pts.sort((a,b)=>a[1]-b[1]);
-  for(const [x,z,hm,nb] of pts){ const w=toScr(cw(x,0,z+.03,_a)), gc=SP.groundColor(w.x,w.y)||[90,90,60], k=w.k, near=Math.hypot(x,z)<.95, lit=near? Math.min(1,S.fire*.9) : 0;
+  for(const [x,z,hm,nb,fore] of pts){ const front=fore||z>.02; if(part&&(part==="front")!==front) continue;   /* the blades behind the fire are drawn before it, so the logs and stones cover them */ const w=toScr(cw(x,0,z+.03,_a)), gc=SP.groundColor(w.x,w.y)||[90,90,60], k=w.k, near=Math.hypot(x,z)<.95, lit=near? Math.min(1,S.fire*.9) : 0;
     const base=gc.map(v=>v*.55), warm=[255,150,70]; c.strokeStyle=`rgb(${base.map((v,j)=>Math.round(v+(warm[j]*.42-v)*lit*.55)).join(",")})`; c.lineWidth=Math.max(.7,.006*k);   /* the blades nearest the fire catch its light */
     for(let i=0;i<(nb||7);i++){ const ox=((i*37+Math.round(x*100))%13-6)/6*.09*k, hh=hm*(.6+((i*53)%7)/10)*k, ln=((i*29)%9-4)*.01*k; c.beginPath(); c.moveTo(w.x+ox,w.y+1); c.quadraticCurveTo(w.x+ox+ln*.4,w.y-hh*.5,w.x+ox+ln,w.y-hh); c.stroke(); } }
   c.restore(); }

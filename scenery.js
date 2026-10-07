@@ -374,7 +374,11 @@ const ambient=(function(){
   function steerClear(list){ let obs=[]; for(const p of PLUGS) if(p.obstacles) try{ obs=obs.concat(p.obstacles()||[]); }catch(e){} if(!obs.length) return;
     const out=(o,kx,kd,pad)=>{ for(const b of obs){ const dx=(o[kx]-b.Xw)*XM, dz=o[kd]-b.Dw, d=Math.hypot(dx,dz), r=b.r*pad; if(d<r){ const u=d>1e-4? 1/d : 0, ux=d>1e-4? dx*u : 1, uz=d>1e-4? dz*u : 0; o[kx]=b.Xw+ux*r/XM; o[kd]=b.Dw+uz*r; } } };
     for(const o of list){ if(!o||o.Xw==null||o.Dw==null) continue; out(o,"Xw","Dw",1);
-      if(o.tX!=null&&o.tD!=null) out(o,"tX","tD",1.35); }   /* and wherever it was headed, it now heads around */ }
+      if(o.tX!=null&&o.tD!=null) out(o,"tX","tD",1.35); }   /* and wherever it was headed, it now heads around */
+    /* the rabbits keep their place on the screen: keep them, and where they're hopping to, off the same ground */
+    for(const bn of buns){ if(!bn||!bn.init||bn.x==null||bn.y==null) continue;
+      for(const b of obs){ const c=toScreen(b.Xw,b.Dw), rx=b.r*1.25/XM*c.g, ry=rx*.38; const dx=bn.x-c.x, dy=(bn.y-c.y)/ry*rx;
+        if(Math.hypot(dx,dy)<rx){ const sd=dx>=0? 1 : -1; bn.x=c.x+sd*rx; if(bn.tx!=null&&Math.abs(bn.tx-c.x)<rx) bn.tx=c.x+sd*(rx+12); bn.face=sd; } } } }
   /* a sudden flare (a match struck by the fire) sends everything on the lawn running from it, and a scatter of small birds up out of the cover */
   function scatterFrom(Xw,Dw){ const d=toScreen(Xw,Dw);
     for(const f of [fox,skunk,cub,mom,bobcat,coyote,coy2,pheasW,racc,beaver,...["hog","possum","otter","porc"].map(k=>WAD[k].get())]){ if(!f||f.gone||f.state==="leave"||f.Xw==null) continue;
@@ -3863,6 +3867,13 @@ const ambient=(function(){
     parts.push({p:[B(bx,by,0,.42),B(bx+Math.cos(ba)*bl,by+Math.sin(ba)*bl,0,.16)],c:rgb(P.bill),bias:-.05});        /* the long straight bill */
     return parts;
   }
+  function wcMove(w,sp,dt,turn){   /* one stride toward the target, measured in true ground space so sideways and depth steps agree; it turns first, eases up to speed and slows into the stop */
+    const mx=w.tX-w.Xw, mz=trueZ(w.tD)-trueZ(w.Dw), dist=Math.hypot(mx,mz);
+    if(dist<.004){ w.Xw=w.tX; w.Dw=w.tD; w.v=0; return 0; }
+    const want=Math.atan2(mz,mx); if(dist>.03) w.yaw=angTo(w.yaw,want,dt*turn);
+    const off=Math.abs(Math.atan2(Math.sin(want-w.yaw),Math.cos(want-w.yaw))), align=Math.max(0,Math.cos(Math.min(Math.PI/2,off*1.2)));
+    const vT=sp*align*Math.min(1,dist/(sp*.35)+.25); w.v=(w.v||0)+(vT-(w.v||0))*Math.min(1,dt*7);
+    const step=Math.min(dist,w.v*dt); w.Xw+=mx/dist*step; w.Dw+=mz/dist*step*GF/FOC(); return dist-step; }
   function stepWoodcock(w,dt){
     if(w.kind==="robin"||w.kind==="kill") return stepRobin(w,dt); if(w.kind==="card") return stepHopper(w,dt);
     w.t+=dt; if(w.t<0) return;
@@ -3871,10 +3882,8 @@ const ambient=(function(){
     if(w.leaving&&w.alpha<=0){ w.gone=true; return; }
     if(w.t>w.life&&!w.leaving&&w.state!=="run"){ w.leaving=true; w.state="walk"; const s=toScreen(w.Xw,w.Dw), p=toGround(s.x+rnd(-20,20),gnd().vy+lawnMinG(s.x)-4); w.tX=p.Xw; w.tD=p.Dw; }   /* back into the cover */
     if(w.state==="walk"||w.state==="run"){
-      const sp=w.state==="run"? .5 : .1, dX=w.tX-w.Xw, dD=w.tD-w.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
-      if(dist<=sp*dt){ w.Xw=w.tX; w.Dw=w.tD; } else { w.Xw+=dX/dist*sp*dt; w.Dw+=dD/dist*sp*dt*4*(Math.abs(dD)>1e-6?1:0); }
-      const want=Math.atan2(trueZ(w.tD)-trueZ(w.Dw),w.tX-w.Xw); if(dist>.01) w.yaw=angTo(w.yaw,want,dt*(w.state==="run"?8:3));
-      w.ph+=dt*(w.state==="run"? 22 : 6.5); w.head+=((w.state==="run"?.1:.2)-w.head)*Math.min(1,dt*6); w.probe=0;
+      const sp=w.state==="run"? .5 : .1, dist=wcMove(w,sp,dt,w.state==="run"?7:3);
+      w.ph+=dt*(w.state==="run"? 22 : 6.5)*Math.min(1,(w.v||0)/sp+.15); w.head+=((w.state==="run"?.1:.2)-w.head)*Math.min(1,dt*6); w.probe=0;
       if(dist<.01&&!w.leaving){ const r=Math.random(); if(r<.55){ w.state="probe"; w.st=rnd(2,4.5); w.t2=0; } else if(r<.75){ w.state="pause"; w.st=rnd(.8,2); w.t2=0; } else if(r<.88){ w.state="run"; wcTarget(w,true); } else wcTarget(w); }
       if(dist<.01&&w.state==="run"){ w.state="pause"; w.st=rnd(.6,1.4); w.t2=0; }
     } else { w.t2+=dt;
@@ -4170,9 +4179,7 @@ const ambient=(function(){
     if(w.state==="wait"){ w.state="run"; w.t=0; wcTarget(w); }
     if(w.kind==="kill"){ stepKilldeer(w,dt); return; }
     if(w.t>w.life&&!w.leaving){ w.leaving=true; }
-    if(w.state==="run"){ const sp=w.kind==="kill"? .95 : .55, dX=w.tX-w.Xw, dD=w.tD-w.Dw, dist=Math.hypot(dX,dD*.25)||1e-6;
-      if(dist<=sp*dt){ w.Xw=w.tX; w.Dw=w.tD; } else { w.Xw+=dX/dist*sp*dt; w.Dw+=dD/dist*sp*dt*4*(Math.abs(dD)>1e-6?1:0); }
-      const want=Math.atan2(trueZ(w.tD)-trueZ(w.Dw),w.tX-w.Xw); if(dist>.01) w.yaw=angTo(w.yaw,want,dt*9); w.ph+=dt*24; w.head+=(0-w.head)*Math.min(1,dt*8); w.worm=0; w.cock=0;
+    if(w.state==="run"){ const sp=w.kind==="kill"? .95 : .55, dist=wcMove(w,sp,dt,7); w.ph+=dt*24*Math.min(1,(w.v||0)/sp+.15); w.head+=(0-w.head)*Math.min(1,dt*8); w.worm=0; w.cock=0;
       if(dist<.01){ w.state="listen"; w.st=rnd(.8,1.8); w.t2=0; } }
     else { w.t2+=dt;
       if(w.state==="listen"){ w.cock+=(.9-w.cock)*Math.min(1,dt*6); if(w.kind==="kill"){ w.peck=Math.max(0,Math.sin(w.t2*7))*.25; } if(w.t2>w.st){ if(w.kind==="kill"){ w.peck=0; w.state="run"; wcTarget(w,true); } else if(Math.random()<.55){ w.state="probe"; w.st=rnd(1.4,2.4); w.t2=0; } else { w.state="run"; wcTarget(w); } } }   /* head cocked: listening, or looking, for a worm */
