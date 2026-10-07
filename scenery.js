@@ -439,14 +439,14 @@ const ambient=(function(){
       /* the wing: a thick, nearly straight leading edge along the top, widening to a broad rounded end, the trailing edge sweeping back to the seed */
       const wing=new Path2D(); wing.moveTo(52,47); wing.bezierCurveTo(120,38,220,30,292,36); wing.bezierCurveTo(312,40,314,62,300,78); wing.bezierCurveTo(272,100,214,98,170,90); wing.bezierCurveTo(120,82,84,80,58,76); wing.closePath();
       x.save(); x.clip(wing);
-      const g=x.createLinearGradient(50,0,310,0); g.addColorStop(0,C(pal.w0,glow? .9 : .92)); g.addColorStop(.35,C(pal.w1,glow? .7 : .8)); g.addColorStop(1,C(pal.w2,glow? .6 : .72)); x.fillStyle=g; x.fillRect(0,0,320,120);
+      const g=x.createLinearGradient(50,0,310,0); g.addColorStop(0,C(pal.w0,glow? .8 : .82)); g.addColorStop(.35,C(pal.w1,glow? .55 : .62)); g.addColorStop(1,C(pal.w2,glow? .45 : .5));   /* thin and see-through */ x.fillStyle=g; x.fillRect(0,0,320,120);
       const g2=x.createLinearGradient(0,36,0,100); g2.addColorStop(0,C(pal.w0,.0)); g2.addColorStop(.75,C(pal.w2,.0)); g2.addColorStop(1,C(pal.w0,.35)); x.fillStyle=g2; x.fillRect(0,0,320,120);   /* the papery trailing edge a touch darker */
       /* the veins: fanning from the leading edge back and down to the trailing edge, with a fine net between them */
       x.lineCap="round"; for(let i=0;i<26;i++){ const u=i/25, sx=lerp(70,286,u), sy=lerp(46,37,u)+Math.sin(u*3)*2, ex=sx-lerp(30,8,u)-RN()*10, ey=lerp(78,92,Math.sin(u*Math.PI*.9))+RN()*4;
-        x.strokeStyle=C(pal.v,.42+RN()*.2); x.lineWidth=.9+RN()*.7; x.beginPath(); x.moveTo(sx,sy); x.quadraticCurveTo(sx-6,lerp(sy,ey,.45),ex,ey); x.stroke(); }
+        x.strokeStyle=C(pal.v,.26+RN()*.14); x.lineWidth=.7+RN()*.5; x.beginPath(); x.moveTo(sx,sy); x.quadraticCurveTo(sx-6,lerp(sy,ey,.45),ex,ey); x.stroke(); }
       for(let i=0;i<260;i++){ const px=60+RN()*240, py=40+RN()*55, a=RN()*6.283, l=2+RN()*5; x.strokeStyle=C(pal.v,.16); x.lineWidth=.5; x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l); x.stroke(); }
       x.restore();
-      x.strokeStyle=C(mulv(pal.w0,.75),.55); x.lineWidth=1.1; x.stroke(wing);   /* the fine rim */
+      x.strokeStyle=C(mulv(pal.w0,.85),.3); x.lineWidth=.8; x.stroke(wing);   /* the fine rim */
       /* the leading edge: the wing's thick spine, darker, tapering toward the tip */
       for(let i=0;i<24;i++){ const u0=i/24, u1=(i+1)/24, P=u=>[lerp(54,292,u),47-Math.sin(u*Math.PI)*7-u*5]; const a=P(u0), b=P(u1); x.strokeStyle=C(pal.e,.95); x.lineWidth=lerp(7,2.2,u0); x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); }
       /* the seed: plump, ridged, reddish brown, with the little scar where it hung on its stalk */
@@ -455,16 +455,16 @@ const ambient=(function(){
       x.strokeStyle=C(mulv(pal.s,.55),.5); x.lineWidth=1.2; for(let i=0;i<6;i++){ x.beginPath(); x.ellipse(2,0,23-i*2.6,15-i*1.8,0,-.9,1.2); x.stroke(); }   /* its ridged, veined husk */
       x.fillStyle=C(mulv(pal.s,.45),.9); x.beginPath(); x.ellipse(-25,3,4,3,0,0,6.283); x.fill(); x.restore();
       return c; };
-    const PALS=[{seed:7,w0:[150,94,56],w1:[196,148,92],w2:[218,182,128],v:[110,66,40],e:[104,58,36],s:[136,74,46]},{seed:19,w0:[160,74,52],w1:[200,120,82],w2:[222,170,128],v:[120,56,40],e:[112,48,34],s:[146,64,44]}];
+    const PALS=[{seed:7,w0:[142,118,86],w1:[176,156,120],w2:[196,180,148],v:[116,96,70],e:[104,84,60],s:[116,90,64]},{seed:19,w0:[150,104,80],w1:[180,146,116],w2:[200,178,150],v:[124,92,70],e:[112,80,60],s:[124,86,64]}];   /* dry, straw-brown keys of autumn, with the odd rosier one */
     samSpr=PALS.map(pal=>{ const base=paint(pal,0,false), h1=paint(pal,.35,false), h2=paint(pal,.65,false), glow=paint(pal,0,true), bl=document.createElement("canvas"); bl.width=320; bl.height=120; const bx=bl.getContext("2d"); bx.filter="blur(7px)"; bx.drawImage(base,0,0);
       const disc=document.createElement("canvas"); disc.width=disc.height=64; { const dx=disc.getContext("2d"), g=dx.createRadialGradient(32,32,3,32,32,32), c0=pal.w1; g.addColorStop(0,rgb(c0,0)); g.addColorStop(.55,rgb(c0,.2)); g.addColorStop(.92,rgb(c0,.14)); g.addColorStop(1,rgb(c0,0)); dx.fillStyle=g; dx.fillRect(0,0,64,64); }   /* the blur of the whirling wing, made once */
       return {base:mipChain(base),h1:mipChain(h1),h2:mipChain(h2),glow:mipChain(glow),blur:mipChain(bl),disc}; });
     return samSpr; }
   function newSamara(fresh){ const f=FOC(), vp=vanish(), D=Math.random()<.7? .3+Math.pow(Math.random(),1.2)*1.7 : 2+Math.random()*5;   /* most come down from the trees right over you; a few drift far out over the field */
     const s={D,X:rnd(-1.2,1.2)*(W/2/f)*D,Y:0,vY:rnd(.042,.07),vX:rnd(.012,.06),vD:rnd(-.05,.08),th:rnd(0,6.283),om:(Math.random()<.5? -1 : 1)*rnd(19,32),cone:rnd(.16,.32),pitch:rnd(.5,.78),
-      L:rnd(.015,.02),pal:Math.random()<.3? 1 : 0,ph:rnd(0,6.283),wob:rnd(.004,.012)};
+      L:rnd(.011,.014),pal:Math.random()<.15? 1 : 0,ph:rnd(0,6.283),wob:rnd(.004,.012)};
     s.Y= fresh? ((rnd(-.05,.95)*H-vp[1])/f)*D : ((rnd(-120,-30)-vp[1])/f)*D; return s; }
-  function stepSamaras(dt){ const n=MOBILE()? 18 : 42; while(SAMS.length<n) SAMS.push(newSamara(true)); if(SAMS.length>n) SAMS.length=n;
+  function stepSamaras(dt){ const n=MOBILE()? 5 : 11;   /* just a few at a time, now and then */ while(SAMS.length<n) SAMS.push(newSamara(true)); if(SAMS.length>n) SAMS.length=n;
     const f=FOC(), vp=vanish(), gust=.6+.4*Math.sin(t*.13)+.25*Math.sin(t*.41+1);
     for(let i=0;i<SAMS.length;i++){ const s=SAMS[i]; s.ph+=dt; s.th+=s.om*dt; s.Y+=s.vY*(.9+.2*Math.sin(s.ph*1.7))*dt; s.X+=(s.vX*gust+Math.sin(s.ph*.9)*s.wob)*dt; s.D+=s.vD*dt;
       const sx=vp[0]+s.X*f/s.D, sy=vp[1]+s.Y*f/s.D; s.sx=sx; s.sy=sy;
@@ -473,11 +473,11 @@ const ambient=(function(){
     for(const s of SAMS){ if((s.D<3)!==near) continue; const k=f/s.D, Lpx=s.L*k; if(s.sy<-40) continue;
       const air=Math.min(1,Math.max(0,(s.D-1.5)/7)), fade=(s.D>9? Math.max(0,1-(s.D-9)/3) : 1)*night*(dark? .8 : 1), focus=s.D<.48? Math.min(1,(.48-s.D)/.2) : 0;
       const glow=Math.max(0,1-Math.hypot(s.sx-sp.x,s.sy-sp.y)/(W*.55))*(1-nA)*(1-air*.6);
-      if(Lpx<5){ /* far off: just a fleck of spinning wing, a tiny blur */ ctx.globalAlpha=Math.min(.75,.25+Lpx*.12)*fade; ctx.fillStyle=rgb(mixv([150,100,62],[206,178,138],air*.8)); ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Math.max(.6,Lpx*.85),Math.max(.45,Lpx*(.25+.2*Math.abs(Math.sin(s.th)))),0,0,6.283); ctx.fill(); continue; }
+      if(Lpx<5){ /* far off: just a fleck of spinning wing, a tiny blur */ ctx.globalAlpha=Math.min(.5,.18+Lpx*.08)*fade; ctx.fillStyle=rgb(mixv([150,128,96],[206,178,138],air*.8)); ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Math.max(.6,Lpx*.85),Math.max(.45,Lpx*(.25+.2*Math.abs(Math.sin(s.th)))),0,0,6.283); ctx.fill(); continue; }
       const set=samSpr[s.pal], spr= air>.55? set.h2 : air>.2? set.h1 : set.base;
       const el=Math.max(.34,Math.min(.9,Math.abs(s.Y)/Math.max(.05,s.D)+s.cone*1.4));   /* how much of the spin disc we see, looking up at it */
       /* the blur of the whirling wing: a faint disc swept out round the seed */
-      { const dc=set.disc; ctx.globalAlpha=fade*(1-air*.5); ctx.drawImage(dc,s.sx-Lpx*1.05,s.sy-Lpx*1.05*el,Lpx*2.1,Lpx*2.1*el); }
+      { const dc=set.disc; ctx.globalAlpha=fade*(1-air*.5)*.6; ctx.drawImage(dc,s.sx-Lpx*1.05,s.sy-Lpx*1.05*el,Lpx*2.1,Lpx*2.1*el); }
       /* the wing itself, caught at a few angles through the turn as the eye sees it: sharp now, ghosted just behind */
       const n=mipPick(spr,Lpx/SAM_L), R=Math.pow(2,n), im=spr[n];
       for(const [lag,al] of (Lpx>14? [[.5,.22],[.25,.36],[0,.82]] : [[.4,.3],[0,.85]])){ const th=s.th-Math.sign(s.om)*lag, ct=Math.cos(th), st=Math.sin(th), cp=Math.cos(s.pitch), spp=Math.sin(s.pitch);
@@ -487,9 +487,9 @@ const ambient=(function(){
         ctx.save(); ctx.transform(a,b,c,d,s.sx-a*SAM_SX-c*SAM_SY,s.sy-b*SAM_SX-d*SAM_SY);
         if(focus<1){ ctx.globalAlpha=al*fade*(1-focus); ctx.drawImage(im,0,0,im.width,im.height,0,0,320,120); }
         if(focus>0){ const bi=set.blur[Math.max(0,n-1)]; ctx.globalAlpha=al*fade*focus*.85; ctx.drawImage(bi,0,0,bi.width,bi.height,0,0,320,120); }   /* right in front of you, softly out of focus */
-        if(glow>.05&&lag===0){ const tw=.45+.55*Math.abs(Math.sin(th*1.0+s.ph)); ctx.globalAlpha=glow*tw*.8*fade; ctx.globalCompositeOperation="screen"; const gi=set.glow[n]; ctx.drawImage(gi,0,0,gi.width,gi.height,0,0,320,120); }   /* the low sun shining through the papery wing, flashing as it turns */
+        if(glow>.05&&lag===0){ const tw=.45+.55*Math.abs(Math.sin(th*1.0+s.ph)); ctx.globalAlpha=glow*tw*.4*fade; ctx.globalCompositeOperation="screen"; const gi=set.glow[n]; ctx.drawImage(gi,0,0,gi.width,gi.height,0,0,320,120); }   /* the low sun shining through the papery wing, flashing as it turns */
         ctx.restore(); }
-      ctx.globalAlpha=fade*(1-focus*.5); ctx.fillStyle=rgb(mixv(s.pal? [120,58,40] : [112,64,40],[206,178,138],air*.7)); ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Math.max(.8,Lpx*.1),Math.max(.6,Lpx*.075),0,0,6.283); ctx.fill(); }   /* the seed at the hub, steady while the wing whirls round it */
+      ctx.globalAlpha=fade*(1-focus*.5)*.55; ctx.fillStyle=rgb(mixv([110,84,60],[206,178,138],air*.7)); ctx.beginPath(); ctx.ellipse(s.sx,s.sy,Math.max(.6,Lpx*.07),Math.max(.5,Lpx*.055),0,0,6.283); ctx.fill(); }   /* the seed at the hub, steady while the wing whirls round it */
     ctx.globalAlpha=1; }
   /* ---- ground plane under the photo: things farther away sit higher (closer to the horizon) and smaller, and move slower on screen ---- */
   const GF=4000;                                                       /* depth scale: the field edge comes out ~20 m away */
@@ -668,8 +668,8 @@ const ambient=(function(){
       const top=Math.round(h*.5), id=x.getImageData(0,0,w,top), a=id.data;
       for(let y=0;y<top;y++){ const wy=Math.max(0,Math.min(1,(.47-y/h)/.12)); if(wy<=0) continue;
         for(let xx=0;xx<w;xx++){ const i=(y*w+xx)*4, r=a[i]/255, g=a[i+1]/255, b=a[i+2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, dlt=mx-mn; if(dlt<.004||b<r) continue;
-          let hue=mx===b? 4+(r-g)/dlt : mx===g? 2+(b-r)/dlt : (g-b)/dlt; hue*=60; if(hue<0) hue+=360; const hw=Math.max(0,1-Math.abs(hue-215)/45); if(hw<=0) continue;
-          let sat=l>.5? dlt/(2-mx-mn) : dlt/(mx+mn); const lg=Math.max(0,Math.min(1,(l-.3)/.2))*Math.max(0,Math.min(1,(.86-l)/.12)), k=wy*hw*lg; if(k<=.01) continue; const s2=Math.min(1,sat*(1+1.9*k)+.1*k), l2=l*(1-.12*k);
+          let hue=mx===b? 4+(r-g)/dlt : mx===g? 2+(b-r)/dlt : (g-b)/dlt; hue*=60; if(hue<0) hue+=360; const hw=Math.max(0,1-Math.abs(hue-212)/55); if(hw<=0) continue;
+          let sat=l>.5? dlt/(2-mx-mn) : dlt/(mx+mn); const lg=Math.max(0,Math.min(1,(l-.24)/.2))*Math.max(0,Math.min(1,(.88-l)/.12)), k=wy*hw*lg; if(k<=.01) continue; const s2=Math.min(1,sat*(1+3.1*k)+.16*k), l2=l*(1-.17*k);   /* the blue of the sky, deepened */
           const q=l2<.5? l2*(1+s2) : l2+s2-l2*s2, p2=2*l2-q, hh=hue/360, f=tt=>{ tt<0&&(tt+=1); tt>1&&(tt-=1); return tt<1/6? p2+(q-p2)*6*tt : tt<.5? q : tt<2/3? p2+(q-p2)*(2/3-tt)*6 : p2; };
           a[i]=f(hh+1/3)*255; a[i+1]=f(hh)*255; a[i+2]=f(hh-1/3)*255; } }
       x.putImageData(id,0,0); c.naturalWidth=w; c.naturalHeight=h; return c; }catch(e){ return im; } }
@@ -6668,7 +6668,7 @@ const ambient=(function(){
     if(img){ stepSamaras(dt); drawSamaras(false,dark); }
     for(const m of motes) if(m.L===0) drawMote(m);
     if(img){ ctx.globalAlpha=1; drawGeese(dt,dark); drawRaptors(dt,dark); drawSpook(dt,dark); drawEagle(dt,dark); ctx.globalAlpha=1;
-      const deerL=[]; drawDeer(dt,dark,"front",utv? deerL : null); ctx.globalAlpha=1; drawPecker(dt,dark); ctx.globalAlpha=1; drawCardinals(dt,dark); ctx.globalAlpha=1;   /* the woodpecker on its tree sits behind the animals on the lawn too */                  /* the deer stay behind every other animal on the lawn */
+      const deerL=[]; drawDeer(dt,dark,"front",deerL);   /* the deer go into the same near-and-far ordering as everything else on the lawn */ ctx.globalAlpha=1; drawPecker(dt,dark); ctx.globalAlpha=1; drawCardinals(dt,dark); ctx.globalAlpha=1;   /* the woodpecker on its tree sits behind the animals on the lawn too */                  /* the deer stay behind every other animal on the lawn */
       const L=[]; if(fox) L.push({y:toScreen(fox.Xw,fox.Dw).y,fn:()=>drawFox(dt,dark)}); else drawFox(dt,dark);
       if(skunk) L.push({y:toScreen(skunk.Xw,skunk.Dw).y,fn:()=>drawSkunk(dt,dark)}); else drawSkunk(dt,dark);
       if(cub) L.push({y:toScreen(cub.Xw,cub.Dw).y,fn:()=>drawCub(dt,dark)}); else drawCub(dt,dark);
