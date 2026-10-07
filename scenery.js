@@ -1482,7 +1482,7 @@ const ambient=(function(){
   }
   function deerPose(d){
     const s=d.s, w=1-s, X=w*w*d.a.X+2*w*s*d.m.X+s*s*d.e.X, Z=w*w*d.a.Z+2*w*s*d.m.Z+s*s*d.e.Z, Dw=Z*GF/FOC(), sc=toScreen(X,Dw);
-    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.62+.7*(1-(d.fa??1))),leapU:d.u,q:0,ph:0};
+    return {x:sc.x,y:sc.y,g:sc.g,Xw:X,Dw,lift:boundLift(d.u)*(.62+.7*(1-(d.fa??1)))-(d.u<.28? Math.sin(d.u/.28*Math.PI)*.28 : d.u>.95? Math.sin((d.u-.95)/.05*Math.PI*.5)*.12 : 0)*(1-(d.fa??1)),leapU:d.u,q:0,ph:0};   /* in the brush each bound arcs up out of it and the deer sinks back down into it, gathering, before the next */
   }
   function stepHerd(dt){
     if(!herd.length){ nextDeer-=(lull>0?0:dt); if(nextDeer<=0) startDeer(); deer=null; return; }
@@ -1626,7 +1626,7 @@ const ambient=(function(){
       else if(layer==="brush"&&fa<1){ paintDeer(p,dark,who);
         /* then the stalks in front of it are laid back over its legs and belly: taken from the same swaying field, so they move as one,
            feathered at the top, and thrashing where it crashes through */
-        const k=1-fa, top=p.y-p.g*(.12+.2*k), x0=p.x-p.g*.42, w=p.g*.84, h=p.y+p.g*.06-top, land=who.u!=null? 1-boundLift(who.u) : 0;
+        const k=1-fa, top=p.y-p.g*(.12+.27*k), x0=p.x-p.g*.42, w=p.g*.84, h=p.y+p.g*.06-top, land=who.u!=null? 1-boundLift(who.u) : 0;
         brushOver(x0,top-6,w,h+6,(1.2+3.2*land)*k,p.x); }
     }
   }
@@ -4326,6 +4326,7 @@ const ambient=(function(){
       if(sc>1.4){ x.strokeStyle=rgb(mulv([60,50,40],lit),.6); x.lineWidth=.08; for(let k=0;k<6;k++){ const u=(k+.5)/6, q=[lerp(p1[0],p3[0],u),lerp(p1[1],p3[1],u)]; x.beginPath(); x.moveTo(q[0],q[1]); x.lineTo(q[0]+d2[1]*.5*sd,q[1]-d2[0]*.5*sd); x.stroke(); } } });   /* fine spines along the legs, when she's close */
     /* the abdomen: egg-shaped, broadest near the front */
     const ab=new Path2D(); ab.moveTo(0,.4); ab.bezierCurveTo(3.7,.2,3.9,-4.6,2.4,-8.4); ab.bezierCurveTo(1.2,-10.6,-1.2,-10.6,-2.4,-8.4); ab.bezierCurveTo(-3.9,-4.6,-3.7,.2,0,.4); ab.closePath();
+    x.save(); x.strokeStyle="rgba(0,0,0,.55)"; x.lineWidth=.9; x.stroke(ab); x.restore();   /* a dark edge so she separates from what's behind */
     x.save(); x.clip(ab); x.fillStyle=L([20,17,14]); x.fillRect(-5,-12,10,13);
     x.fillStyle=L([250,212,64]); for(const sd of [-1,1]){ for(let i=0;i<5;i++){ const yy=-1.4-i*1.75, xx=sd*(2.15-i*.22); x.beginPath(); x.ellipse(xx,yy,1.4-i*.12,.86-i*.05,sd*(.35+i*.05),0,6.283); x.fill(); } x.beginPath(); x.ellipse(sd*1.2,-.9,1.35,.85,sd*.2,0,6.283); x.fill(); }   /* the yellow patches down each side, and the band across the front */
     x.fillStyle=L([226,214,170]); for(let i=0;i<4;i++){ x.beginPath(); x.arc(0,-2.6-i*1.8,.22,0,6.283); x.fill(); }   /* the pale dots down the middle */
@@ -4339,7 +4340,7 @@ const ambient=(function(){
     x.fillStyle=L([28,22,18]); x.beginPath(); x.ellipse(0,4.8,.7,.42,0,0,6.283); x.fill();
     /* set back into the air of the photo */
     x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-atop"; x.fillStyle=rgb(haze,.16); x.fillRect(0,0,S*2,S*2); x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=A; ctx.translate(cx,cy); ctx.rotate(ang); ctx.filter=sc<1.2? "none" : "blur(.35px)"; ctx.drawImage(spC,0,0,S*2,S*2,-S,-S,S*2,S*2); ctx.restore(); ctx.filter="none"; }
+    ctx.save(); ctx.globalAlpha=A; ctx.translate(cx,cy); ctx.rotate(ang); ctx.filter="none"; ctx.drawImage(spC,0,0,S*2,S*2,-S,-S,S*2,S*2); ctx.restore(); ctx.filter="none"; }
   function startWeb(){ const left=Math.random()<.5, R=Math.min(W,H)*rnd(.14,.17);
     web={left,sx:Math.max(R*1.7,W*(left? rnd(.16,.24) : rnd(.76,.84))),sy:H*rnd(.7,.76),R,a:(left?1:-1)*rnd(.3,.6),t:0,life:rnd(46,58),alpha:0,ph:"hub",hubT:rnd(5,9),
       rim:Array.from({length:30},()=>rnd(.86,1)),dew:Array.from({length:80},()=>[rnd(0,6.283),rnd(.2,.95),rnd(0,6)]),su:0,sv:0,sh:-Math.PI/2,leg:0,jolt:0,tear:null};
@@ -4374,6 +4375,7 @@ const ambient=(function(){
     const sp=sun(), sunA=Math.atan2(-(sp.y-w.sy),(sp.x-w.sx)), lit=dark? .35 : 1, A=w.alpha*(1-.6*nA);
     const x=ctx; x.save(); x.globalAlpha=A; x.globalCompositeOperation="source-over"; x.filter="none"; x.lineCap="round";
     const drawT=img=>{ x.save(); x.translate(base[0],base[1]); x.rotate(tilt); x.translate(-base[0],-base[1]); x.drawImage(img,w.tx0,w.ty0); x.restore(); };
+    { const c0=P(0,0), g=x.createRadialGradient(c0[0],c0[1],R*.2,c0[0],c0[1],R*1.35); g.addColorStop(0,`rgba(14,12,8,${(.3*A).toFixed(3)})`); g.addColorStop(.7,`rgba(14,12,8,${(.16*A).toFixed(3)})`); g.addColorStop(1,"rgba(14,12,8,0)"); x.fillStyle=g; x.fillRect(c0[0]-R*1.4,c0[1]-R*1.4,R*2.8,R*2.8); }   /* the brush behind it falls into shade, as it would in the photographer's frame, so the lit silk stands out */
     drawT(w.tB);
     /* the two tall stems it hangs between, and the guy lines */
     const sL=P(-1.12,-1.6), sR=P(1.1,-1.6), tL=P(-1.1,1.2), tR=P(1.08,1.05);   /* the two stems stand right at the web's edges; it is slung between them */
@@ -4395,7 +4397,8 @@ const ambient=(function(){
       if(rEnd<w.rim[i]-.01){ const o=rimPt(i), back=P(Math.cos(th)*Math.max(rEnd+.12,w.rim[i]*.8),Math.sin(th)*Math.max(rEnd+.12,w.rim[i]*.8)); bins[1].push(o,[back[0]-R*.02,back[1]+R*.2]); } }
     let prev=null; for(let k=0;k<30*24;k++){ const th=k/30*6.283, rr=.18+(k/(30*24))*.78, i=k%30, r1=Math.min(rr,w.rim[i]*.97), q=P(Math.cos(th)*r1,Math.sin(th)*r1); if(torn(th,r1)){ prev=null; continue; } if(prev) put(prev,q,Math.atan2(-(q[1]-prev[1]),q[0]-prev[0])); prev=q; }
     const lw=Math.max(.8,R*.0045); x.lineWidth=lw;
-    [[.2,lw],[.28,lw],[.42,lw*1.05],[.7,lw*1.15]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
+    if(bins[3].length){ x.lineWidth=lw*4; x.strokeStyle=thread(.12); x.beginPath(); const L3=bins[3]; for(let j=0;j<L3.length;j+=2){ x.moveTo(L3[j][0],L3[j][1]); x.lineTo(L3[j+1][0],L3[j+1][1]); } x.stroke(); }   /* a soft glow round the brightest runs */
+    [[.3,lw],[.4,lw],[.58,lw*1.05],[.9,lw*1.2]].forEach(([al,wd],k)=>{ if(!bins[k].length) return; x.lineWidth=wd; x.strokeStyle=thread(al*(dark? .6 : 1)); x.beginPath(); const L2=bins[k]; for(let j=0;j<L2.length;j+=2){ x.moveTo(L2[j][0],L2[j][1]); x.lineTo(L2[j+1][0],L2[j+1][1]); } x.stroke(); });
     /* the stabilimentum: a white zigzag band above and below the hub */
     x.strokeStyle=`rgba(${Math.round(250*lit)},${Math.round(248*lit)},${Math.round(236*lit)},${(.3*A).toFixed(3)})`; x.lineWidth=Math.max(.6,R*.006); x.beginPath();
     if(!w.zz) w.zz=Array.from({length:40},()=>[rnd(.6,1.4),rnd(.7,1.3)]);
@@ -4410,7 +4413,7 @@ const ambient=(function(){
     if(w.ph!=="gone"){ const c0=P(w.su,w.sv), hd=P(w.su+Math.cos(w.sh)*.1,w.sv+Math.sin(w.sh)*.1), ang=Math.atan2(hd[1]-c0[1],hd[0]-c0[0])-Math.PI/2;
       if(!w.haze){ const ip=toImg(c0[0],c0[1]); w.haze=mixv((ip&&sampleAt(Math.max(0,Math.min(1,ip[0])),Math.max(0,Math.min(1,ip[1]))))||[150,130,90],[230,200,150],.4); }
       x.save(); x.setTransform(1,0,0,1,0,0); x.restore();
-      drawArgiope(c0[0],c0[1],ang,R*.017,Math.max(.6,Math.abs(ca)),w.leg,w.ph==="walk",lit,A,w.sunS||1,w.haze);
+      drawArgiope(c0[0],c0[1],ang,R*.021,Math.max(.6,Math.abs(ca)),w.leg,w.ph==="walk",lit,A,w.sunS||1,w.haze);
       web.sx2=c0[0]; web.sy2=c0[1]; }
     drawT(w.tF);   /* the soft blades at the lens, in front of it all */
     x.restore();
