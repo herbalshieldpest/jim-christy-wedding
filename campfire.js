@@ -137,7 +137,7 @@ class Person{
       const hairM=new T.MeshStandardMaterial({color:0xffffff,map:strandTex,roughness:.5,metalness:0,side:T.DoubleSide}), hairIn=new T.MeshStandardMaterial({color:0x8a5a48,map:strandTex,roughness:.7,metalness:0,side:T.BackSide});
       hairM.map.repeat.set(3,1);
       M(h,new T.SphereGeometry(.107,32,18,0,Math.PI*2,0,1.15),hairM,0,.1,-.004,1.03,1.1,1.08);                         /* the crown */
-      M(h,new T.SphereGeometry(.109,32,18,Math.PI*.82,Math.PI*1.36,0,1.95),hairM,0,.1,-.008,1.05,1.1,1.09);               /* down over the sides and back of her head, her face left clear */
+      M(h,new T.SphereGeometry(.109,32,22,Math.PI*.82,Math.PI*1.36,0,2.2),hairM,0,.1,-.008,1.05,1.1,1.09);               /* down over the sides and back of her head, her face left clear */
       M(h,sph(16,10),hairM,.04,.205,.03,.065,.024,.055,0,0,-.22);                                                       /* the lift at her side part */
       const hp=this.hairPivot=G(h,0,.16,-.02);
       const hb=this.hairBack=G(this.chest,0,.388,-.004);   /* the long hair hangs from her shoulders, not her head, so tipping her head never swings it into her back */
@@ -145,12 +145,12 @@ class Person{
         const sstep=(a,b,x)=>{ const k=clamp((x-a)/(b-a),0,1); return k*k*(3-2*k); };
         for(let j=0;j<=NV;j++){ const v=j/NV;
           for(let i=0;i<=NU;i++){ const u=i/NU, yEnd0=-.55;
-            const yy=lerp(.0,yEnd0,v), th=(u-.5)*2*lerp(2.15,1.1,sstep(-.1,-.25,yy));   /* round her head beside her face, then gathering behind her shoulders as it falls */
+            const yy=lerp(.05,yEnd0,v), th=(u-.5)*2*lerp(2.15,1.1,sstep(-.1,-.25,yy));   /* round her head beside her face, then gathering behind her shoulders as it falls */
             const side=Math.abs(Math.sin(th));
             const y=yy*(1-.08*side)+(.03*Math.sin(th*5+S0)+.018*Math.sin(th*11))*sstep(.8,1,v);   /* a little shorter at the sides; an uneven, wavy hem */
-            const rBack=lerp(.126,.172,sstep(-.04,-.2,y))+.02*sstep(-.3,-.5,y), rSide=lerp(.124,.132,sstep(-.02,-.12,y))+.1*sstep(-.15,-.27,y);   /* close round her head, then out past the backs of her shoulders */
+            const tuck=lerp(.102,.124,sstep(.05,-.04,y)), rBack=tuck+(.172-.124)*sstep(-.04,-.2,y)+.02*sstep(-.3,-.5,y), rSide=tuck+.008*sstep(-.02,-.12,y)+.1*sstep(-.15,-.27,y);   /* close round her head, then out past the backs of her shoulders */
             let r=lerp(rBack,rSide,side);
-            r+=Math.abs(.011*Math.sin(th*6+v*16+S0)+.006*Math.sin(th*13-v*9))*sstep(.15,.6,v)+.012*sstep(.85,1,v);   /* the waves only ever lift it away from her */   /* waves, and the ends turning out a little */
+            r+=(.007*(.5+.5*Math.sin(th*5+v*9+S0))+.003*(.5+.5*Math.sin(th*9-v*5)))*sstep(.15,.6,v)+.01*sstep(.85,1,v);   /* soft, long waves that only ever lift it away from her */   /* waves, and the ends turning out a little */
             pos.push(Math.sin(th)*r, y, -Math.cos(th)*r); uv.push(u,1-v); } }
         for(let j=0;j<NV;j++) for(let i=0;i<NU;i++){ const a2=j*(NU+1)+i, b2=a2+NU+1; idx.push(a2,b2,a2+1,b2,b2+1,a2+1); }
         const g=new T.BufferGeometry(); g.setAttribute("position",new T.Float32BufferAttribute(pos,3)); g.setAttribute("uv",new T.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals();
