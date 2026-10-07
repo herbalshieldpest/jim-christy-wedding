@@ -430,7 +430,7 @@ const ambient=(function(){
     const base={kind, z, x:rnd(-.1*W,W*1.02), y:top? rnd(-80,-20) : rnd(-40,H), ph:rnd(0,6.28), rot:rnd(0,6.28), flip:rnd(0,6.28)};
     if(kind==="milkweed") return Object.assign(base,{s:rnd(11,18)*z, vy:rnd(5,11)*z, sw:rnd(18,40)*z, fr:rnd(.25,.5), vr:rnd(-.25,.25), vf:0, wind:rnd(8,20)*z, a:rnd(.55,.85)});
     return Object.assign(base,{s:(kind==="maple"?rnd(10,18):kind==="oak"?rnd(10,16):rnd(8,14))*z, vy:rnd(16,32)*z, sw:rnd(14,38)*z, fr:rnd(.4,.9), vr:rnd(-.8,.8), vf:rnd(1,2.4), wind:rnd(5,16)*z,
-      c: kind==="maple"?pick(MAPLE) : kind==="oak"?pick(OAK) : pick(LEAF), a:rnd(.5,.8)*(.55+.45*z)});
+      c: kind==="maple"?pick(MAPLE) : kind==="oak"?pick(OAK) : pick(LEAF), a:1});   /* solid leaves: they never thin out or fade away as they fly */
   }
   /* leaves live in a real 3D space in front of the hills: some ride the wind away into the distance, some toward you and past you */
   const FOC=()=>H*.9;
@@ -456,8 +456,8 @@ const ambient=(function(){
     const sx=vp[0]+l.X*f/l.D, sy=vp[1]+l.Y*f/l.D;
     if(l.D<.35||l.D>14||l.Y>hg||sx<-140||sx>W+140||sy>H+80){ const mw=l.kind==="milkweed"; for(const k in l) delete l[k]; l.off=true; l.cat=mw? "milk" : "leaf"; return; }   /* gone by: it waits for the next flurry */
     l.x=sx; l.y=sy; l.s=l.base*f/l.D;
-    l.mi3=Math.max(0,Math.min(.5,(l.D-2)/10));                    /* the air washes far leaves out */
-    l.in3=(l.D>9? Math.max(0,1-(l.D-9)/5) : 1)*(l.D<.7? .78 : 1)*Math.min(1,(sy+90)/60);
+    l.mi3=Math.max(0,Math.min(.22,(l.D-3)/20));                   /* just a touch of haze on the far ones */
+    l.in3=(l.D>13? Math.max(0,1-(l.D-13)) : 1)*Math.min(1,(sy+90)/60);   /* only goes once it's a speck in the distance */
     l.near3=Math.max(0,Math.min(1,1.6-l.D*.12));
   }
   /* ---- maple keys: the helicopter seeds, spinning down out of the trees all over the view ----
@@ -620,7 +620,7 @@ const ambient=(function(){
       ctx.restore(); return;
     }
     ctx.restore();
-    const sp=sun(); drawLeaf3D(l,l.x,l.y,l.s*pk,{alpha:Math.min(1,l.a*(.55+.6*d))*dim*inten,mist,blur:0,glow:0,sunSide:Math.sign(sp.x-l.x)||1});
+    const sp=sun(); drawLeaf3D(l,l.x,l.y,l.s*pk,{alpha:l.a*dim*inten,mist,blur:0,glow:0,sunSide:Math.sign(sp.x-l.x)||1});
   }
   /* ---- now and then one big leaf of each kind in turn: tumbling right up past the lens, or blown out from behind you into the scene ---- */
   let bigL=null, nextBig=rnd(8,16), bigKind=Math.floor(Math.random()*4);
@@ -637,8 +637,8 @@ const ambient=(function(){
     const l=bigL, f=FOC(), vp=vanish(); l.age+=dt; l.ph+=dt*1.3;
     l.D+=l.vD*dt; const wk=Math.min(1,l.D); l.X+=(l.vX+Math.cos(l.ph)*.03)*wk*dt; l.Y+=(l.vY+Math.sin(l.ph*.8)*.02)*wk*dt; l.rot+=l.vr*dt*(l.kind==="milkweed"?.3:1); l.flip+=l.vf*dt; l.tilt+=l.vt*dt;
     const D=Math.max(.04,l.D), x=vp[0]+l.X*f/D, y=vp[1]+l.Y*f/D, S=l.base*f/D;
-    l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>7||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
-    const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,(5.5-l.D)/2)), A=fadeIn*fadeFar*nearFade(S*2.2)*(dark?.8:1);
+    l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>13||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
+    const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,13-l.D)), A=fadeIn*fadeFar*nearFade(S*2.2)*(dark?.8:1);
     const blur= l.D<.5? (.5-l.D)*26 : l.D>6? Math.min(1.2,(l.D-6)*.35) : 0;                         /* too close for the lens to focus, or soft with distance */
     const mist=Math.max(0,Math.min(.45,(l.D-1.2)/8)), sp=sun(), toSun=Math.atan2(sp.y-y,sp.x-x);
     ctx.save(); ctx.globalAlpha=A*.94; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`;
