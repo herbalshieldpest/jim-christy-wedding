@@ -2928,14 +2928,26 @@ const ambient=(function(){
   function drawMoths(dt,dark,layer){
     const sp=sun();
     if(layer==="field"){
-      /* the small ones: pale flickers drifting over the field toward the light */
-      nextMothSmall-=dt; if(nextMothSmall<=0&&motes2.length<4&&nA<.25){ nextMothSmall=rnd(4,9); const b=gnd(); motes2.push({x:rnd(W*.1,W*.9),y:b.vy+rnd(20,140),ph:rnd(0,6),f:rnd(9,13),a:0,life:rnd(16,30),t:0,vx:0,vy:0,s:rnd(.8,1.3)}); }
-      for(const m of motes2){ m.t+=dt; const tx=sp.x+Math.sin(m.ph+m.t*.3)*W*.18, ty=sp.y+H*.18+Math.cos(m.ph*1.7+m.t*.4)*40;
-        m.vx+=((tx-m.x)*.02+Math.sin(m.t*3.1+m.ph)*34+Math.sin(m.t*7.3)*20)*dt; m.vy+=((ty-m.y)*.02+Math.cos(m.t*2.7+m.ph)*30)*dt; m.vx*=.96; m.vy*=.96; m.x+=m.vx*dt; m.y+=m.vy*dt;
-        m.a= m.t<1.5? m.t/1.5 : m.t>m.life-1.5? Math.max(0,(m.life-m.t)/1.5) : 1;
-        const fl=Math.abs(Math.sin(m.t*m.f)), r=1.6*m.s; ctx.globalAlpha=m.a*.85*dayVis(); ctx.fillStyle=dark?"rgba(220,210,190,.8)":"rgba(255,246,226,.9)";
-        ctx.beginPath(); ctx.ellipse(m.x-r*fl,m.y,r*fl+.3,r*.7,.3,0,6.283); ctx.ellipse(m.x+r*fl,m.y,r*fl+.3,r*.7,-.3,0,6.283); ctx.fill(); }
-      for(let i=motes2.length-1;i>=0;i--) if(motes2[i].t>motes2[i].life) motes2.splice(i,1);
+      /* cabbage whites: small, chalky white butterflies in true 3D, bouncing along low over the field in their jerky, never-resting flutter */
+      nextMothSmall-=dt; if(nextMothSmall<=0&&motes2.length<(MOBILE()?2:4)&&nA<.25){ nextMothSmall=rnd(5,11); const b=gnd(), side=Math.random()<.5? -1 : 1;
+        motes2.push({kind:"cabbage",sx:side<0? -20 : W+20,sy:b.vy+rnd(10,120),z:rnd(1.4,5.5),tz:rnd(1.4,5.5),dir:-side,t:0,life:rnd(16,30),ph:rnd(0,6),flapT:0,glide:0,ang:.4,wy:rnd(0,6),tx:null}); }
+      const F=H*.5, cx=W/2, cy=H*.52, g0=gnd(), vis=dayVis(); if(vis>.01) for(let i=motes2.length-1;i>=0;i--){ const m=motes2[i]; m.t+=dt;
+        if(m.tx==null||Math.random()<dt*.5) m.tx=Math.max(W*.05,Math.min(W*.95,m.sx+m.dir*rnd(40,200)));                               /* zig-zagging along, never straight */
+        m.sx+=Math.max(-90,Math.min(90,(m.tx-m.sx)*1.2))*dt*(4/m.z)+Math.sin(m.t*6.1+m.ph)*30*dt*(4/m.z);
+        m.sy+=(Math.sin(m.t*7.3+m.ph)*70+Math.sin(m.t*2.1+m.wy)*30)*dt*(4/m.z)*.6; m.sy=Math.max(g0.vy+lawnMinG(m.sx)-40,Math.min(H*.9,m.sy));
+        if(Math.random()<dt*.2) m.tz=rnd(1.4,5.5); m.z+=(m.tz-m.z)*dt*.3; flyWings(m,dt);
+        if(m.t>m.life||m.sx<-40||m.sx>W+40){ motes2.splice(i,1); continue; }
+        const X=(m.sx-cx)*m.z/F, Y=(m.sy-cy)*m.z/F, Pn=[X,Y,m.z], Vn=m.pp? [X-m.pp[0],Y-m.pp[1],m.z-m.pp[2]] : [m.dir,0,0]; m.pp=Pn; if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((v,j)=>lerp(v,Vn[j],.15)) : Vn;
+        const sz=Math.ceil(Math.min(400,60*.0074*.62*F/m.z+10)), mx=mncx; if(mncv.width<sz||mncv.height<sz){ mncv.width=mncv.height=Math.max(sz,mncv.width); }
+        mx.setTransform(1,0,0,1,0,0); mx.clearRect(0,0,sz,sz); mx.globalCompositeOperation="source-over"; mx.imageSmoothingEnabled=true; mx.imageSmoothingQuality="high";
+        monarch3D(mx,Pn,m.V||Vn,m.ang,(X3,Y3,Z3)=>{ const zz=Math.max(.05,Z3); return [cx+X3*F/zz-m.sx+sz/2,cy+Y3*F/zz-m.sy+sz/2]; },"cabbage");
+        /* the air around it: lit warm from the low sun's side, hazing toward the field behind it with distance */
+        mx.globalCompositeOperation="source-atop"; { const rl=mx.createLinearGradient(0,0,sz,0), k2=sp.x>m.sx?1:0; rl.addColorStop(k2,"rgba(255,196,120,.22)"); rl.addColorStop(1-k2,"rgba(30,20,12,.12)"); mx.fillStyle=rl; mx.fillRect(0,0,sz,sz); }
+        if(!m.bg||(m.bgT=(m.bgT||0)-1)<=0){ m.bgT=8; const ip=toImg(m.sx,m.sy); m.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[150,130,90]; }
+        mx.fillStyle=rgb(m.bg,Math.min(.35,.04+(m.z-1.4)*.06)); mx.fillRect(0,0,sz,sz);
+        { const tn=tint(); if(tn.a>0){ mx.globalAlpha=tn.a; mx.fillStyle=tn.c; mx.fillRect(0,0,sz,sz); mx.globalAlpha=1; } } if(dark){ mx.fillStyle="rgba(10,8,14,.28)"; mx.fillRect(0,0,sz,sz); }
+        mx.globalCompositeOperation="source-over";
+        m.x=m.sx; m.y=m.sy; ctx.globalAlpha=Math.min(1,m.t/1.2,(m.life-m.t)/1.2)*vis; ctx.drawImage(mncv,0,0,sz,sz,m.sx-sz/2,m.sy-sz/2,sz,sz); }
       ctx.globalAlpha=1; return;
     }
     drawNightLunas(dt,dark);
@@ -3572,7 +3584,7 @@ const ambient=(function(){
   const MR=24, MX0=0, MY0=-14; const mons=[]; let nextMon=6; const mncv=document.createElement("canvas"), mncx=mncv.getContext("2d");
   /* ---- the other butterflies of these hills, painted on the same wing frame as the monarch: each wing an outline, borders laid inside it, spot rows stepped in from the margin ---- */
   const BFLY={monarch:{k:1,name:"Monarch butterfly"},tiger:{k:1.18,name:"Eastern tiger swallowtail",body:[30,26,18]},spice:{k:1.08,name:"Spicebush swallowtail",body:[18,18,20]},frit:{k:1.02,name:"Great spangled fritillary",body:[60,40,24]},
-    admiral:{k:.84,name:"Red admiral",body:[24,20,18]},cloak:{k:1.06,name:"Mourning cloak",body:[40,24,20]},sulphur:{k:.7,name:"Clouded sulphur",body:[120,110,60]},diana:{k:1.12,name:"Diana fritillary",body:[40,30,24]},rosy:{k:.72,name:"Rosy maple moth",body:[236,206,90]}};
+    admiral:{k:.84,name:"Red admiral",body:[24,20,18]},cloak:{k:1.06,name:"Mourning cloak",body:[40,24,20]},sulphur:{k:.7,name:"Clouded sulphur",body:[120,110,60]},cabbage:{k:.62,name:"Cabbage white",body:[58,58,60]},diana:{k:1.12,name:"Diana fritillary",body:[40,30,24]},rosy:{k:.72,name:"Rosy maple moth",body:[236,206,90]}};
   /* ---- the butterflies' wings, painted like the real thing because they come right up close: each species' own wing shape, the true venation
      (the discal cell and the veins fanning from it to the margin), the colour laid in the cells between the veins, borders and spot rows set in the
      interspaces, fringes along the margin, the furry base, and a fine grain of scales over all. One right-hand wing pair per species, mirrored for the left ---- */
@@ -3590,7 +3602,7 @@ const ambient=(function(){
     /* ---- the wing outlines, per family ---- */
     const sh={monarch:{ap:[23,-11.4],to:[17.6,2.4],oc:-.6,hw:"round",hs:.25},frit:{ap:[22.4,-10.8],to:[17.4,2.2],oc:-.5,hw:"round",hs:.35},diana:{ap:[23.4,-11],to:[17.8,2.4],oc:-.4,hw:"round",hs:.3},
       tiger:{ap:[24.4,-12.2],to:[17,2.6],oc:.2,hw:"tail",hs:.55},spice:{ap:[23.6,-11.8],to:[16.6,2.6],oc:.1,hw:"tail2",hs:.6},admiral:{ap:[21.6,-11],to:[16.4,1.8],oc:-.9,hw:"round",hs:.45,notch:1},
-      cloak:{ap:[22.8,-11.2],to:[17,2.2],oc:-1.2,hw:"round",hs:.75,rag:1},sulphur:{ap:[20.6,-10.2],to:[17.4,2.8],oc:.9,hw:"round",hs:0},rosy:{ap:[19.8,-9.6],to:[16.6,3],oc:.6,hw:"moth",hs:0}}[kind];
+      cloak:{ap:[22.8,-11.2],to:[17,2.2],oc:-1.2,hw:"round",hs:.75,rag:1},sulphur:{ap:[20.6,-10.2],to:[17.4,2.8],oc:.9,hw:"round",hs:0},cabbage:{ap:[20.2,-10.4],to:[17.2,2.6],oc:.8,hw:"round",hs:0},rosy:{ap:[19.8,-9.6],to:[16.6,3],oc:.6,hw:"moth",hs:0}}[kind];
     const RT=[.8,-2.4], RB=[.8,.8], ap=sh.ap, to=sh.to;
     const costa=bz(RT,[6,-6.6],[14,-10.6],ap,20);
     const mid=L(ap,to,.5), on=[-(to[1]-ap[1]),to[0]-ap[0]], ol=Math.hypot(on[0],on[1]), oc=[mid[0]+on[0]/ol*sh.oc*-1,mid[1]+on[1]/ol*sh.oc*-1];
@@ -3719,6 +3731,13 @@ const ambient=(function(){
       veins(HW,hV,hCell,[170,150,70],.24,.16); veins(FW,fV,fCell,[170,150,70],.22,.15);
       hair(HW,[200,190,150],4); hair(FW,[200,190,150],3); scales(FW,.9,"255,255,220"); scales(HW,.9,"255,255,220");
       fringe(FS.o,fO,PK,null,.45); fringe(HS.o,hO,PK,null,.45); x.save(); path(FW); x.clip(); x.strokeStyle=C(PK,.9); x.lineWidth=.5; x.beginPath(); FS.c.P.forEach((q,i)=>i? x.lineTo(q[0],q[1]) : x.moveTo(q[0],q[1])); x.stroke(); x.restore(); }
+    else if(kind==="cabbage"){ /* the cabbage white: chalky white, grey-dusted at the base, charcoal wingtips, one or two black spots on the forewing and one on the hindwing's leading edge */
+      radial(HW,3,3,14,[250,250,244],[232,232,216]); radial(FW,4,-2,15,[252,252,246],[236,236,224]); wash(HW,1,1,5.5,[118,118,110],.55); wash(FW,1,-1,4.6,[108,108,104],.6);
+      clip(FW,()=>{ blob([at(FS.c,.7),at(FS.c,.86),ap,at(FS.o,.1),at(FS.o,.2),inward(FS.o,.16,1.5,FC),inward(FS.c,.78,1.1,FC)],[62,62,64]); });
+      dot(inward(FS.o,.5,3.6,FC),.72,.68,[42,42,44]); dot(inward(FS.o,.74,3.1,FC),.56,.52,[46,46,48]); dot(inward(HS.c,.78,.55,HC),.52,.46,[78,78,80]);
+      veins(HW,hV,hCell,[196,196,182],.2,.14); veins(FW,fV,fCell,[196,196,182],.2,.14);
+      hair(HW,[214,214,204],4); hair(FW,[204,204,194],3); scales(FW,.9,"255,255,250"); scales(HW,.9,"255,255,250");
+      fringe(FS.o,fO,[226,226,216],null,.35); fringe(HS.o,hO,[226,226,216],null,.35); }
     else if(kind==="rosy"){ const PK=[228,96,144], PK2=[240,140,176], YL=[246,216,104];
       radial(HW,3,3,14,[250,232,160],[240,200,130]); wash(HW,3,3,8,[240,150,170],.5);
       radial(FW,3,-2,15,PK2,PK);
@@ -3759,6 +3778,26 @@ const ambient=(function(){
     x.strokeStyle=rgb(bc); x.lineWidth=Math.max(.35,wd*.28); for(const sd of [-1,1]){ const a0=S(W3(5.2,sd*.5,.4)), a1=S(W3(12.5,sd*3.6,1.6)); x.beginPath(); x.moveTo(a0[0],a0[1]); x.lineTo(a1[0],a1[1]); x.stroke(); x.fillStyle=rgb(bc); x.beginPath(); x.arc(a1[0],a1[1],Math.max(.4,wd*.5),0,6.283); x.fill(); }
     wingAt(-far);
   }
+  /* how each species actually flies and sits: wingbeat rate and sweep, how long it flaps and how long it sails, the angle it sails at,
+     how erratic its line is, and how it holds its wings at rest (closed over the back, spread open to bask, or tented like a roof) */
+  const SPF={monarch:{hz:5.2,amp:1.05,fl:[.6,1.5],gl:[.5,1.4],ga:.55,bob:1,rest:"closed",bask:1},
+    tiger:{hz:3.8,amp:1.15,fl:[.5,1.1],gl:[.9,1.9],ga:.45,bob:.7,rest:"closed",bask:1},
+    spice:{hz:6.6,amp:1,fl:[1,2.2],gl:[.2,.5],ga:.4,bob:1.3,rest:"closed",bask:.6},
+    frit:{hz:7,amp:.95,fl:[.6,1.2],gl:[.4,.9],ga:.05,bob:.8,rest:"open",bask:1},
+    diana:{hz:6.4,amp:.95,fl:[.6,1.2],gl:[.5,1],ga:.08,bob:.7,rest:"open",bask:1},
+    admiral:{hz:8.2,amp:1,fl:[.4,.9],gl:[.15,.45],ga:.1,bob:1.8,rest:"open",bask:1},
+    cloak:{hz:5,amp:1,fl:[.4,.8],gl:[.9,1.7],ga:0,bob:.8,rest:"open",bask:1},
+    sulphur:{hz:9.5,amp:1.1,fl:[2,4],gl:[.05,.15],ga:.6,bob:1.6,rest:"closed",bask:0},
+    cabbage:{hz:9,amp:1.15,fl:[2,4],gl:[.05,.2],ga:.6,bob:2.2,rest:"closed",bask:0},
+    rosy:{hz:11,amp:.9,fl:[3,6],gl:[.03,.08],ga:.3,bob:2.4,rest:"tent",bask:0},
+    luna:{hz:7,amp:1.05,fl:[3,6],gl:[.05,.1],ga:.3,bob:1.8,rest:"open",bask:0}};
+  const spf=k=>SPF[k]||SPF.monarch;
+  function flyWings(m,dt){ const P=spf(m.kind); m.flapT-=dt; if(m.flapT<=0){ m.glide=m.glide? 0 : 1; m.flapT=m.glide? rnd(P.gl[0],P.gl[1]) : rnd(P.fl[0],P.fl[1]); }
+    m.ang= m.glide? lerp(m.ang,P.ga,Math.min(1,dt*6)) : (P.ga*.4+.15)+Math.sin(m.t*Math.PI*2*P.hz+m.ph)*P.amp; }
+  function restWings(m,dt){ const P=spf(m.kind), k=Math.min(1,dt*3);
+    if(P.rest==="tent") m.ang=lerp(m.ang,-.55,k);                                                                                     /* a moth's wings folded down like a little roof */
+    else if(P.rest==="open"){ const shut=Math.pow(Math.max(0,Math.sin(m.t*.4+m.ph)),10); m.ang=lerp(m.ang,.08+shut*1.35+Math.sin(m.t*1.7)*.05,k); }   /* basking spread flat, closing now and then */
+    else { const bask=P.bask? Math.pow(Math.max(0,Math.sin(m.t*.55+m.ph)),3)*P.bask : 0; m.ang=lerp(m.ang,1.5-bask*1.25,k); } }      /* closed over the back, opening slowly to bask */
   let cmon=null, nextCmon=rnd(40,80); const cmcv=document.createElement("canvas"), cmcx=cmcv.getContext("2d");
   function startCmon(kind,perch){ const inn=Math.random()<.5, side=Math.random()<.5?-1:1, far={x:W*rnd(.3,.7),y:H*rnd(.32,.55)}, near={x:W/2+side*W*rnd(.22,.4),y:H*rnd(.4,.7)};
     cmon={kind:kind||(Math.random()<.5?"monarch":pick(["tiger","spice","frit","admiral","cloak","sulphur","diana"])),t:0,dur:rnd(7,9.5),inn,a:inn? far : near,b:inn? near : far,ph:rnd(0,6),flapT:0,glide:0,ang:.4,wx:rnd(0,6),wy:rnd(0,6),forcePerch:!!perch}; }   /* called from the menu, it always comes in and lands on a grass stem right in front of you */
@@ -3776,11 +3815,10 @@ const ambient=(function(){
       k=0; }
     else { const ue=m.inn? u : 1-u; z=zf*Math.pow(zn/zf,ease(ue)); k=ease(u);                      /* distance shrinks (or grows) at an even pace to the eye */
     const wob=Math.min(1,1.4/z)*W*.02;
-    m.sx=lerp(m.a.x,m.b.x,k)+Math.sin(m.t*2.3+m.wx)*wob+Math.sin(m.t*5.1)*wob*.4; m.sy=lerp(m.a.y,m.b.y,k)+Math.sin(m.t*1.7+m.wy)*wob*1.2+Math.sin(m.t*6.3)*wob*.35; }   /* that loose, bobbing butterfly line */
-    m.flapT-=dt; if(m.flapT<=0){ m.glide=m.glide? 0 : 1; m.flapT=m.glide? rnd(.3,.8) : rnd(.7,1.6); }
+    const bb=spf(m.kind).bob; m.sx=lerp(m.a.x,m.b.x,k)+Math.sin(m.t*2.3+m.wx)*wob+Math.sin(m.t*5.1*bb)*wob*.4*bb; m.sy=lerp(m.a.y,m.b.y,k)+Math.sin(m.t*1.7+m.wy)*wob*1.2+Math.sin(m.t*6.3*bb)*wob*.35*bb; }   /* that loose, bobbing butterfly line */
+    if(!m.rest) flyWings(m,dt);
     if(m.rest&&m.kind==="luna"){ const shiver=Math.pow(Math.max(0,Math.sin(m.t*.7+m.ph)),8); m.ang=lerp(m.ang,.05+shiver*.35*(.5+.5*Math.sin(m.t*14)),Math.min(1,dt*4)); }   /* a moth rests with its wings spread, now and then a little shiver of them */
-    else if(m.rest){ const bask=Math.pow(Math.max(0,Math.sin(m.t*.55+m.ph)),3); m.ang=lerp(m.ang,1.5-bask*1.25,Math.min(1,dt*3)); }   /* at rest: wings closed over the back, opening slowly now and then to bask */
-    else m.ang= m.glide? lerp(m.ang,.55,Math.min(1,dt*6)) : .35+Math.sin(m.t*Math.PI*2*5.2+m.ph)*1.05;
+    else if(m.rest) restWings(m,dt);
     const X=(m.sx-cx)*z/F, Y=(m.sy-cy)*z/F, Pn=[X,Y,z]; let Vn=m.pp? [X-m.pp[0],Y-m.pp[1],z-m.pp[2]] : [0,0,m.inn?-1:1]; m.pp=Pn;
     if(m.rest) Vn= m.kind==="luna"? [m.pdir*.02,-.3,.08] : [m.pdir*.01,.003,.002];   /* a moth clings head-up on the stem, wings spread flat toward you; a butterfly sits along the tip */                                                                                          /* settled, facing along the stem's tip */
     if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((v,j)=>lerp(v,Vn[j],m.rest? .08 : .12)) : Vn;
@@ -3878,14 +3916,13 @@ const ambient=(function(){
     for(let i=mons.length-1;i>=0;i--){ const m=mons[i]; m.t+=dt;
       /* a lazy, wandering course: drifting across, rising and dipping, coming nearer and farther */
       const fl=(m.flee=Math.max(0,(m.flee||0)-dt))>0? 1+2.2*m.flee : 1; if(fl>1){ m.sy+=Math.sin(m.t*13)*90*dt*m.flee; m.ang=.35+Math.sin(m.t*Math.PI*2*8)*1.1; }   /* fleeing: faster, jinking */
-      m.sx+=m.dir*(26+Math.sin(m.t*.7+m.ph)*14)*dt*(4/m.z)*fl; m.sy+=(Math.sin(m.t*1.1+m.wy)*22+Math.sin(m.t*2.9)*10)*dt; m.sy=Math.max(g.vy-70,Math.min(H*.92,m.sy));
+      m.sx+=m.dir*(26+Math.sin(m.t*.7+m.ph)*14)*dt*(4/m.z)*fl; m.sy+=(Math.sin(m.t*1.1+m.wy)*22+Math.sin(m.t*2.9*spf(m.kind).bob)*10*spf(m.kind).bob)*dt; m.sy=Math.max(g.vy-70,Math.min(H*.92,m.sy));
       if(dog&&!dog.gone&&!dog.hidden&&!m.flee&&!(m.dip>0)&&Math.random()<dt/9) m.dip=rnd(7,11);   /* now and then one drifts down low over the lawn, just where Willow is */
       if(m.dip>0){ m.dip-=dt; if(dog&&!dog.gone){ const s0=toScreen(dog.Xw,dog.Dw); m.sy+=((s0.y-.13*s0.g)-m.sy)*Math.min(1,dt*1.1); m.sx+=(s0.x+Math.sin(m.t*.8)*s0.g*.25-m.sx)*Math.min(1,dt*.35); } }
       if(Math.random()<dt*.15) m.tz=rnd(1.6,6.5); m.z+=(m.tz-m.z)*dt*.25;
       if(m.t>m.life||m.sx<-60||m.sx>W+60){ mons.splice(i,1); continue; }
       /* flap a few beats, then sail with the wings held up in a shallow V */
-      m.flapT-=dt; if(m.flapT<=0){ m.glide=m.glide? 0 : 1; m.flapT=m.glide? rnd(.5,1.4) : rnd(.6,1.5); }
-      m.ang= m.glide? lerp(m.ang,.55,Math.min(1,dt*6)) : .35+Math.sin(m.t*Math.PI*2*5.2+m.ph)*1.05;
+      if(fl<=1) flyWings(m,dt);   /* each in its own species' way: the tiger floating on long sails, the sulphur never stopping, the admiral jinking */
       const X=(m.sx-cx)*m.z/F, Y=(m.sy-cy)*m.z/F, Pn=[X,Y,m.z], Vn=m.pp? [X-m.pp[0],Y-m.pp[1],m.z-m.pp[2]] : [m.dir,0,0]; m.pp=Pn;
       if(Math.hypot(...Vn)>1e-7) m.V=m.V? m.V.map((v,j)=>lerp(v,Vn[j],.08)) : Vn;
       const a=Math.min(1,m.t/1)*Math.min(1,(m.life-m.t)/1.2); x.globalAlpha=Math.max(0,a);
@@ -5778,7 +5815,7 @@ const ambient=(function(){
       for(const l of leaves) if(l.x!=null) tag(l.x,l.y,Math.max(10,(l.s||12)*1.2),LEAFN[l.kind]||"Leaf",true);
       if(bigL&&bigL.sx!=null) tag(bigL.sx,bigL.sy,Math.min(220,bigL.sS*1.2),LEAFN[bigL.kind]||"Leaf"); }
     for(const f of flies) tag(f.x,f.y,10,"Firefly",true); for(const f of nflies) if(f.a>.5) tag(f.x,f.y,10,"Firefly",true); for(const b of bugs) if(b.sx!=null) tag(b.sx,b.sy,b.kind==="bee"?24:30,b.kind==="bee"?"Common eastern bumble bee":"Common green darner");
-    for(const m of motes2) tag(m.x,m.y,18,"Cabbage moth");
+    for(const m of motes2) if(m.x!=null) tag(m.x,m.y,18,"Cabbage white");
     for(const f of flocks){ const c=w2s(f.X,f.Y,f.Z); tag(c.x,c.y,Math.max(30,40*9/Math.max(4,f.Z)),"Canada geese"); }
     for(const q of covey) if(q.sx!=null) tag(q.sx,q.sy,q.sr,"Northern bobwhite"); if(grouse&&grouse.sx!=null) tag(grouse.sx,grouse.sy,grouse.sr,"Ruffed grouse"); if(pheas&&pheas.sx!=null) tag(pheas.sx,pheas.sy,pheas.sr,"Ring-necked pheasant");
     if(pheasW) T(pheasW,"Ring-necked pheasant",26);
