@@ -430,7 +430,7 @@ const ambient=(function(){
     const base={kind, z, x:rnd(-.1*W,W*1.02), y:top? rnd(-80,-20) : rnd(-40,H), ph:rnd(0,6.28), rot:rnd(0,6.28), flip:rnd(0,6.28)};
     if(kind==="milkweed") return Object.assign(base,{s:rnd(11,18)*z, vy:rnd(5,11)*z, sw:rnd(18,40)*z, fr:rnd(.25,.5), vr:rnd(-.25,.25), vf:0, wind:rnd(8,20)*z, a:rnd(.55,.85)});
     return Object.assign(base,{s:(kind==="maple"?rnd(10,18):kind==="oak"?rnd(10,16):rnd(8,14))*z, vy:rnd(16,32)*z, sw:rnd(14,38)*z, fr:rnd(.4,.9), vr:rnd(-.8,.8), vf:rnd(1,2.4), wind:rnd(5,16)*z,
-      c: kind==="maple"?pick(MAPLE) : kind==="oak"?pick(OAK) : pick(LEAF), a:1});   /* solid leaves: they never thin out or fade away as they fly */
+      c: kind==="maple"?pick(MAPLE) : kind==="oak"?pick(OAK) : pick(LEAF), a:rnd(.5,.8)*(.55+.45*z)});
   }
   /* leaves live in a real 3D space in front of the hills: some ride the wind away into the distance, some toward you and past you */
   const FOC=()=>H*.9;
@@ -456,8 +456,8 @@ const ambient=(function(){
     const sx=vp[0]+l.X*f/l.D, sy=vp[1]+l.Y*f/l.D;
     if(l.D<.35||l.D>14||l.Y>hg||sx<-140||sx>W+140||sy>H+80){ const mw=l.kind==="milkweed"; for(const k in l) delete l[k]; l.off=true; l.cat=mw? "milk" : "leaf"; return; }   /* gone by: it waits for the next flurry */
     l.x=sx; l.y=sy; l.s=l.base*f/l.D;
-    l.mi3=Math.max(0,Math.min(.22,(l.D-3)/20));                   /* just a touch of haze on the far ones */
-    l.in3=(l.D>13? Math.max(0,1-(l.D-13)) : 1)*Math.min(1,(sy+90)/60);   /* only goes once it's a speck in the distance */
+    l.mi3=Math.max(0,Math.min(.5,(l.D-2)/10));                    /* the air washes far leaves out */
+    l.in3=(l.D>9? Math.max(0,1-(l.D-9)/5) : 1)*(l.D<.7? .78 : 1)*Math.min(1,(sy+90)/60);
     l.near3=Math.max(0,Math.min(1,1.6-l.D*.12));
   }
   /* ---- maple keys: the helicopter seeds, spinning down out of the trees all over the view ----
@@ -594,12 +594,17 @@ const ambient=(function(){
     const n=mipPick(spr.f,S/LFK), sc=Math.pow(2,n), lsS=sp=>sp[n], fw=LFW*LFK/sc/NU, fh=LFH*LFK/sc/NV, Ls=[.35*(o.sunSide||1),-.55,-.75];
     const cells=[]; for(let j=0;j<NV;j++) for(let i=0;i<NU;i++){ const P0=G[j][i], P1=G[j][i+1], P2=G[j+1][i], P3=G[j+1][i+1], ax=P1[0]-P0[0], ay=P1[1]-P0[1], az=P1[2]-P0[2], bx=P2[0]-P0[0], by=P2[1]-P0[1], bz=P2[2]-P0[2];
       let nx=ay*bz-az*by, ny=az*bx-ax*bz, nz=ax*by-ay*bx; const nl=Math.hypot(nx,ny,nz)||1; nx/=nl; ny/=nl; nz/=nl;
-      cells.push({i,j,P0,P1,P2,z:(P0[2]+P3[2])/2,front:nz<0,lam:Math.abs(nx*Ls[0]+ny*Ls[1]+nz*Ls[2])}); }
+      cells.push({i,j,P0,P1,P2,P3,z:(P0[2]+P3[2])/2,front:nz<0,lam:Math.abs(nx*Ls[0]+ny*Ls[1]+nz*Ls[2])}); }
     cells.sort((a,b)=>b.z-a.z);   /* the far side of a curl first, so the near side lies over it */
-    for(const c of cells){ const a=c.P1[0]-c.P0[0], b=c.P1[1]-c.P0[1], cc=c.P2[0]-c.P0[0], d=c.P2[1]-c.P0[1];
-      X.setTransform(a/fw,b/fw,cc/fh,d/fh,c.P0[0],c.P0[1]); const im=(c.front? spr.f : spr.b)[n], sx=c.i*fw, sy=c.j*fh;
-      X.globalAlpha=1; X.drawImage(im,sx,sy,fw,fh,-.02*fw,-.02*fh,fw*1.04,fh*1.04);
-      const sh=(1-c.lam)*.5+(c.front? 0 : .08); if(sh>.04){ X.globalAlpha=sh; X.drawImage(spr.s[n],sx,sy,fw,fh,-.02*fw,-.02*fh,fw*1.04,fh*1.04); } }   /* each patch shaded by how it faces the light */
+    /* each patch is two triangles, each mapped by its own three corners and clipped to itself, so the curved sheet stays whole: no cracks or holes opening between patches */
+    const tri=(A,B,C)=>{ const mx=(A[0]+B[0]+C[0])/3, my=(A[1]+B[1]+C[1])/3; X.beginPath(); for(const [k,Q] of [A,B,C].entries()){ const dx=Q[0]-mx, dy=Q[1]-my, l=Math.hypot(dx,dy)||1, e=(l+.8)/l; k? X.lineTo(mx+dx*e,my+dy*e) : X.moveTo(mx+dx*e,my+dy*e); } X.closePath(); };
+    for(const c of cells){ const im=(c.front? spr.f : spr.b)[n], sx=c.i*fw, sy=c.j*fh, sh=(1-c.lam)*.5+(c.front? 0 : .08), P0=c.P0, P1=c.P1, P2=c.P2, P3=c.P3;
+      for(let h=0;h<2;h++){ X.save(); X.setTransform(1,0,0,1,0,0);
+        if(h===0){ tri(P0,P1,P2); X.clip(); X.setTransform((P1[0]-P0[0])/fw,(P1[1]-P0[1])/fw,(P2[0]-P0[0])/fh,(P2[1]-P0[1])/fh,P0[0],P0[1]); }
+        else { tri(P3,P2,P1); X.clip(); X.setTransform((P3[0]-P2[0])/fw,(P3[1]-P2[1])/fw,(P3[0]-P1[0])/fh,(P3[1]-P1[1])/fh,P1[0]+P2[0]-P3[0],P1[1]+P2[1]-P3[1]); }
+        X.globalAlpha=1; X.drawImage(im,sx-.06*fw,sy-.06*fh,fw*1.12,fh*1.12,-.06*fw,-.06*fh,fw*1.12,fh*1.12);
+        if(sh>.04){ X.globalAlpha=sh; X.drawImage(spr.s[n],sx-.06*fw,sy-.06*fh,fw*1.12,fh*1.12,-.06*fw,-.06*fh,fw*1.12,fh*1.12); }   /* each patch shaded by how it faces the light */
+        X.restore(); } }
     X.setTransform(1,0,0,1,0,0); X.globalAlpha=1; X.globalCompositeOperation="source-atop";
     if(o.glow>.05&&o.toSun!=null){ const gx=Math.cos(o.toSun), gy=Math.sin(o.toSun), g3=X.createLinearGradient(R-gx*S,R-gy*S,R+gx*S,R+gy*S); g3.addColorStop(.5,"rgba(255,170,70,0)"); g3.addColorStop(1,`rgba(255,180,80,${(.3*o.glow).toFixed(2)})`); X.fillStyle=g3; X.fillRect(0,0,D2,D2); }   /* the sun glowing through its edge */
     if(o.mist>.02){ X.fillStyle=`rgba(236,210,166,${Math.min(.6,o.mist).toFixed(2)})`; X.fillRect(0,0,D2,D2); }   /* the air between us and it */
@@ -620,7 +625,7 @@ const ambient=(function(){
       ctx.restore(); return;
     }
     ctx.restore();
-    const sp=sun(); drawLeaf3D(l,l.x,l.y,l.s*pk,{alpha:l.a*dim*inten,mist,blur:0,glow:0,sunSide:Math.sign(sp.x-l.x)||1});
+    const sp=sun(); drawLeaf3D(l,l.x,l.y,l.s*pk,{alpha:Math.min(1,l.a*(.55+.6*d))*dim*inten,mist,blur:0,glow:0,sunSide:Math.sign(sp.x-l.x)||1});
   }
   /* ---- now and then one big leaf of each kind in turn: tumbling right up past the lens, or blown out from behind you into the scene ---- */
   let bigL=null, nextBig=rnd(8,16), bigKind=Math.floor(Math.random()*4);
@@ -637,8 +642,8 @@ const ambient=(function(){
     const l=bigL, f=FOC(), vp=vanish(); l.age+=dt; l.ph+=dt*1.3;
     l.D+=l.vD*dt; const wk=Math.min(1,l.D); l.X+=(l.vX+Math.cos(l.ph)*.03)*wk*dt; l.Y+=(l.vY+Math.sin(l.ph*.8)*.02)*wk*dt; l.rot+=l.vr*dt*(l.kind==="milkweed"?.3:1); l.flip+=l.vf*dt; l.tilt+=l.vt*dt;
     const D=Math.max(.04,l.D), x=vp[0]+l.X*f/D, y=vp[1]+l.Y*f/D, S=l.base*f/D;
-    l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>13||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
-    const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,13-l.D)), A=fadeIn*fadeFar*nearFade(S*2.2)*(dark?.8:1);
+    l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>7||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
+    const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,(5.5-l.D)/2)), A=fadeIn*fadeFar*nearFade(S*2.2)*(dark?.8:1);
     const blur= l.D<.5? (.5-l.D)*26 : l.D>6? Math.min(1.2,(l.D-6)*.35) : 0;                         /* too close for the lens to focus, or soft with distance */
     const mist=Math.max(0,Math.min(.45,(l.D-1.2)/8)), sp=sun(), toSun=Math.atan2(sp.y-y,sp.x-x);
     ctx.save(); ctx.globalAlpha=A*.94; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`;
