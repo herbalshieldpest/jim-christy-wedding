@@ -802,8 +802,8 @@ SP.add({
     if(!S.on){ S.fireGoal=0; S.fire=Math.max(0,S.fire-dt*.3); }   /* the fire dies down as the light comes */
     const gone=!S.run||(flags.jimGone&&flags.chrGone); if(!S.on&&gone&&SP.held){ SP.dawn&&SP.dawn(4); SP.holdNight(false); }
     if(!S.on&&S.alpha<=.003&&gone){ if(S.run){ S.run=false; reset(); } return; }
-    if(S.on&&!S.run&&SP.night>.85){ let ban=null; try{ ban=typeof ambient!=="undefined"&&ambient.banU? ambient.banU() : null; }catch(e){}   /* the bluebirds' banner has the stage: let it finish crossing first */
-      if(ban!=null&&ban<1) S.waitT=0; else { S.waitT=(S.waitT||0)+dt; if(S.waitT>1.2){ S.waitT=0; begin(); } } }
+    if(S.on&&!S.run&&SP.night>.85){ let mid=null; try{ mid=typeof ambient!=="undefined"&&ambient.banMid? ambient.banMid() : null; }catch(e){}   /* the bluebirds' banner has the stage: wait till it has reached the middle of the screen */
+      if(mid===false) S.waitT=0; else { S.waitT=(S.waitT||0)+dt; if(S.waitT>1.2){ S.waitT=0; begin(); } } }
     if(!S.run){ layout(); S.frame=(S.frame||0)+1; if(S.alpha>.003) L.push({y:F_SCREEN.y,fn:()=>drawA()}); return; }   /* just the empty chairs and the cold ring, waiting */
     simulate(Math.min(dt,.05));
     S.frame=(S.frame||0)+1;
