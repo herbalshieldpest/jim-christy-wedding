@@ -535,8 +535,8 @@ const ambient=(function(){
       if(mode==="sil"){ x.fillStyle="#000"; x.fill(p); x.lineWidth=.03; x.strokeStyle="#000"; x.stroke(p); return c; }
       const back=mode==="back", base= back? mixv(mulv(lc,.86),[214,196,150],.22) : lc;
       x.fillStyle=rgb(base); x.fill(p); x.save(); x.clip(p);
-      const sd0=RN(); for(let i=0;i<9;i++){ const mx=RN()*1.6-.8, my=RN()*2.2-.9, mr=.12+RN()*.3, dk=RN()<.55, g=x.createRadialGradient(mx,my,0,mx,my,mr); g.addColorStop(0,dk? "rgba(50,24,8,.22)" : "rgba(255,214,150,.16)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.fillStyle=g; x.fillRect(mx-mr,my-mr,mr*2,mr*2); }   /* weathering */
-      const eg=x.createRadialGradient(0,.25,.3,0,.25,1.5); eg.addColorStop(0,"rgba(0,0,0,0)"); eg.addColorStop(1,back? "rgba(40,20,6,.18)" : "rgba(40,18,4,.26)"); x.fillStyle=eg; x.fillRect(-1.3,-1.3,2.6,3.2);   /* the margins a little darker */
+      for(let i=0;i<9;i++){ RN(); RN(); RN(); RN(); }   /* (no weathering blotches) */
+      const eg=x.createRadialGradient(0,.25,.3,0,.25,1.5); eg.addColorStop(0,"rgba(0,0,0,0)"); eg.addColorStop(1,back? "rgba(40,20,6,.08)" : "rgba(40,18,4,.12)"); x.fillStyle=eg; x.fillRect(-1.3,-1.3,2.6,3.2);   /* the margins a little darker */
       const vein= back? rgb(mulv(base,.6),.6) : rgb(mixv(lc,[255,226,170],.3),.45); x.strokeStyle=vein; x.lineCap="round";
       x.lineWidth=.035; x.beginPath(); x.moveTo(0,-.85); x.lineTo(0,1.4);
       if(kind==="maple"){ for(const [a,b] of [[-.62,-.45],[.62,-.45],[-.7,.35],[.7,.35]]){ x.moveTo(0,.22); x.lineTo(a,b); } }
