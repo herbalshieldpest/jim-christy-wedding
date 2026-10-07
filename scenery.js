@@ -17,12 +17,13 @@ const SC={
   sun:()=>{ try{ return SceneryHost.sun? SceneryHost.sun() : {x:.711,y:.344,iw:1364,ih:1024,strength:.33}; }catch(e){ return null; } },
   dim:()=>{ try{ return SceneryHost.dim? !!SceneryHost.dim() : false; }catch(e){ return false; } },                 /* a darker "welcome" look */
   shown:()=>{ try{ return SceneryHost.shown? !!SceneryHost.shown() : true; }catch(e){ return true; } },
+  quiet:()=>{ try{ return SceneryHost.quiet? !!SceneryHost.quiet() : false; }catch(e){ return false; } },             /* the host page wants the sounds hushed for now */
   key:SceneryHost.key||"scene", sounds:SceneryHost.sounds||"" };
 var natureSfx=(function(){
   let ctx=null, master=null, noiseBuf=null, breezeG=null, breezeF=null, on=true, armed=false, birdT=null, gustT=null, live=false, faded=false;
   on=true;   /* sound is on by default every visit; browsers only let it start on the first tap, click or key press */
   const R=(a,b)=>a+Math.random()*(b-a);
-  const wanted=()=>on && !document.hidden && (typeof ambient==="undefined"||ambient.on);
+  const wanted=()=>on && !document.hidden && !SC.quiet() && (typeof ambient==="undefined"||ambient.on);
   function init(){
     if(ctx) return true; const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return false;
     try{ ctx=new AC(); }catch(e){ return false; }
