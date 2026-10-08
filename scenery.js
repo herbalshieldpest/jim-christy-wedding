@@ -376,7 +376,19 @@ var natureSfx=(function(){
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
-  let ctx=cv.getContext("2d"); let camX=0, camY=0, camZ=1, moundZ=0, dtF=.016; const moundRise=()=>{ const L=logC; if(!L||L.hold) return 0; const sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; let o=H*.16*(1-sm(L.t/2.6)); if(L.t>L.life) o+=H*.1*sm((L.t-L.life)/1.6); return o; };   /* the rise comes up into the frame from below as we draw back, and sinks away again */ let W=0,H=0, leaves=[], motes=[], last=0, raf=0, t=0;
+  let ctx=cv.getContext("2d"); let camX=0, camY=0, camZ=1, moundZ=0, dtF=.016, frameRect=null; const efC=document.createElement("canvas"), efX=efC.getContext("2d");
+  /* drawn back wider than the photograph itself: the margins it opens up are filled by mirroring the picture's own edges outward, softened, so the frame never shows a border */
+  /* drawing back without a border: the finished picture is gently warped, the middle drawn in smaller while every edge stays put at the edge of the frame,
+     so the whole view seems to widen as we step back, with nothing ever cropped in or left blank. Done in strips, across and then down */
+  const ef2=document.createElement("canvas"), ef2X=ef2.getContext("2d");
+  function edgeFill(){ const st=moundZ*.14; if(st<.002||!SC.shown()) return; const CW=cv.width, CH=cv.height, N=MOBILE()? 16 : 32;
+    if(efC.width!==CW||efC.height!==CH){ efC.width=CW; efC.height=CH; } if(ef2.width!==CW||ef2.height!==CH){ ef2.width=CW; ef2.height=CH; }
+    const f=(u,p)=>{ const w=u<p? (u-p)/p : (u-p)/(1-p), g=w*(1-st)+st*w*w*w; return u<p? p+g*p : p+g*(1-p); };   /* 0..1 -> 0..1, edges fixed, the middle squeezed toward p */
+    efX.setTransform(1,0,0,1,0,0); efX.clearRect(0,0,CW,CH); efX.drawImage(cv,0,0);
+    ef2X.setTransform(1,0,0,1,0,0); ef2X.clearRect(0,0,CW,CH); for(let i=0;i<N;i++){ const a=i/N, b=(i+1)/N, sx=Math.floor(a*CW), sw=Math.ceil(b*CW)-sx, dx=f(a,.5)*CW, dw=f(b,.5)*CW-dx; ef2X.drawImage(efC,sx,0,sw,CH,dx,0,dw+.6,CH); }
+    const c=ctx; c.save(); c.setTransform(1,0,0,1,0,0); c.globalAlpha=1; c.globalCompositeOperation="source-over"; c.filter="none";
+    for(let i=0;i<N;i++){ const a=i/N, b=(i+1)/N, sy=Math.floor(a*CH), sh=Math.ceil(b*CH)-sy, dy=f(a,.3)*CH, dh=f(b,.3)*CH-dy; c.drawImage(ef2,0,sy,CW,sh,0,dy,CW,dh+.6); }
+    c.restore(); } const moundRise=()=>{ const L=logC; if(!L||L.hold) return 0; const sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; let o=H*.16*(1-sm(L.t/2.6)); if(L.t>L.life) o+=H*.1*sm((L.t-L.life)/1.6); return o; };   /* the rise comes up into the frame from below as we draw back, and sinks away again */ let W=0,H=0, leaves=[], motes=[], last=0, raf=0, t=0;
   const reduce=window.matchMedia("(prefers-reduced-motion: reduce)"), darkQ=window.matchMedia("(prefers-color-scheme: dark)");
   let on=true; try{ on=localStorage.getItem(SC.key+"-ambient")!=="off"; }catch(e){}
   const LEAF=["#b5532a","#c9772b","#d89a3a","#a33b25","#8c5a2b","#c4882f","#9e6b2e"];
@@ -8394,8 +8406,7 @@ const ambient=(function(){
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
     camX=(Math.sin(t*.23)*9+Math.sin(t*.61+1)*4)*.9; camY=(Math.cos(t*.19+.5)*6+Math.sin(t*.47)*3)*.9; camZ=1+30/Math.min(W,H)+.035*(.5-.5*Math.cos(t*2*Math.PI/48));   /* and slowly breathes in and out, about once every 48 seconds */   /* the hand-held drift: the whole view sways together */
     { const L=logC, sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; let k=0; if(L&&!L.hold){ k=sm(L.t/2.6); if(L.t>L.life) k*=1-sm((L.t-L.life)/1.6); } moundZ=k; }   /* 0..1: how far the camera has drawn back for the near rise */
-    if(SC.shown()){ const pull=moundZ*(1-1/camZ)*.92, z=camZ*(1-pull), fk=Math.max(0,(z-1)/Math.max(1e-3,camZ-1)), py=H*.3, cX=camX*fk, cY=camY*fk;   /* drawing back: the frame widens toward the whole photograph, the near rise rising into it from below */
-      ctx.setTransform(z,0,0,z,(1-z)*W/2+cX,(1-z)*py+cY); }
+    if(SC.shown()) ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY);
     const dark=document.documentElement.dataset.theme==="dark"||(document.documentElement.dataset.theme!=="light"&&darkQ.matches);
     const sp=sun(), R=Math.max(W,H)*.6, img=SC.shown();
     const drawMote=m=>{
@@ -8466,7 +8477,7 @@ const ambient=(function(){
     ctx.globalAlpha=1; if(img){ dogScare(dt); drawGreet(dt,dark); drawTrail(dt,dark); drawMoths(dt,dark,"near"); drawBats(dt,dark); drawFlock(dt,dark); drawJays(dt,dark); drawJM(dt,dark); drawCmon(dt,dark); drawBanner(dt,dark); drawPerchBird(dt,dark); drawHawkG(dt,dark,"near"); drawPheasFront(dt,dark); drawHum(dt,dark); drawMantF(dt,dark); drawDragF(dt,dark); drawFsq(dt,dark); } ctx.globalAlpha=1;
     nightLayerEnd(nlMain);
     if(img) for(const pl of PLUGS) if(pl.light) try{ pl.light(dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
-    ctx.setTransform(1,0,0,1,0,0); if(img) filmPass();
+    ctx.setTransform(1,0,0,1,0,0); edgeFill(); if(img) filmPass();
   }
   /* ---- night belongs to the night creatures: everything that's about by day (songbirds, hawks and eagles, the pileated woodpecker,
      turkeys, squirrels, butterflies and bees, the day's moths, the UTV) fades out as the dark comes on and doesn't come out until morning.
