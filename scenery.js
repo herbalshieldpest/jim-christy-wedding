@@ -4782,7 +4782,7 @@ const ambient=(function(){
     if(!async){ rows(0,Ht); M.done=true; return M; }
     let y=0; const step=()=>{ if(barkMap!==M) return; if(M.done) return; rows(y,Math.min(Ht,y+24)); y+=24; if(y>=Ht) M.done=true; else setTimeout(step,30); }; setTimeout(step,30); M.finish=()=>{ if(!M.done){ rows(y,Ht); y=Ht; M.done=true; } }; return M; }
   setTimeout(()=>{ if(!barkMap) barkMap=makeBarkMap(true); },9000);   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
-  function startLogCrawler(kind){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : -1, len=W*rnd(.5,.58)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.034;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
+  function startLogCrawler(kind){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.5,.58)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.034;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
     const L={kind,side,t:0,u:.1,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
       ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*rnd(.97,1.0), len, R0, seed:Math.floor(rnd(0,9999)),
@@ -4799,6 +4799,7 @@ const ambient=(function(){
     /* snapped side branches: short, broken off raggedly, rising from the far side at the old forks */
     L.stubs=nodes.slice(0,2+(Math.random()<.5? 1 : 0)).map((nd,i)=>{ const xs=nd.u*len, back=Math.random()<.3; return {xs,th:back? -rnd(2.1,2.5) : -rnd(.45,.95),len:R0*rnd(1.3,3.2),r0:rnd(.42,.58),seed:Math.floor(rnd(0,9999)),splint:Array.from({length:4},()=>({a:rnd(-.8,.8),w:rnd(.08,.2),h:rnd(.2,.8)}))}; });
     L.knots=L.knots.concat(nodes.map(nd=>({u:nd.u+rnd(-.01,.01),ph:rnd(-.4,.3),s:rnd(1,1.4)})));
+    if(side>0){ L.y0-=H*.045; L.ang*=1.15; }   /* on the right the lawn sits lower in the frame: lift the stick up onto it so it lies in full view like the left one */
     if(kind==="turtle"){ L.u=.3; L.life=rnd(40,55); L.state="pause"; L.dur=rnd(3,5); }   /* the turtle is already hauled out a little way along, basking */
     logC=L; }
   const sm01=z=>{ const t2=Math.max(0,Math.min(1,z*.5+.5)); return t2*t2*(3-2*t2); };
