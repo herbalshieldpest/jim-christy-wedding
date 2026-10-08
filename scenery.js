@@ -3384,15 +3384,17 @@ const ambient=(function(){
       const dx=m[0]-mo[0], dy=m[1]-mo[1], l=Math.hypot(dx,dy)||1, ux=dx/l*6, uy=dy/l*6;
       x.beginPath(); x.moveTo(p.top[0]+ux,p.top[1]+uy+(p.bot[1]-p.top[1])*.08); x.lineTo(ap[0],ap[1]); x.lineTo(p.bot[0]+ux,p.bot[1]+uy-(p.bot[1]-p.top[1])*.08); x.lineTo(p.bot[0]+ux*3,p.bot[1]+uy*3); x.lineTo(p.top[0]+ux*3,p.top[1]+uy*3); x.closePath(); x.fill(); }
     x.restore();
-    /* little brass weights hanging on short cords from the lower edge, swinging as the birds fly and the cloth ripples */
-    const wts=[]; for(const [k,sw,cl] of [[.04,0,.55],[.27,1,.95],[.5,2,.4],[.73,3,.75],[.96,4,.5]]){ const i=Math.round((k+E)/(1+2*E)*N), P=pts[i], ht=Math.hypot(P.bot[0]-P.top[0],P.bot[1]-P.top[1]);
-      const th=-B.dir*.16+Math.sin(B.t*(3.4-cl*1.2)+sw*1.9)*.22+Math.sin(B.t*4.6+sw)*.06, L=ht*cl, r=Math.max(1.4,ht*.085), ex=P.bot[0]+Math.sin(th)*L, ey=P.bot[1]+Math.cos(th)*L;
-      x.strokeStyle="rgba(70,52,30,.85)"; x.lineWidth=Math.max(.35,ht*.011); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+Math.sin(th)*L*.45,P.bot[1]+Math.cos(th)*L*.55,ex,ey); x.stroke();   /* the cord */
-      x.fillStyle="#7a5a24"; x.beginPath(); x.ellipse(ex,ey+r*.15,r*.42,r*.3,th,0,6.283); x.fill();                                                      /* the cap */
-      const cxw=ex+Math.sin(th)*r*1.1, cyw=ey+Math.cos(th)*r*1.1, g=x.createRadialGradient(cxw-r*.4,cyw-r*.45,r*.1,cxw,cyw,r*1.15);
-      g.addColorStop(0,"#ffe6a6"); g.addColorStop(.35,"#d6a44c"); g.addColorStop(.8,"#8a5f22"); g.addColorStop(1,"#4a3210"); x.fillStyle=g;
-      x.save(); x.translate(cxw,cyw); x.rotate(-th); x.beginPath(); x.moveTo(0,-r*1.05); x.bezierCurveTo(r*.75,-r*.7,r*.95,r*.35,0,r*1.05); x.bezierCurveTo(-r*.95,r*.35,-r*.75,-r*.7,0,-r*1.05); x.fill(); x.restore();   /* a teardrop of brass */
-      wts.push([cxw,cyw,r]); }
+    /* three slender gilt drops on fine silk cords, hung from the lower hem: a small bead, a tapering spindle of polished brass, and a little silk tassel below, swaying gently */
+    const wts=[]; for(const [k,sw,cl] of [[.2,0,.36],[.5,1,.52],[.8,2,.36]]){ const i=Math.round((k+E)/(1+2*E)*N), P=pts[i], ht=Math.hypot(P.bot[0]-P.top[0],P.bot[1]-P.top[1]);
+      const th=-B.dir*.12+Math.sin(B.t*(2.6-cl*.8)+sw*1.9)*.14+Math.sin(B.t*3.9+sw)*.04, L=ht*cl, r=Math.max(1,ht*.05), ca=Math.cos(th), sa=Math.sin(th), ex=P.bot[0]+sa*L, ey=P.bot[1]+ca*L;
+      x.strokeStyle="rgba(214,190,140,.85)"; x.lineWidth=Math.max(.3,ht*.007); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+sa*L*.45,P.bot[1]+ca*L*.55,ex,ey); x.stroke();   /* the silk cord */
+      x.save(); x.translate(ex,ey); x.rotate(-th);
+      const gold=(y0,y1)=>{ const g=x.createLinearGradient(-r,0,r,0); g.addColorStop(0,"#6e4c18"); g.addColorStop(.3,"#e9c77c"); g.addColorStop(.45,"#fff1c8"); g.addColorStop(.7,"#b88a3c"); g.addColorStop(1,"#5a3c12"); return g; };
+      x.fillStyle=gold(); x.beginPath(); x.arc(0,r*.45,r*.42,0,6.283); x.fill();   /* the bead */
+      x.beginPath(); x.moveTo(0,r*.9); x.bezierCurveTo(r*.7,r*1.3,r*.62,r*2.6,0,r*4.2); x.bezierCurveTo(-r*.62,r*2.6,-r*.7,r*1.3,0,r*.9); x.fillStyle=gold(); x.fill();   /* the spindle */
+      x.strokeStyle="rgba(255,244,214,.6)"; x.lineWidth=Math.max(.25,r*.08); x.beginPath(); x.moveTo(-r*.14,r*1.4); x.quadraticCurveTo(-r*.3,r*2.4,-r*.08,r*3.5); x.stroke();   /* a glint down its length */
+      x.strokeStyle="rgba(200,170,110,.75)"; x.lineWidth=Math.max(.2,r*.06); for(let j=-3;j<=3;j++){ const sx2=j*r*.09, sw2=Math.sin(B.t*3+sw+j)*r*.12; x.beginPath(); x.moveTo(sx2*.4,r*4.1); x.quadraticCurveTo(sx2+sw2*.5,r*5,sx2*1.5+sw2,r*5.9); x.stroke(); }   /* the tassel's fine threads */
+      x.restore(); wts.push([ex+sa*r*3,ey+ca*r*3,r*3]); }
     B.bp=birds.map(b=>proj(...b.P));
     for(const b of birds) blueBird3D(x,b.P,(()=>{ const l=Math.hypot(b.V[0],b.V[1]*.5,b.V[2])||1; return [b.V[0]/l,b.V[1]*.5/l,b.V[2]/l]; })(),b.flap,b.glide,proj,Kw,sunL,b.amp);
     /* light and air, over the whole group */
@@ -3932,6 +3934,7 @@ const ambient=(function(){
     if(!pbird) return; const b=pbird, F=H*.5, cx=W/2, cy=H*.52, br=b.br, C=b.C, sz0=(C.size||1); b.t+=dt;
     br.kv+=(-br.k*34-br.kv*2.6)*dt; br.k+=br.kv*dt;                                                                                 /* the bough springs, dips and settles */
     br.sa= b.phase==="gone"? Math.max(0,br.sa-dt*.7) : Math.min(1,br.sa+dt*.9); if(b.phase==="gone"&&br.sa<=0){ pbird=null; return; }
+    dofBlur(Math.max(1.5,H*.004)*br.sa);   /* when a songbird comes to the bough it's the one thing in focus: the field and hills soften behind it */
     const at=drawBranch(br,dark,false);
     const sp=sun(), sunL=(()=>{ const v=[(sp.x-cx)/F,(sp.y-cy)/F-.05,1], l=Math.hypot(...v); return v.map(c=>c/l); })(), Kw=.0074*sz0, z=b.z;
     const pS=at(b.uP), pS2=at(Math.min(1,b.uP+.02)), tang=Math.atan2(pS2[1]-pS[1],pS2[0]-pS[0]);
@@ -3960,7 +3963,7 @@ const ambient=(function(){
       if(b.phase==="perch"){ /* sitting: quick head turns, tail flicks, singing; now and then it hops round to face the other way */
         b.lookT-=dt; if(b.lookT<=0){ b.lookT=rnd(.4,1.5); b.lookTo=pick([-.7,-.4,-.15,0,.2,.45,.7]); } b.look+=((b.lookTo||0)-b.look)*Math.min(1,dt*16);
         if(Math.random()<dt*(C.kind==="cardinal"||C.kind==="blue"? .6 : .3)) b.flick=1; b.flick=Math.max(0,(b.flick||0)-dt*5); b.tailUp=Math.sin(b.flick*Math.PI)*.9;
-        b.singT-=dt; if(b.singT<=0){ b.singT=rnd(3.5,6.5); b.singing=1.4; try{ if(C.kind==="blue"&&natureSfx.bluebird) natureSfx.bluebird(b.side*.5); else natureSfx.sing&&natureSfx.sing(C.sk,b.side*.5); }catch(e){} }
+        b.singT-=dt; if(b.singT<=0){ b.singT=rnd(2.2,3.8); b.singing=1.4; try{ if(C.kind==="blue"&&natureSfx.bluebird) natureSfx.bluebird(b.side*.5); else natureSfx.sing&&natureSfx.sing(C.sk,b.side*.5); }catch(e){} }
         b.singing=Math.max(0,(b.singing||0)-dt); b.gape= b.singing>0? Math.abs(Math.sin(b.t*15))*.8 : 0; o.gape=b.gape; o.headUp=b.singing>0? .8 : 0;
         b.turnT-=dt; if(b.turnT<=0&&!b.hop){ b.turnT=rnd(6,10); b.hop=.001; } if(b.hop){ b.hop+=dt/.3; if(b.hop>=.5&&b.fcur!==b.face){ b.fcur=b.face; } if(b.hop>=1){ b.hop=0; br.kv+=.6; } }   /* a little hop in place, resettling its grip (it keeps facing in, toward the field) */
         if(b.hop){ const h=Math.sin(b.hop*Math.PI); P=v3.a(P,[0,-h*1.6*Kw,0]); o.fold=1-h*.25; o.legs=1; }
@@ -4900,6 +4903,11 @@ const ambient=(function(){
       return {L:Lm,sunC,skyC,bnc,dir:"moon"+Lm.join(","),key:["moon",mx2,mk,dark?1:0].join(",")}; }
     const L3=[Math.round(lx*10)/10*.55,.7,Math.round(elev*10)/10]; return {L:L3,sunC,skyC,bnc,dir:L3.join(","),key:[Math.round(lx*10),Math.round(elev*20),Math.round(nightK*25),dark?1:0,Math.round(tint().a*20)].join(",")}; }
   let nextLogAuto=rnd(90,180), dofC=null;
+  /* shallow focus on everything already drawn: blurred at half size, faded out below y1 (screen y as a fraction) so the near ground stays sharp */
+  function dofBlur(b,y0,y1){ if(b<=.3) return; const cv=ctx.canvas, dc=dofC||(dofC=document.createElement("canvas")), qw=Math.ceil(W/2), qh=Math.ceil(H/2); if(dc.width!==qw||dc.height!==qh){ dc.width=qw; dc.height=qh; } const dx=dc.getContext("2d");
+    dx.setTransform(1,0,0,1,0,0); dx.globalCompositeOperation="source-over"; dx.clearRect(0,0,qw,qh); dx.filter=`blur(${(b*qw/W).toFixed(1)}px)`; dx.drawImage(cv,0,0,cv.width,cv.height,0,0,qw,qh); dx.filter="none";
+    if(y0!=null){ const g=dx.createLinearGradient(0,0,0,qh); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(Math.max(.02,Math.min(.97,y0)),"rgba(0,0,0,.85)"); g.addColorStop(Math.max(.03,Math.min(.99,y1)),"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,0)"); dx.globalCompositeOperation="destination-in"; dx.fillStyle=g; dx.fillRect(0,0,qw,qh); dx.globalCompositeOperation="source-over"; }
+    ctx.save(); ctx.drawImage(dc,0,0,W,H); ctx.restore(); }
   /* anything walking on the lawn keeps off the stick: the stick is handed to the lawn's own steering as a chain of keep-out circles on the ground,
      the same way the campfire is, so walkers route round it smoothly instead of being shoved about */
   function stickObs(){ const L=logC; if(!L||L.a<=.05) return []; const N=18, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, G=gnd(), o=[];
@@ -4937,11 +4945,7 @@ const ambient=(function(){
       gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
       gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
     /* shallow focus: with something this close in the lens, the field and hills beyond fall softly out of focus, more the farther they are */
-    { const b=Math.max(1.5,H*.0045)*L.a, cv=ctx.canvas; if(b>.3){ const dc=dofC||(dofC=document.createElement("canvas")); const qw=Math.ceil(W/2), qh=Math.ceil(H/2); if(dc.width!==qw||dc.height!==qh){ dc.width=qw; dc.height=qh; } const dx=dc.getContext("2d");
-        dx.setTransform(1,0,0,1,0,0); dx.globalCompositeOperation="source-over"; dx.clearRect(0,0,dc.width,dc.height); const sc=dc.width/W; dx.filter=`blur(${(b*sc).toFixed(1)}px)`; dx.drawImage(cv,0,0,cv.width,cv.height,0,0,dc.width,dc.height); dx.filter="none";   /* worked at a quarter of the pixels: blur hides the difference */
-        const crestY=L.y0-Math.abs(Math.sin(L.ang))*L.len-H*.06, g=dx.createLinearGradient(0,0,0,dc.height); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(Math.max(.05,Math.min(.95,crestY/H)),"rgba(0,0,0,.85)"); g.addColorStop(Math.min(.99,Math.max(.1,(crestY/H)+.12)),"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,0,0)");
-        dx.globalCompositeOperation="destination-in"; dx.fillStyle=g; dx.fillRect(0,0,dc.width,dc.height); dx.globalCompositeOperation="source-over";
-        ctx.save(); ctx.drawImage(dc,0,0,W,H); ctx.restore(); } }
+    { const crestY=L.y0-Math.abs(Math.sin(L.ang))*L.len-H*.06; dofBlur(Math.max(1.5,H*.0045)*L.a,crestY/H,crestY/H+.12); }
     { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; ctx.drawImage(L.hill,0,0,W,H); ctx.restore(); }   /* the rise of ground it lies on */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
@@ -6240,7 +6244,7 @@ const ambient=(function(){
   /* ---- little brown bats, out as the light fades, flitting erratically over the lawn and along the tree line ---- */
   const bats=[]; let batUntil=-1;
   function drawBats(dt,dark){
-    const lv=batUntil>t? Math.max(.6,duskV,nA*.9) : Math.max(0,.6-(t-batUntil)*.5), want=lv>.22? (MOBILE()? 2 : 3) : 0, F=H*.5, cx=W/2, cy=H*.52;   /* only when they're called: they no longer come out on their own at dusk */
+    const lv=Math.max(nA*.9,batUntil>t? .6 : 0), want=lv>.22? (MOBILE()? (nA>.5?2:1) : (nA>.5||batUntil>t?3:2)) : 0, F=H*.5, cx=W/2, cy=H*.52;   /* out through the night, and whenever they're called; not in the daylight dusk before it */
     while(bats.length<want) bats.push({x:rnd(W*.1,W*.9),y:rnd(H*.08,gnd().vy*.6),z:rnd(2.5,6),vx:rnd(-60,60),vy:0,vz:0,ph:rnd(0,6),f:rnd(52,64),tw:0});
     if(bats.length>want) bats.length=want;
     const a=Math.min(1,(lv-.22)/.15); if(a<=0) return;
