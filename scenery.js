@@ -875,12 +875,13 @@ const ambient=(function(){
   /* ---- a sun shower: rain falling while the sun is still out, every drop lit gold, splashing on the lawn ---- */
   let ssDrops=null, ssSplash=[];
   function drawSunShower(dt,dark){ if(ssA<=.01){ ssDrops=null; ssSplash.length=0; return; } const n=MOBILE()? 170 : 420, hz=gnd().vy, sp=sun(), sc=H/800;
-    if(!ssDrops) ssDrops=Array.from({length:n},()=>{ const d=Math.pow(Math.random(),1.6); return {x:Math.random()*W*1.2,y:Math.random()*H,d}; });
+    if(!ssDrops) ssDrops=Array.from({length:n},()=>{ const r=Math.random(), d=r<.58? Math.random()*.25 : r<.9? .25+Math.random()*.4 : .7+Math.random()*.3; return {x:Math.random()*W*1.2,y:Math.random()*H,d}; });   /* most of it far off and fine, some in the middle distance, a few big drops right in front of us */
     ctx.save(); ctx.lineCap="round";
-    for(const q of ssDrops){ const d=q.d, v=(520+1200*d)*sc, L=(7+34*d)*sc, yEnd=lerp(hz+8,H+20,d), wind=-.2;
+    for(const q of ssDrops){ const d=q.d, dd=d*d, v=(380+2200*dd)*sc, L=(4+18*d+95*dd*d)*sc, yEnd=lerp(hz+8,H+20,Math.min(1,d*1.3)), wind=-.2;
       q.y+=v*dt; q.x+=v*dt*wind; if(q.y>yEnd){ if(d>.35&&ssSplash.length<60&&Math.random()<ssA) ssSplash.push({x:q.x,y:yEnd,d,t:0}); q.y=-Math.random()*H*.4; q.x=Math.random()*W*1.25; }
-      const glint=1+1.6*Math.exp(-Math.pow((q.x-sp.x)/(W*.22),2)), a=ssA*(.14+.4*d)*Math.min(1.6,glint)*(dark? .7 : 1);
-      ctx.strokeStyle=`rgba(255,${Math.round(232-20*(glint-1))},${Math.round(196-40*(glint-1))},${a.toFixed(3)})`; ctx.lineWidth=(.5+1.3*d)*sc; ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(q.x-L*wind,q.y-L); ctx.stroke(); }   /* each drop a short streak, brighter where it crosses the sun */
+      const glint=1+1.6*Math.exp(-Math.pow((q.x-sp.x)/(W*.22),2)), a=ssA*(.1+.34*d)*Math.min(1.6,glint)*(dark? .7 : 1);
+      const rc=`255,${Math.round(232-20*(glint-1))},${Math.round(196-40*(glint-1))}`; if(d>.7){ ctx.strokeStyle=`rgba(${rc},${(a*.28).toFixed(3)})`; ctx.lineWidth=(2.5+6*(d-.7))*sc; ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(q.x-L*wind,q.y-L); ctx.stroke(); }   /* the nearest drops big and soft, out of focus */
+      ctx.strokeStyle=`rgba(${rc},${a.toFixed(3)})`; ctx.lineWidth=(.35+1.1*d+1.6*dd)*sc; ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(q.x-L*wind,q.y-L); ctx.stroke(); }   /* each drop a short streak, brighter where it crosses the sun */
     for(const s2 of ssSplash){ s2.t+=dt; const k=s2.t/.28, r=(1.5+5*s2.d)*sc*(.4+k); ctx.strokeStyle=`rgba(255,240,214,${(ssA*.45*(1-k)*s2.d).toFixed(3)})`; ctx.lineWidth=.8*sc; ctx.beginPath(); ctx.ellipse(s2.x,s2.y,r,r*.3,0,Math.PI,6.283); ctx.stroke(); }   /* little crowns of spray where they land */
     ssSplash=ssSplash.filter(s2=>s2.t<.28);
     { const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,`rgba(255,236,200,${(.05*ssA).toFixed(3)})`); g.addColorStop(.55,`rgba(230,214,190,${(.035*ssA).toFixed(3)})`); g.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }   /* the sunlit haze of the shower */
