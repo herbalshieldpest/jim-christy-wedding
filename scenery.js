@@ -4942,12 +4942,13 @@ const ambient=(function(){
     /* light: the sun's side and from above, a cool sky fill; the eye toward us */
     const Ls=v3.n([sunSide*.55,.15,.82]), V=[0,-ce,se];
     const lit=dark? .55 : 1, K=lt*lit*(1-nightK*.72)*(sk? 1 : 1.3);   /* the eft's orange is vivid, almost glowing, even in the low light */
-    const PAL= sk? {base:[44,38,32],stripe:[206,190,140],tail:[66,98,170],tail2:[44,66,124],belly:[176,170,150]} : {base:[255,104,14],dark:[236,78,8],spot:[214,26,18],ring:[30,12,6],belly:[255,150,40]};
+    const PAL= sk? {base:[44,38,32],stripe:[206,190,140],tail:[66,98,170],tail2:[44,66,124],belly:[176,170,150]} : {base:[255,96,0],dark:[250,80,0],spot:[255,16,8],ring:[24,8,4],belly:[255,150,30]};
     const colAt=(s,th)=>{ let c=PAL.base; if(sk&&s>svl-4) c=mixv(mixv(PAL.base,PAL.tail,Math.min(1,(s-svl+4)/14)),PAL.tail2,Math.min(1,(s-svl)/tl)*.6); if(Math.sin(th)<-.2) c=mixv(c,PAL.belly,Math.min(1,(-Math.sin(th)-.2)*2)); if(!sk&&Math.sin(th)>.6) c=mixv(c,PAL.dark,(Math.sin(th)-.6)*.5); return c; };
     const nrmAt=(s,th)=>{ const f=frame(s), w=hw(s)||1, h=hh(s)||1, a=Math.cos(th)/w, b=Math.sin(th)/h; return v3.n([f.nx*a,f.ny*a,b]); };
     const shadeC=(c,n,s)=>{ const d=Math.max(0,v3.d(n,Ls)), amb=.34+.18*Math.max(0,n[2]), k=(amb+.78*d)*K; let o=mulv(c,k); o=[o[0]+10*(1-d)*(dark? .6:1)*.5,o[1]+12*(1-d)*.5,o[2]+22*(1-d)*.5];   /* shadows go cool toward the sky */
       if(sk){ const hv=v3.n(v3.a(Ls,V)), sp=Math.pow(Math.max(0,v3.d(n,hv)),36)*(dark? .25 : .9); o=mixv(o,[255,250,236],sp); }   /* the skink's polished scales catch the sun */
-      return o; };
+      if(!sk){ const v=Math.max(o[0],o[1],o[2])||1, sat=1.35; o=o.map(cc=>v-(v-cc)*sat); o=mixv(o,c,.3*(1-nightK)); }   /* the eft's colour is loud: saturated, and holding its brightness even in shade */
+      return o.map(cc=>Math.max(0,Math.min(255,cc))); };
     const body=hullLoft(SECT,pt,false);
     x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
     /* its shadow pooled on the bark under it, pushed away from the sun */
@@ -4992,7 +4993,7 @@ const ambient=(function(){
       let s3=9; const RN=()=>{ s3=(s3*1664525+1013904223)>>>0; return s3/4294967296; };
       for(let i=0;i<700;i++){ const s=RN()*Ltot, th=RN()*Math.PI*1.3-.15, n=nrmAt(s,th); if(v3.d(n,V)<0) continue; const p=pt(s,hw(s)*Math.cos(th),zc(s)+hh(s)*Math.sin(th)), lc=RN()<.55; x.fillStyle=lc? rgb(shadeC([255,170,90],n),.35) : rgb(shadeC(PAL.dark,n),.4); x.beginPath(); x.arc(p[0],p[1],.22+RN()*.4,0,6.283); x.fill(); }
       for(const [s,sd] of [[8,1],[9.5,-1],[15,1],[17,-1],[22,-1],[24,1],[29,1],[31,-1],[36,-1],[37.5,1],[44,1]]){ const th=Math.PI/2+sd*.62, n=nrmAt(s,th); if(v3.d(n,V)<0) continue; const c0=pt(s,hw(s)*Math.cos(th),zc(s)+hh(s)*Math.sin(th)), fs=Math.max(.35,v3.d(n,V));
-        x.fillStyle=rgb(shadeC(PAL.ring,n)); x.beginPath(); x.ellipse(c0[0],c0[1],1.25,1.25*fs,0,0,6.283); x.fill(); x.fillStyle=rgb(shadeC(PAL.spot,n)); x.beginPath(); x.ellipse(c0[0],c0[1],.85,.85*fs,0,0,6.283); x.fill(); } }
+        x.fillStyle=rgb(shadeC(PAL.ring,n)); x.beginPath(); x.ellipse(c0[0],c0[1],1.45,1.45*fs,0,0,6.283); x.fill(); x.fillStyle=rgb(shadeC(PAL.spot,n)); x.beginPath(); x.ellipse(c0[0],c0[1],1.05,1.05*fs,0,0,6.283); x.fill(); x.fillStyle="rgba(255,140,120,.5)"; x.beginPath(); x.ellipse(c0[0]-.25,c0[1]-.3*fs,.35,.3*fs,0,0,6.283); x.fill(); } }   /* bright red spots, ringed in black, with a little shine */
     /* a soft rim of light where the surface turns away from the sun, and the glossy spine highlight */
     surfLine(Math.PI/2-sunSide*.35,3,Ltot*.8,dark? "rgba(190,210,240,.18)" : `rgba(255,236,200,${sk? .32 : .18})`,sk? .8 : 1.2);
     x.restore();
