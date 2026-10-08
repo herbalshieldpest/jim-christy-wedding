@@ -588,7 +588,7 @@ const ambient=(function(){
   const lsc=document.createElement("canvas"), lsx=lsc.getContext("2d");
   function leafShape(l){ if(l.fold==null){ l.fold=(Math.random()<.5? -1 : 1)*rnd(.15,.7); l.curl=rnd(-.65,.65); l.twist=rnd(-.6,.6); l.tilt0=rnd(0,6.283); l.vt=(Math.random()<.5? -1 : 1)*rnd(.25,1.1); } }
   /* draws leaf l at (x,y), S pixels per leaf unit; o: {alpha, mist, blur, glow (0..1), toSun (screen angle), tint} */
-  function drawLeaf3D(l,x,y,S,o){ leafShape(l); const spr=leafSprites(l.kind,l.c||"#9c6a32"), NU=S<14? 3 : S<45? 5 : 8, NV=S<14? 4 : S<45? 7 : 11;
+  function drawLeaf3D(l,x,y,S,o){ leafShape(l); const spr=leafSprites(l.kind,l.c||"#9c6a32"), mob=W<700, NU=mob? (S<20? 2 : S<60? 3 : 4) : S<14? 3 : S<45? 5 : 8, NV=mob? (S<20? 3 : S<60? 4 : 6) : S<14? 4 : S<45? 7 : 11;   /* fewer, larger patches on a phone */
     const R=Math.ceil(S*2.4)+4, D2=R*2; if(lsc.width<D2||lsc.height<D2){ lsc.width=Math.max(lsc.width,D2); lsc.height=Math.max(lsc.height,D2); }
     const X=lsx; X.setTransform(1,0,0,1,0,0); X.globalCompositeOperation="source-over"; X.globalAlpha=1; X.clearRect(0,0,D2,D2);
     const cr=Math.cos(l.rot), sr=Math.sin(l.rot), tilt=(l.tilt??l.tilt0)+(l.tilt==null? t*l.vt : 0), cf=Math.cos(l.flip), sf=Math.sin(l.flip), ct=Math.cos(tilt), st=Math.sin(tilt);
@@ -607,14 +607,14 @@ const ambient=(function(){
         if(h===0){ tri(P0,P1,P2); X.clip(); X.setTransform((P1[0]-P0[0])/fw,(P1[1]-P0[1])/fw,(P2[0]-P0[0])/fh,(P2[1]-P0[1])/fh,P0[0],P0[1]); }
         else { tri(P3,P2,P1); X.clip(); X.setTransform((P3[0]-P2[0])/fw,(P3[1]-P2[1])/fw,(P3[0]-P1[0])/fh,(P3[1]-P1[1])/fh,P1[0]+P2[0]-P3[0],P1[1]+P2[1]-P3[1]); }
         X.globalAlpha=1; X.drawImage(im,sx-.06*fw,sy-.06*fh,fw*1.12,fh*1.12,-.06*fw,-.06*fh,fw*1.12,fh*1.12);
-        if(sh>.04){ X.globalAlpha=sh; X.drawImage(spr.s[n],sx-.06*fw,sy-.06*fh,fw*1.12,fh*1.12,-.06*fw,-.06*fh,fw*1.12,fh*1.12); }   /* each patch shaded by how it faces the light */
+        if(sh>.04&&!mob){ X.globalAlpha=sh; X.drawImage(spr.s[n],sx-.06*fw,sy-.06*fh,fw*1.12,fh*1.12,-.06*fw,-.06*fh,fw*1.12,fh*1.12); }   /* each patch shaded by how it faces the light */
         X.restore(); } }
     X.setTransform(1,0,0,1,0,0); X.globalAlpha=1; X.globalCompositeOperation="source-atop";
     if(o.glow>.05&&o.toSun!=null){ const gx=Math.cos(o.toSun), gy=Math.sin(o.toSun), g3=X.createLinearGradient(R-gx*S,R-gy*S,R+gx*S,R+gy*S); g3.addColorStop(.5,"rgba(255,170,70,0)"); g3.addColorStop(1,`rgba(255,180,80,${(.3*o.glow).toFixed(2)})`); X.fillStyle=g3; X.fillRect(0,0,D2,D2); }   /* the sun glowing through its edge */
     if(o.mist>.02){ X.fillStyle=`rgba(236,210,166,${Math.min(.6,o.mist).toFixed(2)})`; X.fillRect(0,0,D2,D2); }   /* the air between us and it */
     const tn=tint(); if(tn.a>0){ X.globalAlpha=tn.a; X.fillStyle=tn.c; X.fillRect(0,0,D2,D2); X.globalAlpha=1; }
     X.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=o.alpha; if(o.blur>.3) ctx.filter=`blur(${o.blur.toFixed(1)}px)`; ctx.drawImage(lsc,0,0,D2,D2,x-R,y-R,D2,D2); ctx.restore(); ctx.filter="none"; }
+    ctx.save(); ctx.globalAlpha=o.alpha; if(o.blur>.3&&!MOBILE()) ctx.filter=`blur(${o.blur.toFixed(1)}px)`; ctx.drawImage(lsc,0,0,D2,D2,x-R,y-R,D2,D2); ctx.restore(); ctx.filter="none"; }
   function leaf(l,dim){
     const pk=1, inten=l.in3??1, mist=l.mi3??0, d=l.near3??1;
     ctx.save(); ctx.translate(l.x,l.y); ctx.rotate(l.rot);
@@ -649,6 +649,7 @@ const ambient=(function(){
     l.sx=x; l.sy=y; l.sS=S; if(l.D<.06||l.D>7||x<-S*3||x>W+S*3||y>H+S*3){ bigL=null; nextBig=rnd(16,34); return; }
     const fadeIn=Math.min(1,l.age/.6), fadeFar=l.toward? 1 : Math.max(0,Math.min(1,(5.5-l.D)/2)), A=fadeIn*fadeFar*nearFade(S*2.2)*(dark?.8:1);
     const blur= l.D<.5? (.5-l.D)*26 : l.D>6? Math.min(1.2,(l.D-6)*.35) : 0;                         /* too close for the lens to focus, or soft with distance */
+    if(MOBILE()){ if(l.D<.32){ bigL=null; nextBig=rnd(24,44); return; } }   /* on a phone the leaf slips past before it fills the screen: a huge, blurred leaf is more than a phone can redraw smoothly */
     const mist=Math.max(0,Math.min(.45,(l.D-1.2)/8)), sp=sun(), toSun=Math.atan2(sp.y-y,sp.x-x);
     ctx.save(); ctx.globalAlpha=A*.94; if(blur>.3) ctx.filter=`blur(${blur.toFixed(1)}px)`;
     if(l.kind==="milkweed"){ const m={kind:"milkweed",x,y,s:S*.9,rot:Math.sin(l.ph)*.4,a:.9,in3:1,mi3:mist,near3:1}; leaf(m,1); ctx.restore(); ctx.filter="none"; return; }
@@ -3315,15 +3316,15 @@ const ambient=(function(){
       B.dy[i]+=((d-.45)*.075-B.dy[i])*Math.min(1,dt*1.6);                                          /* sinking as it flags, climbing as it wins */
       const heave=-Math.sin(fp-.6)*(.007+.006*d), wob=Math.sin(B.t*3.7+i*2)*.006*d;              /* each downstroke jerks the body up */
       return {P:[lead-B.dir*span*i+wob, Y0+B.dy[i]+heave+Math.sin(B.t*.7+i)*.012, z+(i? .05 : 0)+Math.sin(B.t*1.9+i)*.012], V:[B.dir,-(.32+.28*d)+Math.sin(fp)*.06,0], flap:fp, glide:false, amp:1.12+.28*d, d}; });
-    const bR=Math.min(2,Math.max(1,window.devicePixelRatio||1)), cw=Math.ceil(W*bR), ch=Math.ceil(H*bR); if(bncv.width!==cw||bncv.height!==ch){ bncv.width=cw; bncv.height=ch; }   /* full resolution: the silk's edges and border lines stay clean */
-    const x=bncx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(bR,0,0,bR,0,0); x.imageSmoothingEnabled=true; x.imageSmoothingQuality="high";
+    const bR=MOBILE()? 1 : Math.min(2,Math.max(1,window.devicePixelRatio||1)), cw=Math.ceil(W*bR), ch=Math.ceil(H*bR); if(bncv.width!==cw||bncv.height!==ch){ bncv.width=cw; bncv.height=ch; }   /* full resolution: the silk's edges and border lines stay clean */
+    const x=bncx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw,ch); x.setTransform(bR,0,0,bR,0,0); x.imageSmoothingEnabled=true; x.imageSmoothingQuality=MOBILE()? "low" : "high";
     const sp=sun(), sunL=(()=>{ const v=[(sp.x-cx)/F,(sp.y-cy)/F-.05,1], l=Math.hypot(...v); return v.map(c=>c/l); })();
     /* bills first (the birds are drawn after the ribbon so they hold it), from a dry pass of the bird geometry */
     const beak=b=>{ const l=Math.hypot(...b.V)||1, f=b.V.map(c=>c/l), r=[-f[2],0,f[0]]; const rl=Math.hypot(...r)||1; const rr=r.map(c=>c/rl), uu=[f[1]*rr[2]-f[2]*rr[1],f[2]*rr[0]-f[0]*rr[2],f[0]*rr[1]-f[1]*rr[0]];
       return [0,1,2].map(i=>b.P[i]+(f[i]*8.4+uu[i]*.8)*Kw); };
     const A=beak(birds[1]), Bk=beak(birds[0]);   /* the trailing bird's bill to the leader's */
     /* the ribbon: hangs between the two bills, sags in the middle, ripples in the wind of their flight */
-    const N=64, E=.13, hgt=span*.12, sag=span*(.1+.06*(birds[0].d+birds[1].d)/2), pts=[];
+    const N=MOBILE()? 26 : 64, E=.13, hgt=span*.12, sag=span*(.1+.06*(birds[0].d+birds[1].d)/2), pts=[];
     for(let i=0;i<=N;i++){ const s=-E+(1+2*E)*i/N, sc=Math.max(0,Math.min(1,s)), out=s<0? -s/E : s>1? (s-1)/E : 0, inn=Math.sin(sc*Math.PI);
       const w=Math.sin(s*Math.PI*2.2-B.t*4.6)*span*.025*inn, tw=Math.sin(s*Math.PI*1.6-B.t*2.4)*.42*inn+out*(.34*Math.sin(B.t*3.6-out*3.2+(s<0?0:2))+.14*Math.sin(B.t*6.1-out*5));   /* the free ends twist and flutter */
       const c=[lerp(A[0],Bk[0],s), lerp(A[1],Bk[1],sc)+sag*4*sc*(1-sc)+w+out*out*hgt*.55+Math.sin(B.t*3.1-out*3.6+(s<0?1:3))*hgt*.4*out+Math.sin(B.t*5.3-out*6)*hgt*.1*out, lerp(A[2],Bk[2],sc)+Math.sin(s*Math.PI*1.7-B.t*3.6)*span*.05*inn+out*hgt*.3+Math.sin(B.t*2.6-out*3+(s<0?2:0))*hgt*.6*out];   /* the loose ends hang and stream, a wave running out along each one */
@@ -3410,7 +3411,7 @@ const ambient=(function(){
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.18)"; x.fillRect(RX,RY,RW,RH); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(RX,RY,RW,RH); x.globalAlpha=1; } }
     if(dark){ x.fillStyle="rgba(10,8,14,.3)"; x.fillRect(RX,RY,RW,RH); }
     x.globalCompositeOperation="source-over";
-    ctx.save(); ctx.globalAlpha=1; ctx.filter="blur(.3px)"; ctx.drawImage(bncv,RX,RY,RW,RH,X0,Y0b,X1-X0,Y1-Y0b); ctx.restore(); ctx.filter="none";
+    ctx.save(); ctx.globalAlpha=1; if(!MOBILE()) ctx.filter="blur(.3px)"; ctx.drawImage(bncv,RX,RY,RW,RH,X0,Y0b,X1-X0,Y1-Y0b); ctx.restore(); ctx.filter="none";
     B.sx=mx; B.sy=my;
   }
   function drawFlock(dt,dark){
@@ -4828,7 +4829,7 @@ const ambient=(function(){
     const M={Wt,Ht,Hf,MO,LI,AL,BK,done:false};
     if(!async){ rows(0,Ht); M.done=true; return M; }
     let y=0; const step=()=>{ if(barkMap!==M) return; if(M.done) return; rows(y,Math.min(Ht,y+24)); y+=24; if(y>=Ht) M.done=true; else setTimeout(step,30); }; setTimeout(step,30); M.finish=()=>{ if(!M.done){ rows(y,Ht); y=Ht; M.done=true; } }; return M; }
-  setTimeout(()=>{ if(!barkMap) barkMap=makeBarkMap(true); },9000);   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
+  setTimeout(()=>{ if(!barkMap&&window.SCENERY_LOGS_ON) barkMap=makeBarkMap(true); },9000);   /* (not while the stick is switched off) */   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
   const LOGS_ON=window.SCENERY_LOGS_ON=false;   /* the stick and the animals that come out on it (skink, eft, painted turtle, slimy salamander) are switched off for now: flip to true to bring them back */
   function startLogCrawler(kind){ if(!LOGS_ON) return; if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.5,.58)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.034;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
