@@ -120,9 +120,11 @@ var natureSfx=(function(){
       const am=ctx.createGain(); am.gain.value=.6; const lfo=ctx.createOscillator(); lfo.frequency.value=52; const lg=ctx.createGain(); lg.gain.value=.4; lfo.connect(lg); lg.connect(am.gain);
       src.connect(nb); nb.connect(am); am.connect(ng); ng.connect(g);
       src.start(); o1.start(); o2.start(); lfo.start(); humN={src,o1,o2,lfo,g,p,bp}; }
-    if(!humN) return; const now=ctx.currentTime; humN.g.gain.setTargetAtTime(vol,now,.08); if(humN.p) humN.p.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),now,.06);
+    if(!humN) return; humN.last=performance.now(); const now=ctx.currentTime; humN.g.gain.setTargetAtTime(vol,now,.08); if(humN.p) humN.p.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),now,.06);
     humN.bp.frequency.setTargetAtTime(320+vol*900,now,.1); humN.o1.frequency.setTargetAtTime(50+vol*12,now,.2); humN.o2.frequency.setTargetAtTime(101+vol*24,now,.2);
     if(vol<=0){ const n=humN; humN=null; n.g.gain.setTargetAtTime(0,now,.06); setTimeout(()=>{ try{ n.src.stop(); n.o1.stop(); n.o2.stop(); n.lfo.stop(); }catch(e){} },500); } }
+  /* if the bird stops being drawn for any reason (night falls, the scene changes, the tab hides), its whir fades out on its own rather than droning forever */
+  setInterval(()=>{ if(humN&&ctx&&performance.now()-(humN.last||0)>400) humSet(0,0); },250);
   function humChip(pan){ if(!ctx||!live) return; const out=voice(master,pan), at=ctx.currentTime+.02; for(let i=0;i<2+Math.floor(Math.random()*2);i++) tone(at+i*.09,R(5200,6000),R(4200,4800),.05,.06,out); }
   /* a single peck at the bark: a dry, hollow knock with a little woody thump under it */
   function peck(xf){ if(!ctx||!live) return; const at=ctx.currentTime+.01, out=voice(master,(xf||.2)*2-1), bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(1000,1500); bp.Q.value=4; bp.connect(out);
