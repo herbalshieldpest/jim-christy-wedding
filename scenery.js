@@ -4895,6 +4895,7 @@ const ambient=(function(){
     { let sd=L.seed+11; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }; const day=1-Math.min(1,nA*1.2); for(let i=0;i<46;i++){ const f=i/46, p2=crest[Math.min(crest.length-1,Math.floor(f*50)+(RN()<.5? 0 : 1))]; for(let j=0;j<5;j++){ const bx=p2[0]+(RN()-.5)*14, by=p2[1]+2+RN()*4, h=4+RN()*RN()*16, lean=(RN()-.5)*h*.6;
         x.strokeStyle=nA>.3? `rgba(40,46,58,.8)` : `rgba(${Math.round(70+RN()*60)},${Math.round(70+RN()*50)},${Math.round(30+RN()*20)},.85)`; x.lineWidth=.8+RN(); x.beginPath(); x.moveTo(bx,by); x.quadraticCurveTo(bx+lean*.3,by-h*.6,bx+lean,by-h); x.stroke();
         if(day>.3&&RN()<.5){ x.strokeStyle=`rgba(255,210,140,${(.45*day).toFixed(2)})`; x.lineWidth=.7; x.beginPath(); x.moveTo(bx+lean*.6,by-h*.6); x.lineTo(bx+lean,by-h); x.stroke(); } } } }
+    { const ys=crest.map(p2=>p2[1]), xs=crest.map(p2=>p2[0]); const x0=Math.max(0,Math.floor(Math.min(...xs)-W*.12)), y0=Math.max(0,Math.floor(Math.min(...ys)-H*.08)), x1=Math.min(cw2,Math.ceil(Math.max(...xs)+W*.12)); L.hillBox=[x0,y0,Math.max(1,x1-x0),Math.max(1,ch2-y0)]; }
     L.hillKey=[Math.round(nA*20),Math.round(tint().a*20)].join(","); }
   function limbLight(L,dark){ let L3f; const sp=sun(), nightK=Math.min(1,nA*1.2), midX=L.x0+Math.cos(L.ang)*L.len*.5*-L.side, sunS=Math.sign(sp.x-midX)||1, lx=(L.side<0? 1 : -1)*sunS*Math.min(1,Math.abs(sp.x-midX)/(W*.5)+.25);
     const elev=Math.max(.12,Math.min(.85,(H*.62-sp.y)/H+.15)), g=L.gc||[110,110,60], day=(1-nightK)*(dark? .45 : 1);
@@ -4953,7 +4954,7 @@ const ambient=(function(){
       gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
       gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
     /* shallow focus: with something this close in the lens, the field and hills beyond fall softly out of focus, more the farther they are */
-    { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; ctx.drawImage(L.hill,0,0,W,H); ctx.restore(); }   /* the rise of ground it lies on */
+    { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; const hb=L.hillBox||[0,0,W,H], ks=L.hill.width/W; ctx.drawImage(L.hill,hb[0]*ks,hb[1]*ks,hb[2]*ks,hb[3]*ks,hb[0],hb[1],hb[2],hb[3]); ctx.restore(); }   /* the rise of ground it lies on */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
        A soft occlusion right under the stick where no sky reaches, and a fainter shade falling toward us from the low sun behind */
@@ -4962,7 +4963,7 @@ const ambient=(function(){
         sx2.save(); sx2.filter=`blur(${(H*.004*k).toFixed(1)}px)`; sx2.fillStyle=`rgba(10,8,3,${(.42*sh).toFixed(3)})`; sx2.beginPath(); for(let i=0;i<=N;i++){ const xl=i/N*Ln; sx2.lineTo(xl,R(xl)*.6-sag(xl)); } for(let i=N;i>=0;i--){ const xl=i/N*Ln; sx2.lineTo(xl,R(xl)*1.18-sag(xl)+H*.002); } sx2.closePath(); sx2.fill(); sx2.restore(); }
       ctx.globalCompositeOperation="source-atop"; ctx.drawImage(L.shC,L.imgX,L.imgY,cw/k,chh/k); ctx.globalCompositeOperation="source-over"; }   /* only ever darkening what is already there, never painting over empty canvas */
     /* the stick, softened to the photograph's own focus */
-    ctx.save(); ctx.filter="blur(.35px)"; ctx.drawImage(L.img,L.imgX,L.imgY,cw/k,chh/k); ctx.restore();
+    ctx.drawImage(L.img,L.imgX,L.imgY,cw/k,chh/k);
     /* a couple of slender side twigs, rising from the upper side, tapering to fine tips; lit along the top by the low sun, dark beneath */
     for(const tw of L.twigs){ const xl=tw.u*Ln, r=R(xl), bx=xl, by=-sag(xl)-r*.55, ln=Ln*tw.l, N2=14, pts=[];
       for(let i=0;i<=N2;i++){ const q=i/N2, ang=tw.a+tw.b*q*q; pts.push([bx+Math.cos(ang)*ln*q, by+Math.sin(ang)*ln*q, r*.2*Math.pow(1-q*.85,1.1)+.35]); }
@@ -4984,28 +4985,16 @@ const ambient=(function(){
       ctx.restore(); }
     /* the real grass laid back over the stick's foot */
     if(nA<.6){ ctx.save(); ctx.globalAlpha=L.a*(1-nA/.6); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.drawImage(gs,L.imgX,L.imgY,cw/k,chh/k); ctx.restore(); }   /* by night the blades are lost in the dark anyway; let them go rather than glow */
-    /* tall grass right in front, nearer than everything: a few loose clumps, each a fan of slender arching leaves, a fine stem or two with a nodding seed panicle,
-       now and then a foxtail; all different heights, tips drooping over, swaying on their own; dark against the light with a lit edge */
-    { if(!L.tall){ const cl=[], nC=3+Math.floor(Math.random()*2); for(let c=0;c<nC;c++){ const u=.08+(c+Math.random()*.8)/nC*.9, n=2+Math.floor(Math.random()*4);
-          for(let k=0;k<n;k++){ const r=Math.random(), type=r<.62? "leaf" : r<.88? "panicle" : "fox"; cl.push({u:u+rnd(-.012,.012),dx:rnd(-.008,.008)*W,ang:rnd(-.38,.3)+(k-n/2)*.08,hx:type==="leaf"? rnd(.035,.12) : rnd(.08,.17),droop:type==="leaf"? rnd(.15,.75) : rnd(.05,.25),w:(type==="leaf"? rnd(3.4,6.4) : rnd(1.1,1.7))*(H/800),ph:rnd(0,6),type,c:Math.random(),dir:Math.random()<.5? -1 : 1}); } }
-        L.tall=cl; }
+    /* a few tall strands of grass right in front, nearer than everything: rising out of the bottom of the frame past the stick, swaying, a little soft, dark against the light with lit edges */
+    { if(!L.tall) L.tall=Array.from({length:9},(_,i)=>({u:.06+i/9*.95+rnd(-.04,.04),dx:rnd(-.03,.03)*W,lean:rnd(-.18,.12),hx:rnd(.03,.09),w:rnd(3,6)*(H/800),ph:rnd(0,6),seed:Math.random()<.45,bend:rnd(.1,.3),c:Math.random()}));
       const ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, day=1-Math.min(1,nA*1.2), g=L.gc||[110,110,60];
-      ctx.save(); ctx.globalAlpha=L.a; ctx.filter="blur(.6px)"; ctx.lineCap="round";
-      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx0=L.x0+ca*xl*mx-sa*ly+tg.dx, sy0=L.y0+sa*xl*mx+ca*ly, by=H+10, len=(by-sy0)+H*tg.hx;
-        const sw=Math.sin(t*1.05+tg.ph)*.035+Math.sin(t*2.4+tg.ph*1.7)*.012, a0=tg.ang+sw*(tg.type==="leaf"? 1.4 : 1), bx=sx0-Math.sin(a0)*(by-sy0);
-        /* the strand's line: rising at its angle, bending more along its length, the tip drooping over */
-        const P=sN=>{ const s=sN, bend=a0+tg.dir*tg.droop*Math.pow(s,2.2)*2.2; let px=bx, py=by; const n=Math.max(1,Math.round(s*24)); for(let i=0;i<n;i++){ const s2=(i+.5)/24, an=a0+tg.dir*tg.droop*Math.pow(s2,2.2)*2.2; px+=Math.sin(an)*len/24; py-=Math.cos(an)*len/24; } return [px,py,bend]; };
-        const col=mulv(mixv(g,[44,54,20],.5+tg.c*.3),(.42+tg.c*.28)*(1-nA*.55)), lit=`rgba(255,214,146,${(.38*day).toFixed(2)})`;
-        if(tg.type==="leaf"){ const L2=[], R2=[]; for(let i=0;i<=24;i++){ const s2=i/24, p=P(s2), w=tg.w*Math.pow(1-s2,.8)*(1+.25*Math.sin(s2*9+tg.ph)); L2.push([p[0]-Math.cos(p[2])*w,p[1]-Math.sin(p[2])*w]); R2.push([p[0]+Math.cos(p[2])*w,p[1]+Math.sin(p[2])*w]); }
-          ctx.fillStyle=rgb(col); ctx.beginPath(); L2.forEach((q,i)=>i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); R2.reverse().forEach(q=>ctx.lineTo(q[0],q[1])); ctx.closePath(); ctx.fill();
-          if(day>.2){ ctx.strokeStyle=lit; ctx.lineWidth=Math.max(.5,tg.w*.28); ctx.beginPath(); L2.slice(8).forEach((q,i)=>i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); ctx.stroke(); }   /* light along one edge */
-          ctx.strokeStyle=rgb(mulv(col,.7),.6); ctx.lineWidth=Math.max(.3,tg.w*.12); ctx.beginPath(); for(let i=0;i<=20;i++){ const p=P(i/24); i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]); } ctx.stroke(); }   /* the midrib */
-        else { ctx.strokeStyle=rgb(mulv(col,1.1)); ctx.lineWidth=tg.w; ctx.beginPath(); for(let i=0;i<=24;i++){ const p=P(i/24); i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]); } ctx.stroke();   /* a fine stem */
-          if(day>.2){ ctx.strokeStyle=lit; ctx.lineWidth=Math.max(.4,tg.w*.4); ctx.beginPath(); for(let i=10;i<=24;i++){ const p=P(i/24); i>10? ctx.lineTo(p[0]+.5,p[1]) : ctx.moveTo(p[0]+.5,p[1]); } ctx.stroke(); }
-          const tip=P(1), hc=rgb(mulv(mixv(col,[186,156,96],.55),1.1));
-          if(tg.type==="panicle"){ ctx.strokeStyle=hc; ctx.lineWidth=Math.max(.4,tg.w*.5); for(let k=0;k<9;k++){ const s2=.82+k*.02, p=P(s2), side=(k%2? 1 : -1), bl=H*(.012+.006*(k%3)), an=p[2]+side*(.7+.2*Math.sin(t*1.7+k))+Math.PI;
-              const ex=p[0]+Math.sin(an)*bl, ey=p[1]+Math.cos(an)*bl*-1+bl*.6; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.quadraticCurveTo((p[0]+ex)/2,(p[1]+ey)/2-bl*.3,ex,ey); ctx.stroke(); ctx.fillStyle=hc; ctx.beginPath(); ctx.ellipse(ex,ey,tg.w*.7,tg.w*1.5,an,0,6.283); ctx.fill(); } }   /* a loose, nodding panicle of spikelets */
-          else { ctx.save(); ctx.translate(tip[0],tip[1]); ctx.rotate(tip[2]); ctx.fillStyle=hc; for(let k=0;k<12;k++){ const yy=k*tg.w*1.1; ctx.beginPath(); ctx.ellipse(0,yy,tg.w*1.5,tg.w*.9,0,0,6.283); ctx.fill(); } ctx.strokeStyle=rgb([214,190,140],.5); ctx.lineWidth=.4; for(let k=0;k<20;k++){ const yy=k*tg.w*.65, sd=k%2? 1 : -1; ctx.beginPath(); ctx.moveTo(0,yy); ctx.lineTo(sd*tg.w*3.2,yy-tg.w*1.2); ctx.stroke(); } ctx.restore(); } } }   /* or a bristly foxtail */
+      ctx.save(); ctx.globalAlpha=L.a;
+      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx=L.x0+ca*xl*mx-sa*ly+tg.dx, sy=L.y0+sa*xl*mx+ca*ly, topY=sy-H*tg.hx, by=H+8, bx=sx-tg.lean*(by-topY)*.6;
+        const sw=Math.sin(t*1.1+tg.ph)*H*.006+Math.sin(t*2.3+tg.ph*1.7)*H*.002, tx=sx+tg.lean*(by-topY)*.4+sw, mxp=(bx+tx)/2+(tg.bend*(tx-bx>0? 1 : -1))*H*.02, myp=(by+topY)/2;
+        const col=mulv(mixv(g,[54,62,26],.45+tg.c*.3),(.55+tg.c*.25)*(1-nA*.55)), w=tg.w;
+        ctx.fillStyle=rgb(col); ctx.beginPath(); ctx.moveTo(bx-w,by); ctx.quadraticCurveTo(mxp-w*.6,myp,tx,topY); ctx.quadraticCurveTo(mxp+w*.6,myp,bx+w,by); ctx.closePath(); ctx.fill();
+        if(day>.2){ ctx.strokeStyle=`rgba(255,212,140,${(.35*day).toFixed(2)})`; ctx.lineWidth=Math.max(.6,w*.3); ctx.beginPath(); ctx.moveTo(lerp(bx,mxp,.6)+w*.4,lerp(by,myp,.6)); ctx.quadraticCurveTo(mxp+w*.4,myp,tx,topY); ctx.stroke(); }   /* sunlit edge */
+        if(tg.seed){ ctx.save(); ctx.translate(tx,topY); ctx.rotate(Math.atan2(topY-myp,tx-mxp)+Math.PI/2); ctx.fillStyle=rgb(mulv(mixv(col,[170,140,80],.5),1.1)); for(let k=0;k<7;k++){ ctx.beginPath(); ctx.ellipse((k%2? 1 : -1)*w*.55,k*w*1.1-w*7,w*.45,w*1.1,(k%2? .4 : -.4),0,6.283); ctx.fill(); } ctx.restore(); }   /* a seed head on some */ }
       ctx.restore(); }
     L.sx=L.x0+Math.cos(L.ang)*L.u*Ln*-L.side; L.sy=L.y0-H*.08; }
   /* an eastern painted turtle hauled out on the stick to bask: a low smooth olive-black shell with pale seams between the scutes and red bars round its rim,
@@ -5018,7 +5007,7 @@ const ambient=(function(){
     const nS=(X,Y)=>{ const e=Math.max(.02,1-(X/A)**2-(Y/Bw)**2), g=C*.62*Math.pow(e,-.38); return v3.n([2*X/(A*A)*g,2*Y/(Bw*Bw)*g,1]); };
     x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
     /* its shadow on the stick */
-    x.save(); x.filter=`blur(${(2/S*Math.max(1,S)).toFixed(2)}px)`; x.fillStyle=`rgba(8,6,4,${(.45*(1-nightK*.5)).toFixed(2)})`; x.beginPath(); for(let i=0;i<=40;i++){ const a=i/40*6.283, Y=Math.sin(a)*Bw*.75, X=Math.cos(a)*A*.85-sunSide*3; x.lineTo(...P(X,Y,surf(Math.max(-Rm,Math.min(Rm,Y)))+1)); } x.fill(); x.restore();
+    x.save(); x.fillStyle=`rgba(8,6,4,${(.3*(1-nightK*.5)).toFixed(2)})`; x.beginPath(); for(let i=0;i<=40;i++){ const a=i/40*6.283, Y=Math.sin(a)*Bw*.75, X=Math.cos(a)*A*.85-sunSide*3; x.lineTo(...P(X,Y,surf(Math.max(-Rm,Math.min(Rm,Y)))+1)); } x.fill(); x.restore();
     /* the legs: thick, scaly, black-olive striped with red and yellow; feet hooked round the stick's sides */
     const legs=[[38,1,0],[38,-1,Math.PI],[-36,1,Math.PI],[-36,-1,0]];
     const leg=([lx,sd,ph])=>{ const front=lx>0, cyc=mv? Math.sin(q+ph) : 0, reach=cyc*8, lift=mv? Math.max(0,Math.cos(q+ph))*3 : 0;
@@ -5115,7 +5104,7 @@ const ambient=(function(){
     const body=hullLoft(SECT,pt,false);
     x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
     /* its shadow pooled on the bark under it, pushed away from the sun */
-    { x.save(); x.filter=`blur(${(Math.max(1.2,1.6*S)/S).toFixed(2)}px)`; x.fillStyle=`rgba(10,7,4,${(.5*(1-nightK*.4)).toFixed(2)})`; x.beginPath();
+    { x.save(); x.fillStyle=`rgba(10,7,4,${(.32*(1-nightK*.4)).toFixed(2)})`; x.beginPath();
       for(let i=0;i<nS;i++){ const s=SECT[i][0], f=frame(s), w=hw(s)*1.15, Y=f.Y+f.ny*w-sunSide*0; const p=P(f.X+f.nx*w-sunSide*2,Y,surf(Y)); i? x.lineTo(...p) : x.moveTo(...p); }
       for(let i=nS-1;i>=0;i--){ const s=SECT[i][0], f=frame(s), w=hw(s)*1.15, Y=f.Y-f.ny*w; const p=P(f.X-f.nx*w-sunSide*2,Y,surf(Y)); x.lineTo(...p); } x.closePath(); x.fill(); x.restore(); }
     /* the legs: hip and shoulder at the side of the body, the upper limb out sideways and up, the forearm down to a foot planted on the limb's curve, the long toes splayed;
