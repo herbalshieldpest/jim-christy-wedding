@@ -734,7 +734,7 @@ function drawA(who){ const c=SP.ctx(); if(!built) return; const solo=who&&who.is
   const restore= solo? showOnly(owned(who)) : showOnly(null,[jim,chr].filter(apart).flatMap(owned));
   pass("A"); restore();
   /* set into the photo: a touch of the lens's softness, and the photo's own slightly muted colour */
-  drawGrass(c,solo? who : null,"back"); c.save(); c.globalAlpha=1; if("filter" in c) c.filter="blur(.45px) saturate(.88) contrast(.95)"; c.drawImage(cvs,rect.x,rect.y,rect.w,rect.h); c.filter="none"; c.restore();
+  drawGrass(c,solo? who : null,"back"); c.save(); c.globalAlpha=1; if("filter" in c&&SP.W>=700) c.filter="blur(.45px) saturate(.88) contrast(.95)";   /* phones: skipped, it costs a full extra pass every frame */ c.drawImage(cvs,rect.x,rect.y,rect.w,rect.h); c.filter="none"; c.restore();
   drawGrass(c,solo? who : null,"front"); if(!solo) drawSmoke(c); }
 /* a few blades of the lawn's own grass in front of their boots and the chair legs, so they stand in it rather than on it */
 function drawGrass(c,only,part){ c.save(); c.globalAlpha=only? .9 : S.alpha*.9; c.lineCap="round";

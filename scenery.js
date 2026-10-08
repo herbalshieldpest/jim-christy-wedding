@@ -1094,7 +1094,7 @@ const ambient=(function(){
     { const y0=IY(.3), y1=IY(.46), g=ctx.createLinearGradient(0,y0,0,H); const f=Math.max(.01,Math.min(.99,(y1-y0)/Math.max(1,H-y0))); g.addColorStop(0,"rgba(255,214,150,0)"); g.addColorStop(f,`rgba(255,214,150,${(.1*a).toFixed(3)})`); g.addColorStop(1,`rgba(255,214,150,${(.04*a).toFixed(3)})`); ctx.fillStyle=g; ctx.fillRect(-W,y0,W*3,H*2); }   /* the land warms in the light, fading in softly (no hard edge across the picture) */
     ctx.restore(); }
   /* the northern lights, low over the ridges to the right: green curtains with rays shimmering up through them, rose and violet along their tops */
-  const auC=document.createElement("canvas"), auX=auC.getContext("2d");
+  const auC=document.createElement("canvas"), auX=auC.getContext("2d"); const auG=document.createElement("canvas"), auGx=auG.getContext("2d"), auB=document.createElement("canvas"), auBx=auB.getContext("2d"), auH=document.createElement("canvas"), auHx=auH.getContext("2d");   /* the aurora's glow and softened body, blurred once per redraw instead of on the main canvas every frame */
   /* ---- the northern lights ----
      Each curtain is a long sheet of light hanging in the sky, seen from below and to one side. Its lower edge is a sharp, bright yellow-green hem; light
      streams up from it in fine rays that are green low down and turn rose and crimson toward the top as they fade. The sheet folds back and forth as it
@@ -1113,7 +1113,8 @@ const ambient=(function(){
     {P:[[.48,1.4],[.64,1.18],[.84,1.3],[1.06,1.05]],h:.3,amp:.95,folds:7,ph:2.3,sp:.8},
     {P:[[.58,.7],[.7,.34],[.86,.46],[1.05,.16]],h:.22,amp:.75,folds:4,ph:4.1,sp:1.15}];
   AUR.forEach(R=>{ R.rnd=Array.from({length:900},()=>[Math.random(),Math.random(),Math.random()]); });
-  function drawAurora(a){ if(a<=.01) return; const q=2, cw=Math.ceil(W/q), ch=Math.ceil(IY(.62)/q); if(auC.width!==cw||auC.height!==ch){ auC.width=cw; auC.height=ch; }
+  function drawAurora(a){ if(a<=.01) return; const q=2, cw=Math.ceil(W/q), ch=Math.ceil(IY(.62)/q); if(auC.width!==cw||auC.height!==ch){ auC.width=cw; auC.height=ch; auC._t=null; }
+    if(auC._t==null||t-auC._t>=(MOBILE()? .15 : .08)||t<auC._t){ auC._t=t;   /* the curtains move slowly: redrawn a dozen times a second, not every frame */
     const x=auX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.globalAlpha=1; x.clearRect(0,0,cw,ch); x.globalCompositeOperation="lighter"; x.setTransform(1/q,0,0,1/q,0,0);
     const hz=IY(.4), mob=MOBILE(), T=t;   /* placed against the sky itself, not the ridgeline, so the mountains simply cut across the bottom of the curtains */
     for(const R of AUR){ const P=R.P.map(([px,py],i)=>[px*W+Math.sin(T*.05*R.sp+i*1.7+R.ph)*W*.025, py*hz+Math.sin(T*.06*R.sp+i*2.3+R.ph)*hz*.05]);
@@ -1137,11 +1138,14 @@ const ambient=(function(){
     { x.setTransform(1/q,0,0,1/q,0,0); x.globalCompositeOperation="destination-out"; x.fillStyle="rgba(0,0,0,.087)"; if("filter" in x) x.filter=`blur(${Math.max(1,3/q).toFixed(1)}px)`;   /* the low parts thin out into the haze over the ridge: */
       for(let j=0;j<14;j++){ farBelow(x,-H*.14*j/14); x.fill(); }                                                                                       /* layers that follow the ridge's own line, so the fade has no steps in it */
       x.filter="none"; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; }
+    const fl="filter" in auGx; auG.width=Math.ceil(cw/2); auG.height=Math.ceil(ch/2); if(fl) auGx.filter="blur(3px)"; auGx.drawImage(auC,0,0,auG.width,auG.height); auGx.filter="none";
+    if(auB.width!==cw||auB.height!==ch){ auB.width=cw; auB.height=ch; } auBx.clearRect(0,0,cw,ch); if(fl) auBx.filter="blur(1.5px)"; auBx.drawImage(auC,0,0); auBx.filter="none"; auB._ok=fl; }
     ctx.save(); ridgePath(ctx,SKYL.far,Math.max(2,H*.003)+1.5); if(moonAt){ ctx.moveTo(moonAt[0]+moonAt[2]*1.04,moonAt[1]); ctx.arc(moonAt[0],moonAt[1],moonAt[2]*1.04,0,6.283,true); } ctx.clip("evenodd"); ctx.globalCompositeOperation="screen"; ctx.imageSmoothingEnabled=true;   /* cut along exactly the same edge as the night sky, so no seam shows above the ridge */
-    if("filter" in ctx){ ctx.globalAlpha=Math.min(1,a*1.3); ctx.filter="blur(12px)"; ctx.drawImage(auC,0,0,cw*q,ch*q); ctx.globalAlpha=a*.9; ctx.filter="blur(3px)"; ctx.drawImage(auC,0,0,cw*q,ch*q); ctx.filter="none"; }   /* the wide glow, then the softened body */
+    if(auB._ok){ ctx.globalAlpha=Math.min(1,a*1.3); ctx.drawImage(auG,0,0,cw*q,ch*q); ctx.globalAlpha=a*.9; ctx.drawImage(auB,0,0,cw*q,ch*q); }   /* the wide glow, then the softened body */
     ctx.globalAlpha=a*.6; ctx.drawImage(auC,0,0,cw*q,ch*q);   /* and the fine rays */
-    { ctx.globalAlpha=a; const x0=IX(.3), x1=IX(1), hg=ctx.createLinearGradient(x0,0,x1,0); for(let i=0;i<=8;i++) hg.addColorStop(i/8,`rgba(70,210,150,${(.016*Math.sin(Math.PI*i/8)).toFixed(4)})`); ctx.fillStyle=hg;
-      if("filter" in ctx) ctx.filter="blur(2px)"; for(let j=0;j<10;j++){ farBelow(ctx,-H*.07*j/10); ctx.fill(); } ctx.filter="none"; }   /* the faint green glow of it lying along the horizon behind the ridge, in layers that follow the ridgeline */
+    { const hk=W+"x"+H; if(auH._k!==hk){ auH._k=hk; auH.width=Math.ceil(W/2); auH.height=Math.ceil(H/2); const c=auHx; c.setTransform(.5,0,0,.5,0,0); c.clearRect(0,0,W,H); const x0=IX(.3), x1=IX(1), hg=c.createLinearGradient(x0,0,x1,0); for(let i=0;i<=8;i++) hg.addColorStop(i/8,`rgba(70,210,150,${(.016*Math.sin(Math.PI*i/8)).toFixed(4)})`); c.fillStyle=hg;
+      if("filter" in c) c.filter="blur(1px)"; for(let j=0;j<10;j++){ farBelow(c,-H*.07*j/10); c.fill(); } c.filter="none"; }
+      ctx.globalAlpha=a; ctx.drawImage(auH,0,0,W,H); }   /* the faint green glow of it lying along the horizon behind the ridge, in layers that follow the ridgeline */
     ctx.restore(); }
 
   let fmC=null;
@@ -1645,7 +1649,7 @@ const ambient=(function(){
     rigDraw(x,deerParts(p,who.yaw,C),rigView(who.yaw,viewPitch(p.Dw,.2)),u*R);
     x.setTransform(1,0,0,1,0,0);
     rigLight(x,ax,ay-46*u*R,ay,40*u*R,sun().x-p.x,0);
-    { const sp=sun(), dx=sp.x-p.x, dy=sp.y-p.y, L=Math.hypot(dx,dy)||1, k=Math.max(1,u*R*1.1); rimLight(x,w,h,dx/L*k,dy/L*k,`rgba(255,214,150,${(.6*Math.min(1,u*R/4)).toFixed(2)})`); }
+    if(nA<.5){ const sp=sun(), dx=sp.x-p.x, dy=sp.y-p.y, L=Math.hypot(dx,dy)||1, k=Math.max(1,u*R*1.1); rimLight(x,w,h,dx/L*k,dy/L*k,`rgba(255,214,150,${(.6*Math.min(1,u*R/4)).toFixed(2)})`); }
     x.globalCompositeOperation="source-atop";
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,w,h); }
     else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,w,h); x.globalAlpha=1; } }
@@ -1667,8 +1671,9 @@ const ambient=(function(){
       deer.push({X:s.X,Z:s.Z,left,yaw:rnd(0,6.28),hd:1,hy:0,hyT:0,q:rnd(0,6),alpha:0,walking:false,v:0,antlers:i<bucks,fawn:i>=bucks&&i<bucks+fawns,act:"graze",at:rnd(1.5,7),fi:rnd(1.5,4),dl:rnd(0,6)}); }
     meadow={t:0,dur:rnd(75,100),deer}; lull=Math.max(lull,meadow.dur); }
   function stepMeadow(dt){
-    if(!meadow){ nextMeadow-=dt; if(nextMeadow<=0){ if(buck||buck2||herd.length) nextMeadow=20; else startMeadow(); } return; }
-    const M=meadow; M.t+=dt; const ending=M.t>M.dur;
+    const fireOnNow=!!(window.Campfire&&Campfire.on);   /* the whole herd doesn't come grazing while they sit at the fire: too many at once with the fire going */
+    if(!meadow){ nextMeadow-=dt; if(nextMeadow<=0){ if(buck||buck2||herd.length||fireOnNow) nextMeadow=20; else startMeadow(); } return; }
+    const M=meadow; M.t+=dt; if(fireOnNow&&M.t<M.dur) M.dur=M.t; const ending=M.t>M.dur;
     for(const d of M.deer){ if(M.t<d.dl) continue;
       d.alpha= ending? Math.max(0,d.alpha-dt/(d.fi*.8)) : Math.min(1,d.alpha+dt/d.fi); d.at-=dt; d.walking=false;
       if(d.act==="graze"){ d.hd=lerp(d.hd,1,Math.min(1,dt*2)); if(d.at<=0){ if(Math.random()<.45){ d.act="look"; d.at=rnd(2.5,6); d.jt=0; } else { d.act="walk"; const p=d.left? leftPt() : lawnPt(), dx=p.X-d.X, dz=p.Z-d.Z, L=Math.hypot(dx,dz)||1, k=Math.min(1,rnd(.15,.45)/L); d.tx=d.X+dx*k; d.tz=d.Z+dz*k; } } }
