@@ -917,7 +917,16 @@ const ambient=(function(){
       ctx.setTransform(T0); }
     ctx.restore(); seeds=seeds.filter(q=>!q.dead); if(sdsA<=.01&&!seeds.length) seedT=0; }
   /* ---- moonrise: a big full moon comes up orange out of the haze over the far ridge, flattened a little at first, then climbs, shrinks back to its proper size and pales to silver, lighting the field below ---- */
-  const mrC=document.createElement("canvas"), mrX=mrC.getContext("2d"), mlC=document.createElement("canvas"); let fullMoon=null;
+  const mrC=document.createElement("canvas"), mrX=mrC.getContext("2d"), mlC=document.createElement("canvas"); let fullMoon=null, rimC=null;
+  /* where the moon catches the edges of things: every dark shape in the photo (the crowns of the trees, the treelines, the brush) whose edge faces the moon
+     gets a thin bright rim there. Found once from the photograph, then lit by how near each bit is to the moon */
+  function makeRim(mx,my){ if(!photo) return null; const k=.5, w=Math.ceil(W*k), h=Math.ceil(H*k), c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d",{willReadFrequently:true}), m=cover();
+    x.filter="blur(1px)"; x.drawImage(photo,m.ox*k,m.oy*k,m.iw*m.s*k,m.ih*m.s*k); x.filter="none"; let d;   /* softened first, so only the big shapes count, not every blade and leaf */ try{ d=x.getImageData(0,0,w,h); }catch(e){ return null; } const src=d.data, L=new Float32Array(w*h); for(let i=0;i<w*h;i++) L[i]=src[i*4]*.3+src[i*4+1]*.59+src[i*4+2]*.11;
+    const out=x.createImageData(w,h), o=out.data;
+    for(let yy=1;yy<h-1;yy++) for(let xx=1;xx<w-1;xx++){ const i=yy*w+xx, l=L[i]; if(l>125) continue; const fy=((yy/k)-m.oy)/(m.ih*m.s), reg=Math.max(0,Math.min(1,(.7-fy)/.1)); if(reg<=0) continue;   /* the trees and the brush, not the mown lawn */ let dx=mx*k-xx, dy=my*k-yy; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl; let best=0;
+      for(const st of [1.5,3,5]){ const qx=Math.round(xx+dx*st), qy=Math.round(yy+dy*st); if(qx<0||qy<0||qx>=w||qy>=h) continue; best=Math.max(best,(L[qy*w+qx]-l-4)/(30+st*5)); }
+      const v=Math.max(0,Math.min(1,best*1.4))*Math.min(1,(125-l)/50)*reg; if(v<.1) continue; o[i*4]=255; o[i*4+1]=255; o[i*4+2]=255; o[i*4+3]=Math.round(255*v); }
+    x.clearRect(0,0,w,h); x.putImageData(out,0,0); const c2=document.createElement("canvas"); c2.width=w; c2.height=h; const x2=c2.getContext("2d"); x2.filter="blur(.8px)"; x2.drawImage(c,0,0); x2.filter="none"; x2.globalAlpha=.7; x2.drawImage(c,0,0); return c2; }
   /* a full moon (it rises at sunset, so it's always full when it comes up like this): limb-darkened disc, the dark maria where they really lie, Tycho's bright rays */
   function makeFullMoon(){ const S=512, c=document.createElement("canvas"); c.width=c.height=S; const x=c.getContext("2d"), r=S/2-3, cx=S/2, cy=S/2; let sd=7; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
     const g=x.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,"#f3efe5"); g.addColorStop(.7,"#e9e4d7"); g.addColorStop(.93,"#d9d3c4"); g.addColorStop(1,"#bdb6a6"); x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,6.283); x.fill();   /* the bright highlands, a little darker toward the limb */
@@ -971,12 +980,19 @@ const ambient=(function(){
     { const LK=[Math.round(a*30),Math.round(e*30),Math.round(px),W,H].join("|"); if(mlC._k!==LK){ mlC._k=LK; const hw=Math.ceil(W/2), hh=Math.ceil(H/2); if(mlC.width!==hw||mlC.height!==hh){ mlC.width=hw; mlC.height=hh; } const ctx=mlC.getContext("2d"); ctx.setTransform(.5,0,0,.5,0,0); ctx.clearRect(0,0,W,H);
       const lk=a*(.25+.75*e), col=[Math.round(lerp(255,196,e)),Math.round(lerp(176,206,e)),Math.round(lerp(120,236,e))], cs=(al)=>`rgba(${col[0]},${col[1]},${col[2]},${Math.max(0,al).toFixed(3)})`;
       ctx.save(); farBelow(ctx,0); ctx.clip(); ctx.globalCompositeOperation="lighter";
-      const rg=ctx.createRadialGradient(px,ry+H*.03,0,px,ry+H*.03,W*.75); rg.addColorStop(0,cs(.3*lk)); rg.addColorStop(.35,cs(.16*lk)); rg.addColorStop(1,cs(0)); ctx.fillStyle=rg; ctx.fillRect(0,ry-4,W,H-ry+4);   /* strongest on the hills right under it */
+      const rg=ctx.createRadialGradient(px,ry+H*.03,0,px,ry+H*.03,W*1.15); rg.addColorStop(0,cs(.3*lk)); rg.addColorStop(.2,cs(.2*lk)); rg.addColorStop(.5,cs(.09*lk)); rg.addColorStop(1,cs(.015*lk)); ctx.fillStyle=rg; ctx.fillRect(0,ry-4,W,H-ry+4);   /* strongest on the hills right under it */
       const hg=ctx.createLinearGradient(px>W/2? W : 0,0,px>W/2? 0 : W,0); hg.addColorStop(0,cs(.12*lk)); hg.addColorStop(1,cs(.03*lk)); ctx.fillStyle=hg; ctx.fillRect(0,ry-4,W,H-ry+4);   /* the whole valley a little silvered, more on its side */
       const vg=ctx.createLinearGradient(0,ry,0,H); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(.25,cs(.05*lk)); vg.addColorStop(1,cs(.08*lk)); ctx.fillStyle=vg; ctx.fillRect(0,ry-4,W,H-ry+4); ctx.restore();   /* and the open field nearer us */
+      { const rk=Math.round(px/8)+"|"+Math.round(py/8)+"|"+W+"|"+H; if(!rimC||rimC._k!==rk){ rimC=makeRim(px,py); if(rimC) rimC._k=rk; }
+        if(rimC){ if(!rimC.lit) rimC.lit=document.createElement("canvas"); const t2=rimC.lit; t2.width=rimC.width; t2.height=rimC.height; t2.width=rimC.width; t2.height=rimC.height; const x2=t2.getContext("2d"); x2.drawImage(rimC,0,0); x2.globalCompositeOperation="source-in"; x2.setTransform(.5,0,0,.5,0,0);
+          const fg=x2.createRadialGradient(px,py,0,px,py,W*1.05); fg.addColorStop(0,cs(1)); fg.addColorStop(.3,cs(.7)); fg.addColorStop(.7,cs(.28)); fg.addColorStop(1,cs(.07)); x2.fillStyle=fg; x2.fillRect(0,0,W,H);   /* brightest on the trees nearest the moon, fading across the scene */
+          } }
+      { const sg=ctx.createRadialGradient(px,py,R,px,py,W*1.1); sg.addColorStop(0,cs(.14*lk)); sg.addColorStop(.3,cs(.06*lk)); sg.addColorStop(1,cs(0)); ctx.save(); ridgePath(ctx,SKYL.far,0); ctx.clip(); ctx.globalCompositeOperation="lighter"; ctx.fillStyle=sg; ctx.fillRect(0,0,W,ry+4); ctx.restore(); }   /* the sky lightened all the way across from its side */
+
       { const c2=document.createElement("canvas"); c2.width=mlC.width; c2.height=mlC.height; const x2=c2.getContext("2d"); x2.filter="blur(3px)"; x2.drawImage(mlC,0,0); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,mlC.width,mlC.height); ctx.drawImage(c2,0,0); }   /* its edge along the ridge feathered, so no seam of doubled light runs along the hilltops */
     }
-      ctx.save(); ctx.globalCompositeOperation="screen"; ctx.drawImage(mlC,0,0,W,H); ctx.restore(); }   /* laid on in one go */
+      ctx.save(); ctx.globalCompositeOperation="screen"; ctx.drawImage(mlC,0,0,W,H); ctx.restore();
+      if(rimC&&rimC.lit){ const lk=a*(.25+.75*e); ctx.save(); ridgePath(ctx,SKYL.far,-2); ctx.rect(0,0,W,H); ctx.clip("evenodd"); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=Math.min(1,lk*.75); ctx.drawImage(rimC.lit,0,0,W,H); ctx.restore(); } }   /* the moonlit edges of the trees, crisp, on top */
   }
   function ridgePath(c,arr,dy){ const m=cover(), N=arr.length-1, w=m.iw*m.s, h=m.ih*m.s; c.beginPath(); c.moveTo(m.ox-4,-H*2); for(let i=0;i<=N;i++) c.lineTo(m.ox+i/N*w,m.oy+arr[i]*h+(dy||0)); c.lineTo(m.ox+w+4,-H*2); c.closePath(); }
   function ridgeY(arr,fx){ const m=cover(), N=arr.length-1, u=Math.max(0,Math.min(N,fx*N)), i=Math.min(N-1,Math.floor(u)); return m.oy+lerp(arr[i],arr[i+1],u-i)*m.ih*m.s; }
