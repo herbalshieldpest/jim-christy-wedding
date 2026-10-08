@@ -17,7 +17,8 @@ const SC={
   sun:()=>{ try{ return SceneryHost.sun? SceneryHost.sun() : {x:.711,y:.344,iw:1364,ih:1024,strength:.33}; }catch(e){ return null; } },
   dim:()=>{ try{ return SceneryHost.dim? !!SceneryHost.dim() : false; }catch(e){ return false; } },                 /* a darker "welcome" look */
   shown:()=>{ try{ return SceneryHost.shown? !!SceneryHost.shown() : true; }catch(e){ return true; } },
-  quiet:()=>{ try{ return SceneryHost.quiet? !!SceneryHost.quiet() : false; }catch(e){ return false; } },             /* the host page wants the sounds hushed for now */
+  quiet:()=>{ try{ return SceneryHost.quiet? !!SceneryHost.quiet() : false; }catch(e){ return false; } },
+  paused:()=>{ try{ return SceneryHost.paused? !!SceneryHost.paused() : false; }catch(e){ return false; } },           /* the host page wants the animation stopped for now (the still photo shows instead); call ambient.refresh() when that changes */             /* the host page wants the sounds hushed for now */
   key:SceneryHost.key||"scene", sounds:SceneryHost.sounds||"" };
 var natureSfx=(function(){
   let ctx=null, master=null, noiseBuf=null, breezeG=null, breezeF=null, on=true, armed=false, birdT=null, gustT=null, live=false, faded=false;
@@ -8539,14 +8540,14 @@ const ambient=(function(){
     drawWaddler=function(dt,dark,kind){ return (kind==="hog"||kind==="otter")&&!allowed(kind)? dayCall(()=>wd.call(this,dt,dark,kind)) : wd.call(this,dt,dark,kind); };
     drawWoodcock=function(w,dt,dark){ return !w.kind||w.kind==="woodcock"||allowed("wcs")? wc.call(this,w,dt,dark) : dayCall(()=>wc.call(this,w,dt,dark)); };
     drawRaptors=function(dt,dark){ if(nA>.6&&!allowed("raptors")) soarers=soarers.filter(b=>b.kind==="owl"); return rp.call(this,dt,dark); }; }
-  const running=()=>on && !document.hidden;
-  function start(){ cv.hidden=!on; if(running() && !raf){ last=0; raf=requestAnimationFrame(frame); } }
+  const running=()=>on && !document.hidden && !SC.paused();
+  function start(){ cv.hidden=!on||SC.paused(); if(running() && !raf){ last=0; raf=requestAnimationFrame(frame); } }
   size(); seed();
   window.addEventListener("resize",()=>{ size(); seed(); buns.forEach(b=>b.init=false); });
   document.addEventListener("visibilitychange",start);
   reduce.addEventListener?.("change",start);
   start();
-  return { hawkDbg(){ return hawkG&&{st:hawkG.state,t:+hawkG.st.toFixed(2),x:Math.round(hawkG.x),y:Math.round(hawkG.y),tx:Math.round(hawkG.tx),ty:Math.round(hawkG.ty)}; }, rigShot(kind,yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=700; c.height=420; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,700,420);
+  return { refresh(){ start(); }, hawkDbg(){ return hawkG&&{st:hawkG.state,t:+hawkG.st.toFixed(2),x:Math.round(hawkG.x),y:Math.round(hawkG.y),tx:Math.round(hawkG.tx),ty:Math.round(hawkG.ty)}; }, rigShot(kind,yaw,pitch,sc){ const c=document.createElement('canvas'); c.width=700; c.height=420; const x=c.getContext('2d'); x.fillStyle='#6b6a3a'; x.fillRect(0,0,700,420);
       const f={kind,ph:.4,head:0,turn:0,state:'run',yaw,sniff:0,cock:.5,worm:0}, lit=.68, P={fur:mulv(kind==='racc'?[128,120,108]:[110,70,42],lit),dark:mulv([30,27,26],lit),pale:mulv([226,220,206],lit),tail:mulv([44,40,38],lit),teeth:mulv([226,128,40],lit),stick:mulv([150,120,84],lit),leaf:mulv([92,110,52],lit),body:mulv([238,112,32],.8),spot:mulv([214,42,26],.8),back:mulv([92,82,72],lit),breast:mulv([196,86,40],lit),belly:mulv([226,214,196],lit),head:mulv([42,38,36],lit),ring:mulv([236,232,222],lit),bill:mulv([232,184,60],lit),leg:mulv([110,92,76],lit),worm:mulv([190,120,110],lit)};
       const parts=kind==='racc'? raccoonParts(f,P,true) : kind==='beaver'? beaverParts(f,P,true) : kind==='eft'? eftParts(Object.assign(f,{state:'walk'}),P) : robinParts(Object.assign(f,{state:'listen'}),P);
       x.translate(350,340); x.scale(sc,sc); rigDraw(x,parts,rigView(yaw,pitch),1); return c.toDataURL(); }, newDbg(){ const P=o=>o&&{x:Math.round(toScreen(o.Xw,o.Dw).x),y:Math.round(toScreen(o.Xw,o.Dw).y),g:Math.round(toScreen(o.Xw,o.Dw).g),st:o.state}; const o={otter:P(otter),porc:P(porc),racc:P(racc),beaver:P(beaver),eft:P(eft),robin:P(wcs.find(w=>w.kind==="robin")),hog:P(hog),possum:P(possum),card:P(wcs.find(w=>w.kind==="card")),kill:P(wcs.find(w=>w.kind==="kill"))}; for(const q of smalls) o[q.kind]=P(q); if(web) o.web={x:Math.round(web.sx),y:Math.round(web.sy),g:300}; if(bbFlock){ const b=bbFlock.birds[0]; o.flock={x:Math.round(b.sx||0),y:Math.round(b.sy||0),g:200,st:bbFlock.kind}; } return o; }, bfSheet(){ const ks=Object.keys(BFLY), c=document.createElement('canvas'); c.width=ks.length*2*26*5; c.height=34*5+20; const x=c.getContext('2d'); x.fillStyle='#6b6248'; x.fillRect(0,0,c.width,c.height);
