@@ -4786,13 +4786,25 @@ const ambient=(function(){
       splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), twigs:[], knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
       blades:Array.from({length:520},()=>({u:Math.random()*1.06-.03,h:rnd(.12,.75),l:rnd(-.4,.4),c:Math.random(),w:rnd(.6,1.3),bend:rnd(-.3,.3)}))};
     /* a real limb is never a tube: it thickens at an old branch joint, wavers, and tapers to the break */
-    L.Rf=xl=>{ const u=xl/len; return R0*lerp(1,.42,Math.pow(u,.85))*(1+.03*Math.sin(u*9+s1)+.02*Math.sin(u*23+s2)+.1*Math.exp(-Math.pow((u-knob)/.04,2))); };   /* a slender stick, tapering, a slight swelling where a twig once grew */
-    L.sag=xl=>Math.sin(xl/len*Math.PI)*H*.012+Math.sin(xl/len*4.2+s2)*H*.009;   /* a gentle, graceful bow along its length */
+    /* a real stick: it grew in jerks, so it bends at each old fork, steps thinner beyond it with a swollen collar where the side branch was, and wanders a little between */
+    const sg=Math.random()<.5? 1 : -1, nodes=[rnd(.22,.32),rnd(.48,.58),rnd(.7,.8)].map((u,i)=>({u,d:(i%2? -1 : 1)*sg*rnd(.1,.18),step:rnd(.08,.15)}));
+    const sp=(z,w)=>w*Math.log(1+Math.exp(z/w));
+    L.nodes=nodes;
+    L.Rf=xl=>{ const u=xl/len; let r=R0*lerp(1,.6,u)*(1+.04*Math.sin(u*11+s1)+.025*Math.sin(u*29+s2)); for(const nd of nodes){ r*=1-nd.step*sm01((u-nd.u)/.02); r*=1+.16*Math.exp(-Math.pow((u-nd.u)/.025,2)); } return r; };
+    const kink=xl=>{ let y=0; for(const nd of nodes) y+=nd.d*(sp(xl-nd.u*len,R0*.7)-sp(-nd.u*len,R0*.7)); return y; }, kEnd=kink(len);
+    L.sag=xl=>Math.sin(xl/len*Math.PI)*H*.006+kink(xl)-kEnd*xl/len+Math.sin(xl/len*13+s1)*R0*.12;   /* zig-zagging at the forks but lying along the ground overall */
+    /* snapped side branches: short, broken off raggedly, rising from the far side at the old forks */
+    L.stubs=nodes.slice(0,2+(Math.random()<.5? 1 : 0)).map((nd,i)=>{ const xs=nd.u*len, back=Math.random()<.3; return {xs,th:back? -rnd(2.1,2.5) : -rnd(.45,.95),len:R0*rnd(1.3,3.2),r0:rnd(.42,.58),seed:Math.floor(rnd(0,9999)),splint:Array.from({length:4},()=>({a:rnd(-.8,.8),w:rnd(.08,.2),h:rnd(.2,.8)}))}; });
+    L.knots=L.knots.concat(nodes.map(nd=>({u:nd.u+rnd(-.01,.01),ph:rnd(-.4,.3),s:rnd(1,1.4)})));
     logC=L; }
+  const sm01=z=>{ const t2=Math.max(0,Math.min(1,z*.5+.5)); return t2*t2*(3-2*t2); };
   const logR=(L,xl)=>L.Rf(Math.max(0,Math.min(L.len,xl)));
   /* render the limb once per change of light into its own canvas: every pixel is a point on the round of the limb, with the bark's own normal,
      lit by the low sun, the sky's fill from above and the warm-green bounce off the lawn; shadows in the furrows, moss on top, the broken end showing pale torn wood */
-  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9, yT=-R0*1.35-H*.03, yB=R0*1.25+H*.022;
+  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9;
+    let yMin=1e9, yMax=-1e9; for(let i=0;i<=60;i++){ const xl=i/60*Ln, y0=-L.sag(xl); yMin=Math.min(yMin,y0-L.Rf(xl)); yMax=Math.max(yMax,y0+L.Rf(xl)); }
+    for(const st of L.stubs){ const r=L.Rf(st.xs), y0=-L.sag(st.xs)-r*.3, ty=y0+Math.sin(st.th)*st.len; yMin=Math.min(yMin,ty-r); }
+    const yT=yMin-R0*.4-H*.01, yB=yMax+R0*.3+H*.022;
     const cw=Math.ceil((x1+padL)*k), chh=Math.ceil((yB-yT)*k); let c=L.img; if(!c){ c=L.img=document.createElement("canvas"); } if(c.width!==cw||c.height!==chh){ c.width=cw; c.height=chh; }
     const x=c.getContext("2d"), id=x.createImageData(cw,chh), d=id.data; L.imgX=-padL; L.imgY=yT; L.imgK=k;
     const toneMap=v=>{ const q=v/(1+v*.6)*1.6; return Math.max(0,Math.min(255,Math.pow(Math.max(0,q),1/2.2)*255)); };   /* light adds in linear, shown through a soft shoulder like film */
@@ -4803,35 +4815,41 @@ const ambient=(function(){
     const Lv=v3.n(lg.L);
     const samp=(A,u,v)=>{ u=((u%B.Wt)+B.Wt)%B.Wt; v=((v%B.Ht)+B.Ht)%B.Ht; const x0=u|0, y0=v|0, fx=u-x0, fy=v-y0, x2=(x0+1)%B.Wt, y2=(y0+1)%B.Ht; const a=A[y0*B.Wt+x0], b=A[y0*B.Wt+x2], cc=A[y2*B.Wt+x0], dd=A[y2*B.Wt+x2]; return a+(b-a)*fx+(cc-a)*fy+(a-b-cc+dd)*fx*fy; };
     const sm=(e0,e1,v)=>{ const t2=Math.max(0,Math.min(1,(v-e0)/(e1-e0))); return t2*t2*(3-2*t2); };
-    const knots=L.knots.map(kn=>({u:kn.u*Ln,ph:kn.ph,s:kn.s}));
-    for(let py=0;py<chh;py++){ const yl=yT+(py+.5)/k;
-      for(let px=0;px<cw;px++){ const xl=-padL+(px+.5)/k, xc=Math.max(0,Math.min(Ln,xl)), R=L.Rf(xc), y0=-L.sag(xc), a=-(yl-y0)/R;
-        /* the broken end: a ragged line of splinters, with the torn pale wood showing just behind it */
-        let endX=Ln+R*.06*Math.sin(a*9+L.seed); for(const s of L.splint) endX+=R*s.h*Math.exp(-Math.pow((a-s.a)/s.w,2));
-        const ea=Math.abs(a); if(ea>1.08||xl>endX+1/k) continue;
+    /* one shading routine for every piece of wood: the main stick and each snapped branch, in its own frame (x along it, y across), turned by th on the screen */
+    const out={D:[0,0,0],S:[0,0,0],O:[0,0,0],M:[0,0,0],cov:0};
+    const shadeSeg=(G,xl,yl)=>{ const Ln=G.len, xc=Math.max(0,Math.min(Ln,xl)), R=G.Rf(xc), y0=-G.sag(xc), a=-(yl-y0)/R;
+        let endX=Ln+R*.06*Math.sin(a*9+G.seed); for(const s of G.splint) endX+=R*s.h*Math.exp(-Math.pow((a-s.a)/s.w,2));
+        const ea=Math.abs(a); if(ea>1.08||xl>endX+1/k||xl<G.x0) return 0;
         const aa=Math.max(-1,Math.min(1,a)), cz=Math.sqrt(Math.max(0,1-aa*aa)), n0=[0,aa*U[1]+cz*V[1],aa*U[2]+cz*V[2]], phi=Math.atan2(n0[1],n0[2]);
-        const tu=xl*1.75+8, tv=phi*R*2+B.Ht*.5;
+        const tu=xl*1.75+G.tex, tv=phi*R*2+B.Ht*.5;
         let h=samp(B.Hf,tu,tv); const hx=(samp(B.Hf,tu+2,tv)-samp(B.Hf,tu-2,tv))*.75, hy=(samp(B.Hf,tu,tv+2)-samp(B.Hf,tu,tv-2))*.75;
-        /* old knots where twigs fell away: a raised collar with a dark socket */
-        let kn=0; for(const q of knots){ const du=(xl-q.u)/(R*.22*q.s), dv=(phi-q.ph)/(.32*q.s), dd=Math.sqrt(du*du+dv*dv); if(dd<2.2){ kn+=.35*Math.exp(-Math.pow((dd-1)/.4,2))-.45*Math.exp(-Math.pow(dd/.5,2)); } } h+=kn;
-        const top=Math.max(0,n0[2]), mo=sm(.62,.74,samp(B.MO,tu*.6,tv*.6)+top*.18-.06)*sm(.25,.7,top)*(1-sm(.2,.6,-kn)), li=sm(.64,.72,samp(B.LI,tu*.7,tv*.7))*(1-mo)*sm(-.9,-.2,n0[2]+.3);
-        const bump=4*(1-mo*.6), T=[0,n0[2],-n0[1]];
-        let n=[-hx*bump*.5,n0[1]-hy*bump*.5*T[1],n0[2]-hy*bump*.5*T[2]]; if(mo>0){ const g2=(samp(B.MO,tu*3.1,tv*3.1)-.5)*2.4*mo; n[0]+=g2*.5; n[1]+=g2*.3*T[1]; n[2]+=g2*.3*T[2]; } n=v3.n(n);
-        /* albedo: weathered grey on the ridge tops, warm dark brown down in the furrows, drifts of colour along the limb; dull olive moss; pale crusty lichen */
+        /* old knots where twigs fell away: a raised collar of bark rolled round a dark, rotted socket */
+        let kn=0, sock=0; for(const q of G.knots){ const du=(xl-q.u)/(R*.3*q.s), dv=(phi-q.ph)/(.42*q.s), dd=Math.sqrt(du*du+dv*dv); if(dd<2.4){ kn+=.6*Math.exp(-Math.pow((dd-1)/.38,2))-.7*Math.exp(-Math.pow(dd/.55,2)); sock=Math.max(sock,Math.exp(-Math.pow(dd/.6,2))); } } h+=kn;
+        const ca=Math.cos(G.th), sa2=Math.sin(G.th), rot=v=>[v[0]*ca+v[2]*sa2,v[1],-v[0]*sa2+v[2]*ca];
+        const n0w=rot(n0), top=Math.max(0,n0w[2]), mo=sm(.62,.74,samp(B.MO,tu*.6,tv*.6)+top*.18-.06)*sm(.25,.7,top)*(1-sm(.2,.6,-kn)), li=sm(.64,.72,samp(B.LI,tu*.7,tv*.7))*(1-mo)*sm(-.9,-.2,n0w[2]+.3);
+        const bump=4.5*(1-mo*.6), T=[0,n0[2],-n0[1]];
+        let n=[-hx*bump*.5,n0[1]-hy*bump*.5*T[1],n0[2]-hy*bump*.5*T[2]]; if(mo>0){ const g2=(samp(B.MO,tu*3.1,tv*3.1)-.5)*2.4*mo; n[0]+=g2*.5; n[1]+=g2*.3*T[1]; n[2]+=g2*.3*T[2]; } n=v3.n(rot(n));
         const al=samp(B.AL,tu*.5,tv*.5), dep=Math.max(0,Math.min(1,h*1.25));
         let r=lerp(.032,.1,dep)*(.7+.6*al), g=lerp(.022,.085,dep)*(.7+.55*al), b=lerp(.014,.068,dep)*(.7+.5*al);
-        const bkv=samp(B.BK,tu,tv); if(bkv>0){ const f3=.75+.5*samp(B.AL,tu*3,tv*3); r=lerp(r,lerp(.016,.06,dep)*f3,bkv); g=lerp(g,lerp(.012,.048,dep)*f3,bkv); b=lerp(b,lerp(.008,.034,dep)*f3,bkv); }   /* the bark darker and browner than the weathered wood */
+        const bkv=samp(B.BK,tu,tv); if(bkv>0){ const f3=.75+.5*samp(B.AL,tu*3,tv*3); r=lerp(r,lerp(.016,.06,dep)*f3,bkv); g=lerp(g,lerp(.012,.048,dep)*f3,bkv); b=lerp(b,lerp(.008,.034,dep)*f3,bkv); }
         if(li>0){ const f2=.85+.3*samp(B.Hf,tu*3,tv*3); r=lerp(r,.24*f2,li*.7); g=lerp(g,.25*f2,li*.7); b=lerp(b,.2*f2,li*.7); }
         if(mo>0){ const f2=.7+.6*samp(B.MO,tu*4,tv*4); r=lerp(r,.045*f2,mo); g=lerp(g,.05*f2,mo); b=lerp(b,.012*f2,mo); }
-        let wood=0; if(xl>endX-R*.22*cz-2/k){ wood=sm(endX-R*.22*cz-2/k,endX-R*.22*cz,xl); const fib=.8+.4*samp(B.Hf,xl*6,a*90), ring=.9+.1*Math.sin(Math.sqrt(aa*aa+((xl-endX)/(R*.3))**2)*40); r=lerp(r,.26*fib*ring,wood); g=lerp(g,.19*fib*ring,wood); b=lerp(b,.11*fib*ring,wood); n=v3.n(v3.l(n,[1,n[1]*.3,n[2]*.3+.3],wood*.8)); }
-        /* light: the sun with the ridges' own shadows, the sky from above, the lawn's bounce from below, deep occlusion in the furrows and where the limb meets the ground */
+        if(sock>0){ r=lerp(r,.012,sock*.9); g=lerp(g,.008,sock*.9); b=lerp(b,.005,sock*.9); }
+        let wood=0; if(xl>endX-R*.22*cz-2/k){ wood=sm(endX-R*.22*cz-2/k,endX-R*.22*cz,xl); const fib=.8+.4*samp(B.Hf,xl*6,a*90), ring=.9+.1*Math.sin(Math.sqrt(aa*aa+((xl-endX)/(R*.3))**2)*40); r=lerp(r,.26*fib*ring,wood); g=lerp(g,.19*fib*ring,wood); b=lerp(b,.11*fib*ring,wood); n=v3.n(v3.l(n,rot([1,n0[1]*.3,n0[2]*.3+.3]),wood*.8)); }
         const dif=Math.max(0,v3.d(n,Lv)); let shd=1; if(dif>0){ const lu=Lv[0]*9, lv=(Lv[1]*T[1]+Lv[2]*T[2])*9, h2=samp(B.Hf,tu+lu,tv+lv)+kn*.5; shd=1-Math.max(0,Math.min(.75,(h2-h-.06)*3))*(1-wood); }
-        const ao=(.5+.5*Math.min(1,h*1.15+wood*.5))*lerp(.35,1,sm(-1,-.35,aa)), sky=.5+.5*n[2], bo=Math.max(0,-n[2]*.7+.3);
+        const ao=(.5+.5*Math.min(1,h*1.15+wood*.5))*(G.ground? lerp(.35,1,sm(-1,-.35,aa)) : lerp(.6,1,sm(-1,-.2,aa))), sky=.5+.5*n[2], bo=Math.max(0,-n[2]*.7+.3);
         const rim=Math.pow(1-Math.max(0,v3.d(n,V)),3)*Math.max(0,Lv[1])*(mo*.9+.25)*shd;
-        const q=py*cw+px, q3=q*3, ds=dif*shd, sa=sky*ao, ba=bo*ao; bf.D[q3]=r*ds; bf.D[q3+1]=g*ds; bf.D[q3+2]=b*ds; bf.S[q3]=r*sa; bf.S[q3+1]=g*sa; bf.S[q3+2]=b*sa; bf.O[q3]=r*ba; bf.O[q3+1]=g*ba; bf.O[q3+2]=b*ba; bf.M[q3]=rim*.35; bf.M[q3+1]=rim*.3; bf.M[q3+2]=rim*.22;
-        /* the edge: anti-aliased, and roughened by the bark and moss standing proud of the outline */
-        const edgePx=(1-ea)*R*k+(h-.45)*2.2*k+mo*1.5*k*(n0[2]>0? 1 : 0), cov=Math.max(0,Math.min(1,edgePx+.5))*Math.max(0,Math.min(1,(endX-xl)*k+.5));
-        bf.cov[q]=Math.max(0,cov); bf.gr[q]=(Math.random()-.5)*5; } }
+        const ds=dif*shd, sa=sky*ao, ba=bo*ao; out.D[0]=r*ds; out.D[1]=g*ds; out.D[2]=b*ds; out.S[0]=r*sa; out.S[1]=g*sa; out.S[2]=b*sa; out.O[0]=r*ba; out.O[1]=g*ba; out.O[2]=b*ba; out.M[0]=rim*.35; out.M[1]=rim*.3; out.M[2]=rim*.22;
+        const edgePx=(1-ea)*R*k+(h-.45)*2.2*k+mo*1.5*k*(n0w[2]>0? 1 : 0); out.cov=Math.max(0,Math.min(1,edgePx+.5))*Math.max(0,Math.min(1,(endX-xl)*k+.5)); return out.cov; };
+    const knots=L.knots.map(kn=>({u:kn.u*Ln,ph:kn.ph,s:kn.s}));
+    const mainG={len:Ln,Rf:L.Rf,sag:L.sag,splint:L.splint,seed:L.seed,knots,th:0,tex:8,x0:-1e9,ground:true};
+    const stubG=L.stubs.map(st=>{ const rb=L.Rf(st.xs)*st.r0; return {len:st.len,Rf:xl=>rb*lerp(1,.75,xl/st.len),sag:()=>0,splint:st.splint,seed:st.seed,knots:[],th:-st.th,tex:300+st.seed%500,x0:0,ox:st.xs,oy:-L.sag(st.xs)-L.Rf(st.xs)*.25,ground:false}; });
+    for(let py=0;py<chh;py++){ const yl=yT+(py+.5)/k;
+      for(let px=0;px<cw;px++){ const xl=-padL+(px+.5)/k, q=py*cw+px, q3=q*3;
+        let cov=0; const acc=(w)=>{ for(const key of ["D","S","O","M"]){ const A2=bf[key]; for(let j=0;j<3;j++) A2[q3+j]=A2[q3+j]*(1-w)+out[key][j]*w; } };
+        for(const G of stubG){ const dx=xl-G.ox, dy=yl-G.oy, c2=Math.cos(G.th), s2=Math.sin(G.th), lx=dx*c2-dy*s2, ly=dx*s2+dy*c2; if(lx<-G.len*.2||lx>G.len*1.6) continue; const cv=shadeSeg(G,lx,ly); if(cv>0){ acc(cov>0? cv : 1); cov=cov+cv*(1-cov); } }
+        { const cv=shadeSeg(mainG,xl,yl); if(cv>0){ acc(cov>0? cv : 1); cov=cv+cov*(1-cv); } }   /* the main stick over the bases of its branches */
+        bf.cov[q]=cov; bf.gr[q]=(Math.random()-.5)*5; } }
     L.buf=bf; }
     { const bf=L.buf, N2=bf.n; for(let q=0;q<N2;q++){ const cv=bf.cov[q]; if(cv<=0) continue; const q3=q*3, i4=q*4, gr=bf.gr[q];
         d[i4]=toneMap(bf.D[q3]*sunC[0]+bf.S[q3]*skyC[0]+bf.O[q3]*bnc[0]+bf.M[q3]*sunC[0])+gr; d[i4+1]=toneMap(bf.D[q3+1]*sunC[1]+bf.S[q3+1]*skyC[1]+bf.O[q3+1]*bnc[1]+bf.M[q3+1]*sunC[1])+gr; d[i4+2]=toneMap(bf.D[q3+2]*sunC[2]+bf.S[q3+2]*skyC[2]+bf.O[q3+2]*bnc[2]+bf.M[q3+2]*sunC[2])+gr; d[i4+3]=cv*255; } }
@@ -4855,14 +4873,16 @@ const ambient=(function(){
     /* the lawn's own blades, lifted straight out of the photograph just beyond the stick and laid back over its lower edge, so the stick sits down in the real grass */
     if(!L.mask||L.mask.width!==cw||L.mask.height!==chh){ const m=L.mask=document.createElement("canvas"); m.width=cw; m.height=chh; const mx=m.getContext("2d"); mx.setTransform(k,0,0,k,-L.imgX*k,-L.imgY*k); mx.fillStyle="#fff";
       let sd=L.seed+3; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
-      for(let i=0;i<Ln*1.6;i++){ const xl=RN()*Ln*1.04, r=R(Math.min(Ln,xl)), base=r-sag(xl)+H*.003+RN()*r*.25, hgt=r*(.25+Math.pow(RN(),1.6)*1.1)+H*.003, w0=(.5+RN()*.9), lean=(RN()-.5)*hgt*.6, cv=(RN()-.5)*hgt*.25;
+      for(let i=0;i<Ln*1.3;i++){ const xl=RN()*Ln*1.04; if(RN()>.25+.75*Math.pow(.5+.5*Math.sin(xl*.045+L.seed)*Math.sin(xl*.017+1.3),1.5)) continue;   /* in clumps and gaps, not a comb */
+        const r=R(Math.min(Ln,xl)), base=r-sag(xl)+H*.003+RN()*r*.3, hgt=r*(.15+Math.pow(RN(),2.2)*1.5)+H*.002, w0=(.5+RN()*.9), lean=(RN()-.5)*hgt*.6, cv=(RN()-.5)*hgt*.25;
         mx.globalAlpha=.7+RN()*.3; mx.beginPath(); mx.moveTo(xl-w0,base); mx.quadraticCurveTo(xl+lean*.4+cv-w0*.3,base-hgt*.55,xl+lean,base-hgt); mx.quadraticCurveTo(xl+lean*.4+cv+w0*.3,base-hgt*.55,xl+w0,base); mx.closePath(); mx.fill(); }
       L.gs=document.createElement("canvas"); }
     const gs=L.gs; if(gs.width!==cw||gs.height!==chh){ gs.width=cw; gs.height=chh; }
     const dy=-(L.R0*2.4+H*.03);   /* take the turf from just behind the stick, where it is never covered */
     { const gx=gs.getContext("2d"); gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="source-over"; gx.clearRect(0,0,cw,chh);
       const M=new DOMMatrix().scale(k,k).translate(-L.imgX,-L.imgY-dy).multiply(Tl.inverse()); gx.setTransform(M); gx.drawImage(ctx.canvas,0,0,W,H);
-      gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
+      gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
+      gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
        A soft occlusion right under the stick where no sky reaches, and a fainter shade falling toward us from the low sun behind */
