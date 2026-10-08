@@ -374,14 +374,14 @@ var natureSfx=(function(){
     rustleG.gain.cancelScheduledValues(now); rustleG.gain.setTargetAtTime(.22,now+.3,.6); rustleG.gain.setTargetAtTime(.12,now+3.4,1); rustleG.gain.setTargetAtTime(.18,now+6.2,.8); rustleG.gain.setTargetAtTime(0,now+9.2,2.2);   /* the goldenrod and the leaves thrashing in it */
     gustT=setTimeout(gust,16000); }
   /* a gust passing through: you hear it coming in the trees on one side, the roar and the leaves hissing and rattling swell as it reaches you, sweep across, and die away on the other side */
-  function gustPass(dir,t0,t1,amp){ if(!ctx||!live) return; const now=ctx.currentTime, end=now+t1+5, A=amp||1, mid=(t0+t1)/2;
+  function gustPass(dir,t0,t1,amp,far){ if(!ctx||!live) return; const now=ctx.currentTime, end=now+t1+5, A=amp||1, mid=(t0+t1)/2;
     const p=ctx.createStereoPanner? ctx.createStereoPanner() : null, out=ctx.createGain(); out.gain.value=1; if(p){ out.connect(p); p.connect(master);
       p.pan.setValueAtTime(-dir*.95,now); p.pan.linearRampToValueAtTime(-dir*.85,now+t0); p.pan.linearRampToValueAtTime(-dir*.2,now+mid-.6); p.pan.linearRampToValueAtTime(dir*.2,now+mid+.6); p.pan.linearRampToValueAtTime(dir*.85,now+t1); p.pan.linearRampToValueAtTime(dir*.95,end); } else out.connect(master);
     const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true;
-    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.Q.value=.6; lp.frequency.setValueAtTime(380,now); lp.frequency.setTargetAtTime(900,now+t0*.5,t0*.4+.2); lp.frequency.setTargetAtTime(1500,now+mid-1,1); lp.frequency.setTargetAtTime(520,now+t1,1.6);
+    const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.Q.value=.6; lp.frequency.setValueAtTime(380,now); lp.frequency.setTargetAtTime(900,now+t0*.5,t0*.4+.2); lp.frequency.setTargetAtTime(far? 700 : 1500,now+mid-1,1); lp.frequency.setTargetAtTime(520,now+t1,1.6);
     const rg=ctx.createGain(); rg.gain.setValueAtTime(0,now); rg.gain.linearRampToValueAtTime(.08*A,now+t0); rg.gain.setTargetAtTime(.26*A,now+t0,(mid-t0)*.45); rg.gain.setTargetAtTime(.12*A,now+mid+.8,1.4); rg.gain.setTargetAtTime(0,now+t1,1.5);   /* the roar */
     src.connect(lp); lp.connect(rg); rg.connect(out);
-    const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=3400; bp.Q.value=.7; const hs=ctx.createBiquadFilter(); hs.type="highshelf"; hs.frequency.value=6000; hs.gain.value=4;
+    const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=far? 2200 : 3400; bp.Q.value=.7; const hs=ctx.createBiquadFilter(); hs.type="highshelf"; hs.frequency.value=6000; hs.gain.value=4;
     const am=ctx.createGain(); am.gain.value=.55; const lfo=ctx.createOscillator(), lfo2=ctx.createOscillator(); lfo.frequency.value=7+Math.random()*3; lfo2.frequency.value=13+Math.random()*5; const lg=ctx.createGain(), lg2=ctx.createGain(); lg.gain.value=.3; lg2.gain.value=.15; lfo.connect(lg); lg.connect(am.gain); lfo2.connect(lg2); lg2.connect(am.gain);
     const lv=ctx.createGain(); lv.gain.setValueAtTime(0,now); lv.gain.linearRampToValueAtTime(.05*A,now+t0); lv.gain.setTargetAtTime(.2*A,now+t0+.4,(mid-t0)*.4); lv.gain.setTargetAtTime(.09*A,now+mid+1.2,1.6); lv.gain.setTargetAtTime(0,now+t1+.4,1.8);   /* the leaves and the grass rattling up in it */
     src.connect(bp); bp.connect(hs); hs.connect(am); am.connect(lv); lv.connect(out);
@@ -914,8 +914,9 @@ const ambient=(function(){ let heavy=false;
   const SV_BOT=[[0,.6],[.1,.6],[.2,.6],[.28,.598],[.32,.582],[.4,.566],[.5,.56],[.6,.556],[.7,.546],[.8,.552],[.9,.55],[1,.556]];   /* where the trees stop and the goldenrod starts, in the photo */
   const svBot=fx=>{ for(let i=1;i<SV_BOT.length;i++) if(fx<=SV_BOT[i][0]){ const [x0,y0]=SV_BOT[i-1], [x1,y1]=SV_BOT[i]; return y0+(y1-y0)*(fx-x0)/(x1-x0); } return SV_BOT[SV_BOT.length-1][1]; };
   let svLay=null, svKey="";
-  function makeSvLayers(){ const m=cover(), k=MOBILE()? .5 : Math.min(1,1600/W), w=Math.ceil(W*k), ps=m.s*k;   /* photo pixels to working pixels */
-    const topY=fx=>ridgeY(SKYL.near,fx)*k+.004*m.ih*ps, botY=fx=>(m.oy+svBot(fx)*m.ih*m.s)*k;
+  function makeSvLayers(far){ const m=cover(), k=MOBILE()? .5 : Math.min(1,1600/W)*(far? .75 : 1), w=Math.ceil(W*k), ps=m.s*k;   /* photo pixels to working pixels */
+    /* far: the mountain behind, between its skyline and the middle ridge's. Hazy and miles off, so only a soft sheen moving over its woods */
+    const topY=far? fx=>ridgeY(SKYL.far,fx)*k+.003*m.ih*ps : fx=>ridgeY(SKYL.near,fx)*k+.004*m.ih*ps, botY=far? fx=>Math.max(topY(fx),ridgeY(SKYL.near,fx)*k-.002*m.ih*ps) : fx=>(m.oy+svBot(fx)*m.ih*m.s)*k;
     let ya=1e9, yb=0; for(let i=0;i<=40;i++){ const fx=i/40; ya=Math.min(ya,topY(fx)); yb=Math.max(yb,botY(fx)); } const oy=Math.max(0,Math.floor(ya)-2), h=Math.ceil(Math.min(H*k,yb+2)-oy); if(h<4) return null;
     const mk=()=>{ const c=document.createElement("canvas"); c.width=w; c.height=h; return [c,c.getContext("2d",{willReadFrequently:true})]; };
     /* only the woods on the middle ridge and the treeline below it: not the far mountain behind, not the goldenrod in front */
@@ -928,17 +929,19 @@ const ambient=(function(){ let heavy=false;
     const [cc,cx]=mk(), ci=cx.createImageData(w,h); for(let i=0;i<w*h*4;i+=4){ if(sd[i+3]<128) continue; const v=Math.max(0,Math.min(1,(lum(d22,i)-lum(d4,i)-3)/9))*Math.max(0,Math.min(1,((d22[i]-d22[i+1])-(d4[i]-d4[i+1])+1)/7)); ci.data[i+3]=Math.round(255*v); }
     cx.putImageData(ci,0,0); const [cb,cbx]=mk(); cbx.filter=`blur(${Math.max(.5,2*ps).toFixed(2)}px)`; cbx.drawImage(cc,0,0); const cf=cbx.getImageData(0,0,w,h).data;
     const out=x.createImageData(w,h), o=out.data, near=new Float32Array(w*h), pts=[];
-    for(let yy=0;yy<h;yy++) for(let xx=0;xx<w;xx++){ const i=(yy*w+xx)*4; if(sd[i+3]<20) continue; const r=sd[i], g=sd[i+1], bl=sd[i+2], l=r*.3+g*.59+bl*.11; if(l>150) continue;
+    for(let yy=0;yy<h;yy++) for(let xx=0;xx<w;xx++){ const i=(yy*w+xx)*4; if(sd[i+3]<20) continue; const r=sd[i], g=sd[i+1], bl=sd[i+2], l=r*.3+g*.59+bl*.11; if(l>150&&!far) continue;
       const fx=(xx/k-m.ox)/(m.iw*m.s), fy=((yy+oy)/k-m.oy)/(m.ih*m.s), bot=svBot(Math.max(0,Math.min(1,fx))), conif=Math.min(1,cf[i+3]/255*1.7);
+      if(far){ const a=Math.max(0,Math.min(1,(l-lum(d4,i))/4+.7))*(sd[i+3]/255); if(a<.05) continue; o[i]=o[i+1]=o[i+2]=255; o[i+3]=Math.round(255*a); if(a>.3) pts.push(yy*w+xx); continue; }
       const leafy=Math.max(0,Math.min(1,(g-bl+12)/36)), hi=Math.max(0,Math.min(1,(l-lum(d2,i))/6+.35)), a=leafy*hi*(1-conif)*Math.min(1,(bot-fy)/.012)*(sd[i+3]/255); if(a<.05) continue;
       o[i]=o[i+1]=o[i+2]=255; o[i+3]=Math.round(255*a); near[yy*w+xx]=Math.max(0,Math.min(1,(fy-.42)/.14)); if(a>.3) pts.push(yy*w+xx); }
     x.clearRect(0,0,w,h); x.putImageData(out,0,0);
     const lay=[]; lay.oy=oy; lay.k=k; let qa=h, qb=0; for(const q of pts){ const yq=(q/w)|0; if(yq<qa) qa=yq; if(yq>qb) qb=yq; } lay.y0=Math.max(0,qa-4); lay.y1=Math.min(h,qb+4);
     const sc=w/1280; for(let n=0;n<4;n++){ const [Lc,lx]=mk(); lx.fillStyle="#fff";
-      const cnt=Math.min(1600,Math.round(pts.length/90)); for(let j=0;j<cnt;j++){ const p=pts[(Math.random()*pts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(1.6+nr*4.2)*sc*(.6+Math.random()*.7);
+      const cnt=Math.min(1600,Math.round(pts.length/(far? 28 : 90))); for(let j=0;j<cnt;j++){ const p=pts[(Math.random()*pts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(far? 3.6 : 1.6+nr*4.2)*sc*(.6+Math.random()*.7);
         const sub=2+((Math.random()*4)|0); for(let q=0;q<sub;q++){ const ex=px+(Math.random()-.5)*R*2, ey=py+(Math.random()-.5)*R*1.2, r=R*(.4+Math.random()*.5), gg=lx.createRadialGradient(ex,ey,0,ex,ey,r);
           gg.addColorStop(0,"rgba(255,255,255,.8)"); gg.addColorStop(.5,"rgba(255,255,255,.45)"); gg.addColorStop(1,"rgba(255,255,255,0)"); lx.fillStyle=gg; lx.beginPath(); lx.ellipse(ex,ey,r,r*.7,0,0,6.283); lx.fill(); } }   /* a sprig of a crown, the leaves in it turning together; the photo's own leaf texture shows through it */
       lx.globalAlpha=1; lx.globalCompositeOperation="destination-in"; lx.drawImage(c,0,0); lay.push({c:Lc,f:1.6+Math.random()*1.4,ph:Math.random()*6.283}); }
+    if(far){ const [Lc,lx]=mk(); lx.globalAlpha=.55; lx.drawImage(c,0,0); lay.push({c:Lc,f:.7,ph:0}); }   /* and a soft sheen over the whole slope, the haze turning paler as the gust crosses it */
     return lay; }
   const SV_GU=[{s:.4,v:.105,wd:.36,a:1,ph:0},{s:8.5,v:.085,wd:.28,a:.75,ph:2.1},{s:15,v:.12,wd:.4,a:.95,ph:4.3}];   /* three gusts, one after another, each its own speed and size */
   function svGustAt(sx){ if(!(skyEv&&skyEv.k==="silver")) return 0; const ts=t-skyEv.t0, dir=(window.__seedDir||-1)>0? 1 : -1, xf=dir>0? sx/W : 1-sx/W; let v=0;   /* how hard the gust is blowing at this spot on the screen right now */
@@ -948,22 +951,41 @@ const ambient=(function(){ let heavy=false;
   const svP=(()=>{ const c=document.createElement("canvas"); c.width=256; c.height=1; const x=c.getContext("2d"), d=x.createImageData(256,1);   /* the gust's profile: a quick leading edge, the leaves flipping, then a long settling tail behind */
     for(let i=0;i<256;i++){ const u=i/255*1.3-1, a=u>0? Math.exp(-Math.pow(u/.07,2)) : Math.exp(-Math.pow(u/.42,2))*(.75+.25*Math.exp(-Math.pow((u+.08)/.12,2))); d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=255; d.data[i*4+3]=Math.round(255*a); }
     x.putImageData(d,0,0); return c; })();
-  function drawSilver(){ if(svA<=.01||!photo) return; const key=W+"x"+H; if(svKey!==key){ svKey=key; svLay=makeSvLayers(); } if(!svLay||!svLay.length) return;
-    const w=svLay[0].c.width, h=svLay[0].c.height; for(const c of [svT,svW,svM]) if(c.width!==w||c.height!==h){ c.width=w; c.height=h; }
-    const dir=(window.__seedDir||-1)>0? 1 : -1, ts=skyEv&&skyEv.k==="silver"? t-skyEv.t0 : 99, y0=svLay.y0||0, y1=svLay.y1||h, N=Math.max(12,Math.round((y1-y0)/2.5)), sh=(y1-y0)/N;
-    const GU=SV_GU;
-    const T=svX; T.setTransform(1,0,0,1,0,0); T.globalCompositeOperation="source-over"; T.globalAlpha=1; T.clearRect(0,0,w,h); let any=false;
-    svLay.forEach((l,li)=>{ const W2=svWX; W2.globalCompositeOperation="source-over"; W2.globalAlpha=1; W2.clearRect(0,0,w,h); let drew=false;
-      for(const g of GU){ const tg=ts-g.s; if(tg<0||tg>16) continue; const fr=-.25+tg*g.v-li*.025, ww=g.wd*w;
+  const SV_GF=[{s:2.6,v:.07,wd:.42,a:.8,ph:1.3},{s:12.5,v:.062,wd:.36,a:.6,ph:3.7},{s:19.5,v:.08,wd:.45,a:.7,ph:5.2}];   /* the far mountain's own gusts: the same weather, but not the same air, so they run out of step with the near ones and slower across it */
+  let svFar=null;
+  function svSet(lay,GU,col,alpha,ts,dir,op){ const w=lay[0].c.width, h=lay[0].c.height; if(!lay.T){ lay.T=document.createElement("canvas"); lay.Wc=document.createElement("canvas"); lay.M=document.createElement("canvas"); for(const c of [lay.T,lay.Wc,lay.M]){ c.width=w; c.height=h; } }
+    const y0=lay.y0||0, y1=lay.y1||h, N=Math.max(10,Math.round((y1-y0)/2.5)), sh=(y1-y0)/N, T=lay.T.getContext("2d"), W2=lay.Wc.getContext("2d"), M=lay.M.getContext("2d");
+    T.setTransform(1,0,0,1,0,0); T.globalCompositeOperation="source-over"; T.globalAlpha=1; T.clearRect(0,0,w,h); let any=false;
+    lay.forEach((l,li)=>{ W2.globalCompositeOperation="source-over"; W2.globalAlpha=1; W2.clearRect(0,0,w,h); let drew=false;
+      for(const g of GU){ const tg=ts-g.s; if(tg<0||tg>22) continue; const fr=-.25+tg*g.v-li*.025, ww=g.wd*w;
         for(let j=0;j<N;j++){ const yy=y0+j*sh, v=(yy-y0)/(y1-y0);
           const off=.07*Math.sin(v*5.5+tg*.7+g.ph)+.045*Math.sin(v*13-tg*1.4+g.ph*2)+.025*Math.sin(v*29+li*1.7+tg*2.1);   /* a ragged, rolling front: the gust reaching some trees before others */
           const st=g.a*(.55+.45*Math.sin(v*9+g.ph+tg*.4))*(.8+.2*Math.sin(v*21-tg*1.1+li));   /* stronger through some stretches of the woods than others */
-          if(st<.04) continue; let fx=(fr+off)*w; W2.globalAlpha=Math.min(1,st);
+          if(st<.04) continue; const fx=(fr+off)*w; W2.globalAlpha=Math.min(1,st);
           if(dir>0) W2.drawImage(svP,0,0,256,1,fx-ww/1.3,yy,ww,sh+.6); else W2.drawImage(svP,0,0,256,1,w-fx+ww/1.3,yy,-ww,sh+.6); drew=true; } }
-      if(!drew) return; const M=svMX; M.globalCompositeOperation="source-over"; M.globalAlpha=1; M.clearRect(0,0,w,h); M.drawImage(l.c,0,0); M.globalCompositeOperation="destination-in"; M.drawImage(svW,0,0);
-      T.globalCompositeOperation="lighter"; T.globalAlpha=.8+.2*Math.sin(t*l.f*4+l.ph); T.drawImage(svM,0,0); any=true; });   /* each little crown patch turning as the gust gets to it */
-    if(!any) return; T.globalAlpha=1; T.globalCompositeOperation="source-in"; T.fillStyle="rgba(204,222,200,.95)"; T.fillRect(0,0,w,h);
-    ctx.save(); ctx.globalAlpha=svA*(nA>.3? .25 : 1); ctx.globalCompositeOperation="screen"; ctx.drawImage(svT,0,0,w,h,0,svLay.oy/svLay.k,w/svLay.k,h/svLay.k); ctx.restore(); }
+      if(!drew) return; M.globalCompositeOperation="source-over"; M.globalAlpha=1; M.clearRect(0,0,w,h); M.drawImage(l.c,0,0); M.globalCompositeOperation="destination-in"; M.drawImage(lay.Wc,0,0);
+      T.globalCompositeOperation="lighter"; T.globalAlpha=.8+.2*Math.sin(t*l.f*4+l.ph); T.drawImage(lay.M,0,0); any=true; });   /* each little crown patch turning as the gust gets to it */
+    if(!any) return; T.globalAlpha=1; T.globalCompositeOperation="source-in"; T.fillStyle=col; T.fillRect(0,0,w,h);
+    ctx.save(); ctx.globalAlpha=alpha; ctx.globalCompositeOperation=op||"screen"; ctx.drawImage(lay.T,0,0,w,h,0,lay.oy/lay.k,w/lay.k,h/lay.k); ctx.restore(); }
+  function drawSilver(dt){ if(svA<=.01||!photo){ svDeb.length=0; return; } const key=W+"x"+H; if(svKey!==key){ svKey=key; svLay=makeSvLayers(false); svFar=makeSvLayers(true); }
+    const dir=(window.__seedDir||-1)>0? 1 : -1, ts=skyEv&&skyEv.k==="silver"? t-skyEv.t0 : 99, A=svA*(nA>.3? .25 : 1);
+    if(svFar&&svFar.length) svSet(svFar,SV_GF,"rgba(196,206,206,.95)",A*.42,ts,dir,"source-over");   /* the far mountain first, softer and hazier */
+    if(svLay&&svLay.length) svSet(svLay,SV_GU,"rgba(204,222,200,.95)",A,ts,dir);
+    drawSvDebris(dt||1/30,dir,ts,A); }
+  /* debris on the wind: torn leaves, bits of seed and chaff whipped up off the trees and the field as each gust goes through, tumbling and spinning past.
+     Plain little flecks, cheap to draw, the near ones bigger and faster */
+  const svDeb=[]; const SVD_C=[[120,84,40],[150,112,52],[92,70,40],[176,140,70],[110,108,52],[70,52,34]];
+  function drawSvDebris(dt,dir,ts,A){ const cap=MOBILE()? 45 : 110;
+    if(ts<40&&svLay){ const yT=svLay.oy/svLay.k, yB=Math.min(H*.9,(svLay.oy+svLay[0].c.height)/svLay.k+H*.12);
+      for(const g of SV_GU){ const tg=ts-g.s; if(tg<0||tg>18) continue; const xf=-.25+tg*g.v; if(xf<-.05||xf>1.08) continue; const fx=(dir>0? xf : 1-xf)*W;
+        let n=dt*(heavy? 14 : 30)*g.a; while(n>0&&svDeb.length<cap){ if(Math.random()>n){ break; } n-=1; const y=lerp(yT,yB,Math.pow(Math.random(),.8)), dep=Math.max(0,Math.min(1,(y-yT)/(yB-yT))), c=SVD_C[(Math.random()*SVD_C.length)|0];
+          svDeb.push({x:fx+(Math.random()-.6)*W*.05*dir,y,vx:dir*W*(g.v*1.1+.03+dep*.12+Math.random()*.06),vy:-(H*(.02+Math.random()*.07)),sz:(1.4+dep*5.5)*(.6+Math.random()*.8)*Math.max(.7,W/1400),r:Math.random()*6.283,vr:(Math.random()-.5)*14,ph:Math.random()*6.283,life:0,max:1.6+Math.random()*2.4,c,lt:.55+Math.random()*.5}); } } }
+    if(!svDeb.length) return; const x=ctx; x.save();
+    for(let i=svDeb.length-1;i>=0;i--){ const q=svDeb[i]; q.life+=dt; if(q.life>q.max||q.x<-40||q.x>W+40){ svDeb.splice(i,1); continue; }
+      q.vy+=(H*.05-q.vy*.8)*dt; q.x+=q.vx*dt; q.y+=(q.vy+Math.sin(t*6+q.ph)*H*.03)*dt; q.r+=q.vr*dt;   /* lifted, fluttering, slowly settling as it goes */
+      const fl=Math.cos(q.r*1.7), a=Math.min(1,q.life/.25,(q.max-q.life)/.6)*A;   /* tumbling: it flicks edge-on and back, catching the light as it turns */
+      x.globalAlpha=Math.max(0,a)*.9; x.fillStyle=rgb(mulv(q.c,q.lt*(.75+.35*Math.abs(fl)))); x.beginPath(); x.ellipse(q.x,q.y,q.sz,Math.max(.4,q.sz*.55*Math.abs(fl)),q.r,0,6.283); x.fill(); }
+    x.restore(); }
   /* ---- a sun shower: rain falling while the sun is still out, every drop lit gold, splashing on the lawn ---- */
   let ssDrops=null, ssSplash=[];
   function drawSunShower(dt,dark){ if(ssA<=.01){ ssDrops=null; ssSplash.length=0; return; } const n=MOBILE()? 170 : 420, hz=gnd().vy, sp=sun(), sc=H/800;
@@ -1138,7 +1160,7 @@ const ambient=(function(){ let heavy=false;
     if(pendingDay&&!nightHold&&nA<.15){ const k=pendingDay; pendingDay=null; setTimeout(()=>{ try{ ambient.spawn(k); }catch(e){} },0); }
     stepTimeline(dt,on);
     if(skyEv&&t>skyEv.t1) skyEv=null;
-    const k=skyEv&&skyEv.k; nA=approach(nA,skyEv&&NIGHT_EV.includes(k)? 1 : 0,dt/(dawnSlow>0&&!(skyEv&&NIGHT_EV.includes(k))? dawnSlow : 3.5)); if(dawnSlow>0&&nA<=0&&duskV<=.01) dawnSlow=0; csA=approach(csA,k==="shadows"? 1 : 0,dt/6); sdA=approach(sdA,k==="sundogs"? 1 : 0,dt/5); if(k==="balloon"&&!balloon) balloon=newBalloon(); if(balloon){ balloon.t+=dt; if(balloon.t>balloon.dur) balloon=null; } sbA=approach(sbA,k==="sunburst"? 1 : 0,dt/(k==="sunburst"? 4 : 6)); auA=approach(auA,k==="aurora"? 1 : 0,dt/5); mwA=approach(mwA,k==="milkyway"? 1 : 0,dt/5); shA=approach(shA,k==="shower"? 1 : 0,dt/3); coA=approach(coA,k==="comet"? 1 : 0,dt/5); ssA=approach(ssA,k==="sunshower"&&t<skyEv.t1-9? 1 : 0,dt/(k==="sunshower"? 3 : 7)); svA=approach(svA,k==="silver"&&t<skyEv.t1-4? 1 : 0,dt/2); if(k==="silver"){ if(!skyEv.puffed){ skyEv.puffed=true; skyEv.gi=0; window.__seedDir=Math.random()<.5? -1 : 1; } const ts=t-skyEv.t0, g=SV_GU[skyEv.gi]; if(g&&ts>=g.s){ skyEv.gi++; try{ natureSfx.gustPass&&natureSfx.gustPass((window.__seedDir||-1)>0? 1 : -1,.25/g.v,1.25/g.v,g.a); }catch(e){} } }
+    const k=skyEv&&skyEv.k; nA=approach(nA,skyEv&&NIGHT_EV.includes(k)? 1 : 0,dt/(dawnSlow>0&&!(skyEv&&NIGHT_EV.includes(k))? dawnSlow : 3.5)); if(dawnSlow>0&&nA<=0&&duskV<=.01) dawnSlow=0; csA=approach(csA,k==="shadows"? 1 : 0,dt/6); sdA=approach(sdA,k==="sundogs"? 1 : 0,dt/5); if(k==="balloon"&&!balloon) balloon=newBalloon(); if(balloon){ balloon.t+=dt; if(balloon.t>balloon.dur) balloon=null; } sbA=approach(sbA,k==="sunburst"? 1 : 0,dt/(k==="sunburst"? 4 : 6)); auA=approach(auA,k==="aurora"? 1 : 0,dt/5); mwA=approach(mwA,k==="milkyway"? 1 : 0,dt/5); shA=approach(shA,k==="shower"? 1 : 0,dt/3); coA=approach(coA,k==="comet"? 1 : 0,dt/5); ssA=approach(ssA,k==="sunshower"&&t<skyEv.t1-9? 1 : 0,dt/(k==="sunshower"? 3 : 7)); svA=approach(svA,k==="silver"&&t<skyEv.t1-4? 1 : 0,dt/2); if(k==="silver"){ if(!skyEv.puffed){ skyEv.puffed=true; skyEv.gi=0; window.__seedDir=Math.random()<.5? -1 : 1; } const ts=t-skyEv.t0, g=SV_GU[skyEv.gi]; if(g&&ts>=g.s){ skyEv.gi++; try{ natureSfx.gustPass&&natureSfx.gustPass((window.__seedDir||-1)>0? 1 : -1,.25/g.v,1.25/g.v,g.a); }catch(e){} } const gf=SV_GF[skyEv.gf||0]; if(gf&&ts>=gf.s){ skyEv.gf=(skyEv.gf||0)+1; try{ natureSfx.gustPass&&natureSfx.gustPass((window.__seedDir||-1)>0? 1 : -1,.25/gf.v,1.25/gf.v,gf.a*.32,true); }catch(e){} } }
     sdsA=approach(sdsA,k==="seeds"&&t<skyEv.t1-6? 1 : 0,dt/3); { const tb=k==="seeds"? t-skyEv.t0 : 99, sm2=(a,b,v)=>{ const q=Math.max(0,Math.min(1,(v-a)/(b-a))); return q*q*(3-2*q); }; const g1=sm2(0,1.3,tb)*(1-sm2(3.5,8,tb)*.55), g2=sm2(5.5,6.8,tb)*(1-sm2(8.5,15,tb)), goal0=tb<40? Math.max(g1*(1-sm2(8,16,tb)),g2*.95) : 0; let goal=goal0; if(k==="silver"){ const ts=t-skyEv.t0; goal=Math.max(0,Math.min(1,ts/1.5))*(1-Math.max(0,Math.min(1,(ts-22)/6)))*(.1+.04*Math.sin(ts*.9)); } gustB+=(goal-gustB)*Math.min(1,dt*3); }   /* the burst: it hits, eases, shoves again, then blows itself out */ mrA=approach(mrA,k==="moonrise"? 1 : 0,dt/(k==="moonrise"? 2 : 6)); if(k==="moonrise") mrP=Math.min(1,Math.max(0,t-skyEv.t0-2)/48); else if(mrA<=0) mrP=0;
     try{ natureSfx.rain&&natureSfx.rain(ssA); }catch(e){}
     if(k==="sunshower"&&!skyEv.rbDone&&t>skyEv.t1-16){ skyEv.rbDone=true; if(!rb) startRainbow(true); }   /* as it passes, the bow comes out in the last of it */
@@ -8548,7 +8570,7 @@ const ambient=(function(){ let heavy=false;
       ctx.globalAlpha=Math.min(1,a); ctx.fillStyle=k>.35?"#fff6dc":"#fffaf0"; ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,6.283); ctx.fill();
     };
     stepLull(dt);
-    if(img){ drawScene(dark); stepDusk(dt); drawDusk(dark); drawUtvTracks(dark); drawTracks(dark); drawHaze(dt,dark); drawMist(dark); drawRays(dt,dark); drawSunburst(); drawSundogs(); drawBalloon(); drawSilver(); }
+    if(img){ drawScene(dark); stepDusk(dt); drawDusk(dark); drawUtvTracks(dark); drawTracks(dark); drawHaze(dt,dark); drawMist(dark); drawRays(dt,dark); drawSunburst(); drawSundogs(); drawBalloon(); drawSilver(dtF); }
     const nlMain=nightLayerBegin();   /* at night everything out in the field is drawn on its own layer and then lit like the scene: darker, cooler, the colour drained */
     stepFlurries(dt); for(const l of leaves) if(!l.off) step3D(l,dt);
     leaves.sort((a,b)=>(b.D||0)-(a.D||0));
@@ -9128,7 +9150,7 @@ const viewInfo=(function(){
     ["County","Garrett County, Maryland"],
     ["Range","Allegheny Mountains"],
     ["Mountain system","Appalachian Mountains"]];
-  const PIN=`<svg viewBox="0 0 30 38" aria-hidden="true"><path d="M15 1.5C7.6 1.5 1.8 7.2 1.8 14.4c0 9.6 11.1 20.3 12.3 21.5.5.5 1.3.5 1.8 0 1.2-1.2 12.3-11.9 12.3-21.5C28.2 7.2 22.4 1.5 15 1.5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14.2" r="7.4" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="15" cy="10.7" r="1.15" fill="currentColor"/><path d="M15 13.2v5.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+  const PIN=`<svg viewBox="0 0 30 38" aria-hidden="true"><path d="M15 1.5C7.6 1.5 1.8 7.2 1.8 14.4c0 9.6 11.1 20.3 12.3 21.5.5.5 1.3.5 1.8 0 1.2-1.2 12.3-11.9 12.3-21.5C28.2 7.2 22.4 1.5 15 1.5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="16.4" cy="9" r="1.35" fill="currentColor"/><path d="M15.9 12.4L14.5 18.4Q14.2 19.9 15.9 19.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   /* a little engraving for the top: two wedding rings set in a setting sun, its rays fanning out, ridge lines folding away below, a pair of birds */
   /* the top of the card: two wedding rings linked together, one with its solitaire diamond catching the light, cradled in two laurel sprigs */
   function ringsArt(){
