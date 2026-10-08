@@ -376,7 +376,7 @@ var natureSfx=(function(){
 })();
 const ambient=(function(){
   const cv=document.createElement("canvas"); cv.id="ambient"; cv.setAttribute("aria-hidden","true"); document.body.prepend(cv);
-  let ctx=cv.getContext("2d"); let camX=0, camY=0, camZ=1, moundZ=0, dtF=.016; let W=0,H=0, leaves=[], motes=[], last=0, raf=0, t=0;
+  let ctx=cv.getContext("2d"); let camX=0, camY=0, camZ=1, moundZ=0, dtF=.016; const moundRise=()=>{ const L=logC; if(!L||L.hold) return 0; const sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; let o=H*.16*(1-sm(L.t/2.6)); if(L.t>L.life) o+=H*.1*sm((L.t-L.life)/1.6); return o; };   /* the rise comes up into the frame from below as we draw back, and sinks away again */ let W=0,H=0, leaves=[], motes=[], last=0, raf=0, t=0;
   const reduce=window.matchMedia("(prefers-reduced-motion: reduce)"), darkQ=window.matchMedia("(prefers-color-scheme: dark)");
   let on=true; try{ on=localStorage.getItem(SC.key+"-ambient")!=="off"; }catch(e){}
   const LEAF=["#b5532a","#c9772b","#d89a3a","#a33b25","#8c5a2b","#c4882f","#9e6b2e"];
@@ -5264,7 +5264,7 @@ const ambient=(function(){
   function drawLogCrawler(dt,dark){ nextLogAuto-=(lull>0? 0 : dt); if(!logC&&nextLogAuto<=0){ if(stageBusy()||nA>.3||(barkMap&&!barkMap.done)) nextLogAuto=rnd(15,30); else { startLogCrawler(Math.random()<.4? pick(["killdeer","woodcock","bobwhite","grouse","pheasant"]) : pick(["skink","skink","eft","eft","turtle","slimy"])); nextLogAuto=rnd(260,480); } }   /* now and then a skink or an eft comes out on its own, onto a stick in the grass */
     if(!logC) return; const L=logC; if(L.hold){ L.holdT+=dt; if(L.holdT<5&&hillOcc(L).length){ if(Math.floor(L.holdT*2)!==Math.floor((L.holdT-dt)*2)) clearHill(L,hillOcc(L)); return; } L.hold=false; }
     L.t+=dt; if(window.Campfire&&Campfire.on&&L.side<0&&L.life>L.t) L.life=L.t;   /* a stick on the left would lie in the fire ring: it fades away; one on the right stays, and the two of them walk round it */
-    const fadeOut=L.t>L.life; L.a= fadeOut? Math.max(0,L.a-dt*.6) : L.t<.5? 0 : Math.min(1,L.a+dt*.9);   /* it waits for the camera to lean in, then rises as we draw back */ if(fadeOut&&L.a<=0){ logC=null; return; }
+    const fadeOut=L.t>L.life; L.a= fadeOut? Math.max(0,L.a-dt*.6) : Math.min(1,L.a+dt*1.2); if(fadeOut&&L.a<=0){ logC=null; return; }
     if(L.bird){ drawGroundBird(L,dt,dark); return; }
     const sp=sun(), sunS=Math.sign(sp.x-(L.x0+Math.cos(L.ang)*L.len*.5*-L.side))||1, lt=dark? .42 : 1, Ln=L.len, nightK=Math.min(1,nA*1.2);
     if(!L.gc||(L.gcT=(L.gcT||0)-1)<=0){ L.gcT=30; const ip=toImg(L.x0-L.side*W*.3,L.y0-H*.04); L.gc=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[110,110,60]; }
@@ -8393,8 +8393,9 @@ const ambient=(function(){
     const dt=Math.min(.07,(ts-(last||ts))/1000); last=ts; t+=dt; dtF=dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
     camX=(Math.sin(t*.23)*9+Math.sin(t*.61+1)*4)*.9; camY=(Math.cos(t*.19+.5)*6+Math.sin(t*.47)*3)*.9; camZ=1+30/Math.min(W,H)+.035*(.5-.5*Math.cos(t*2*Math.PI/48));   /* and slowly breathes in and out, about once every 48 seconds */   /* the hand-held drift: the whole view sways together */
-    { const L=logC; let mz=0; if(L&&!L.hold){ const sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; mz=.1*(sm(L.t/.6)*(1-sm((L.t-.6)/3))); if(L.t>L.life) mz=Math.max(mz,.04*sm((L.t-L.life)/1.6)); } moundZ+=(mz-moundZ)*Math.min(1,(MOBILE()? 6 : 8)*(dtF||.016)); }   /* the camera eases in a touch, then draws back as the near rise comes up in front of us */
-    if(SC.shown()){ const z=camZ*(1+moundZ), py=H*.28; ctx.setTransform(z,0,0,z,(1-z)*W/2+camX,(1-z)*py+(1-camZ)*(H/2-py)+camY); }
+    { const L=logC, sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; let k=0; if(L&&!L.hold){ k=sm(L.t/2.6); if(L.t>L.life) k*=1-sm((L.t-L.life)/1.6); } moundZ=k; }   /* 0..1: how far the camera has drawn back for the near rise */
+    if(SC.shown()){ const pull=moundZ*(1-1/camZ)*.92, z=camZ*(1-pull), fk=Math.max(0,(z-1)/Math.max(1e-3,camZ-1)), py=H*.3, cX=camX*fk, cY=camY*fk;   /* drawing back: the frame widens toward the whole photograph, the near rise rising into it from below */
+      ctx.setTransform(z,0,0,z,(1-z)*W/2+cX,(1-z)*py+cY); }
     const dark=document.documentElement.dataset.theme==="dark"||(document.documentElement.dataset.theme!=="light"&&darkQ.matches);
     const sp=sun(), R=Math.max(W,H)*.6, img=SC.shown();
     const drawMote=m=>{
@@ -8451,7 +8452,7 @@ const ambient=(function(){
       drawHenAll(dt,dark,L);
       if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||hawkG.state==="lift")) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L); tomQueue(dt,dark,L);
-      L.push({y:logC&&!stickBehindSomeone()? 1e9 : -1e9,fn:()=>drawLogCrawler(dt,dark)});   /* by the campfire the two of them walk out in front of it, so then it sits behind */   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
+      L.push({y:logC&&!stickBehindSomeone()? 1e9 : -1e9,fn:()=>{ const off=moundRise(); if(off){ ctx.save(); ctx.translate(0,off); drawLogCrawler(dt,dark); ctx.restore(); } else drawLogCrawler(dt,dark); }});   /* by the campfire the two of them walk out in front of it, so then it sits behind */   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
       steerClear([fox,skunk,cub,mom,coyote,coy2,bobcat,pheasW,dog,lab,racc,beaver,...["hog","possum","otter","porc"].map(k=>WAD[k].get()),...quails,...buns,...wcs,...sqs,...smalls,doe,doe&&doe.fawn]);
       for(const pl of PLUGS) if(pl.lawn) try{ pl.lawn(L,dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }
