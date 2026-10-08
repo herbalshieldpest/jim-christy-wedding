@@ -8021,10 +8021,11 @@ const ambient=(function(){
       ctx.fillStyle=g; ctx.fillRect(q.x,q.y0,q.w,q.y1-q.y0); }
     ctx.restore(); }
   let frameErr=0;
+  let menuEl=null, menuT=0, menuOn=false; const menuUp=()=>{ const n=performance.now(); if(n-menuT>250){ menuT=n; menuOn=!!document.querySelector(".cc-back.on,.vi-back.on"); } return menuOn; };
   function frame(ts){
     raf=0; if(!running()) { ctx.clearRect(0,0,W,H); return; }
     raf=requestAnimationFrame(frame);
-    if(last && ts-last<28) return;                                         /* ~30 frames a second is plenty for drifting things */
+    if(last && ts-last<(menuUp()? 140 : 28)) return;                                         /* ~30 frames a second is plenty for drifting things; with a menu open over it, the scene just ticks over gently */
     try{ frameBody(ts); }
     catch(e){ if(frameErr++<3) console.warn("scenery:",e); for(let i=0;i<24;i++) ctx.restore(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation="source-over"; ctx.filter="none"; }   /* one bad frame never stops the whole scene */
   }
@@ -8577,7 +8578,8 @@ const critterMenu=(function(){
 .cc-sec.sky-day .cc-si{color:#f0d29a}.cc-sec.sky-night .cc-si{color:#d6dcf2}
 .cc-sec.sky-day{color:rgba(240,216,168,.82)}.cc-sec.sky-night{color:rgba(216,224,246,.82)}
 @media (max-height:690px) and (min-width:1100px){.cc-sub{display:none}.cc-sec{margin:7px 0 3px}.cc-title{font-size:28px}.cc-tile{padding-top:3px;padding-bottom:3px}}
-@media (prefers-reduced-motion:reduce){.cc-back,.cc-panel,.cc-tile svg,.cc-toast{transition:none}}`;
+@media (prefers-reduced-motion:reduce){.cc-back,.cc-panel,.cc-tile svg,.cc-toast{transition:none}}
+@media (max-width:900px),(hover:none){.cc-back,.cc-panel,.cc-toast{-webkit-backdrop-filter:none;backdrop-filter:none}.cc-back{background:rgba(12,8,4,.6)}.cc-tile svg{filter:none}}`;   /* on phones: no live blur behind the menu and no shadows on its seventy icons, which phones struggle to redraw */
   let back=null, last=null, toastEl=null, toastT=null;
   function build(){
     const st=document.createElement("style"); st.textContent=CSS; document.head.append(st);
