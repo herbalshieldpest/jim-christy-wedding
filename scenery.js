@@ -3868,7 +3868,7 @@ const ambient=(function(){
     /* light: the low sun (often behind it), the sky's cool fill from above, warm light wrapping round the rim */
     const back=Math.max(0,sunL[2]), glow=o.glow||0;
     const shade=(c,n)=>{ const lam=Math.max(0,v3.d(n,sunL)), sky=.5+.5*v3.d(n,UPW), fe=Math.max(0,v3.d(n,toEye)), rim=Math.pow(1-fe,2.6)*(.35+.65*back)*(1-Math.max(0,-v3.d(n,UPW))*.6);
-      const sd=Math.hypot(sunL[0],sunL[1])||1, rd=.25+.75*Math.max(0,(n[0]*sunL[0]+n[1]*sunL[1])/sd), rk=rim*rd*(.5+.5*Math.max(0,1-lum3(c)/200)), k=(sp.ground? .56 : .42)+.3*sky+(sp.ground? .5 : .62)*lam; return [c[0]*k+rk*85+6*(1-lam),c[1]*k+rk*60+8*(1-lam),c[2]*k+rk*30+16*(1-lam)]; };   /* the rim of light only on the side toward the sun */
+      const sd=Math.hypot(sunL[0],sunL[1])||1, rd=.25+.75*Math.max(0,(n[0]*sunL[0]+n[1]*sunL[1])/sd), rk=rim*rd*(.5+.5*Math.max(0,1-lum3(c)/200)), k=(sp.ground? .47 : .42)+.3*sky+(sp.ground? .58 : .62)*lam; return [c[0]*k+rk*85+6*(1-lam),c[1]*k+rk*60+8*(1-lam),c[2]*k+rk*30+16*(1-lam)]; };   /* the rim of light only on the side toward the sun */
     const lum3=c=>c[0]*.3+c[1]*.59+c[2]*.11;
     const fillQuads=(L,colAt)=>{ for(let i=0;i<L.nr;i++) for(let j=0;j<NT;j++){ const n=L.nrm[i][j], n2=L.nrm[i+1][j+1], nn=v3.n(v3.a(n,n2)); if(v3.d(nn,toEye)<-.12) continue;
         const c=shade(colAt(L.R[i][0]*.5+L.R[i+1][0]*.5,(j+.5)/NT*6.283),nn), a=L.pts[i][j], b=L.pts[i+1][j], c2=L.pts[i+1][j+1], d=L.pts[i][j+1];
@@ -3887,7 +3887,7 @@ const ambient=(function(){
       if(K==="bobwhite"){ let c=mixv(C.breast,C.back,sm(.1,.45,v)); c=mixv(c,C.belly,sm(.05,-.45,v)*sm(2.4,.5,s)); return mixv(c,[24,18,14],sm(3.2,3.5,s)*sm(.2,-.1,v)); }   /* chestnut flanks, pale belly, the black band under the white throat */
       if(K==="grouse"){ let c=mixv(C.belly,C.back,sm(-.25,.35,v)); return mixv(c,[24,18,14],sm(2.9,3.2,s)*sm(4,3.6,s)*sm(.45,.25,Math.abs(v))*sm(-.6,-.3,v)); }   /* the black ruff on the side of the neck */
       if(K==="wpw"){ return mixv(C.belly,C.back,sm(-.3,.3,v)); }
-      if(K==="pheasant"){ let c=mixv(C.breast,C.back,sm(0,.5,v)); c=mixv(c,C.belly,sm(-.45,-.8,v)*sm(1.5,-1,s)); c=mixv(c,[128,140,126],sm(-2.8,-3.6,s)*sm(.05,.35,v)); return c; }   /* copper, the grey-green rump, the white ring below the dark green neck */
+      if(K==="pheasant"){ let c=mixv(mixv([212,140,60],[140,56,28],sm(1.2,2.2,s)),C.back,sm(.15,.55,v)); c=mixv(c,C.belly,sm(-.45,-.8,v)*sm(1.5,-1,s)); c=mixv(c,[128,140,126],sm(-2.8,-3.6,s)*sm(.05,.35,v)); return c; }   /* copper, the grey-green rump, the white ring below the dark green neck */
       if(K==="waxwing"){ let c=mixv(C.breast,C.back,sm(-.1,.45,v)); c=mixv(c,[132,130,136],sm(-1.5,-4.2,s)*sm(-.1,.5,v)); c=mixv(c,C.belly,sm(-.6,-3,s)*sm(.15,-.45,v)); return mixv(c,[238,236,230],sm(-3.8,-5.2,s)*sm(-.1,-.6,v)); }   /* silky fawn breast, grey rump, pale yellow belly, white under the tail */
       if(K==="jay"){ let c=mixv(mixv(C.belly,C.breast,sm(-2.5,1,s)),C.back,sm(-.2,.25,v)); return mixv(c,[16,16,22],sm(2.7,3.2,s)*sm(4.4,3.9,s)*sm(.45,.2,v)); }   /* blue back, grey-white breast, the black necklace across the upper breast */
       return mixv(mixv(C.breast,C.back,sm(-.1,.5,v)),C.breast2,sm(-.2,-.8,v)*.3); };
@@ -3941,9 +3941,9 @@ const ambient=(function(){
       if(sp.ground&&WPL[K]){ const P2=WPL[K]; let s3=11; const RN=()=>{ s3=(s3*1664525+1013904223)>>>0; return s3/4294967296; };
         /* the folded wing feather by feather: rows of coverts over the shoulder, then the long flight feathers lying back toward the tail */
         for(let row=0;row<7;row++){ const v0=.1+row*.135; for(let k=0;k<13;k++){ const u=.04+k*.046+row*.025+(RN()-.5)*.02; if(u>.62) continue; const c0=g(u,v0+(RN()-.5)*.05), c1=g(u+.05,v0), ang=Math.atan2(c1[1]-c0[1],c1[0]-c0[0]), L2=px*P2.cs*.72*(.85+RN()*.3), w2=L2*.72;
-            x.fillStyle=rgb(shade(mixv(P2.cov,P2.cov2,RN()),v3.s(Z,sd))); x.beginPath(); x.ellipse(c0[0],c0[1],L2*.55,w2*.5,ang,0,6.283); x.fill();
+            x.globalAlpha=.35; x.fillStyle=rgb(shade(mixv(P2.cov,P2.cov2,RN()),v3.s(Z,sd))); x.beginPath(); x.ellipse(c0[0],c0[1],L2*.55,w2*.5,ang,0,6.283); x.fill(); x.globalAlpha=1;
             if(P2.cm&&RN()<.75){ x.fillStyle=rgb(P2.cm,.55); x.beginPath(); x.ellipse(c0[0]+Math.cos(ang)*L2*.05,c0[1]+Math.sin(ang)*L2*.05,L2*.25,w2*.16,ang,0,6.283); x.fill(); }
-            x.strokeStyle=rgb(P2.ce,.45); x.lineWidth=Math.max(.4,L2*.07); x.beginPath(); x.ellipse(c0[0],c0[1],L2*.52,w2*.47,ang,-1,1); x.stroke(); } }
+            x.strokeStyle=rgb(P2.ce,.28); x.lineWidth=Math.max(.35,L2*.06); x.beginPath(); x.ellipse(c0[0],c0[1],L2*.52,w2*.47,ang,-1,1); x.stroke(); } }
         for(let k=0;k<6;k++){ const v0=.3+k*.11, a=g(.55+k*.012,v0), b=g(.985-k*.03,lerp(.5,.62,k/5)), ang=Math.atan2(b[1]-a[1],b[0]-a[0]), ln=Math.hypot(b[0]-a[0],b[1]-a[1]), wd=px*.55;
           x.fillStyle=rgb(shade(P2.prim,v3.s(Z,sd))); x.beginPath(); x.ellipse((a[0]+b[0])/2,(a[1]+b[1])/2,ln*.52,wd,ang,0,6.283); x.fill();
           if(P2.pb){ x.strokeStyle=rgb(P2.pb,.45); x.lineWidth=Math.max(.5,px*.22); for(let q=.12;q<.95;q+=.16){ const cx2=a[0]+(b[0]-a[0])*q, cy2=a[1]+(b[1]-a[1])*q; x.beginPath(); x.moveTo(cx2-Math.sin(ang)*wd*.9,cy2+Math.cos(ang)*wd*.9); x.lineTo(cx2+Math.sin(ang)*wd*.9,cy2-Math.cos(ang)*wd*.9); x.stroke(); } }
@@ -4045,14 +4045,14 @@ const ambient=(function(){
     const plumage=(L,seed,flen,fn)=>{ const px=Kw*F0/P[2]; if(px<.7) return; let s2=seed; const RN=()=>{ s2=(s2*1664525+1013904223)>>>0; return s2/4294967296; };
       for(let i=1;i<L.nr;i++) for(let j=0;j<NT;j++){ const n=L.nrm[i][j], vis=v3.d(n,toEye); if(vis<.06){ RN(); RN(); continue; } const r1=RN(), r2=RN(); const m=fn(L.R[i][0],j/NT*6.283,r1); if(!m) continue;
         const p=L.pts[i][j], q=L.pts[i-1][j], dx=q[0]-p[0], dy=q[1]-p[1], dl=Math.hypot(dx,dy)||1, ux=dx/dl, uy=dy/dl, ang=Math.atan2(uy,ux), len=flen*(m.sz||1)*px*(.8+.4*r2), w=len*.78*Math.max(.4,vis), c0=[p[0]+ux*len*.22+(r1-.5)*len*.15,p[1]+uy*len*.22+(r2-.5)*len*.12];
-        x.globalAlpha=.92; x.fillStyle=rgb(shade(m.b,n)); x.beginPath(); x.ellipse(c0[0],c0[1],len*.55,w*.5,ang,0,6.283); x.fill();
-        if(m.k){ x.fillStyle=x.strokeStyle=rgb(shade(m.mc,n)); x.globalAlpha=m.ma||.9;
+        { const fc=shade(m.b,n), gx=x.createLinearGradient(c0[0]-ux*len*.55,c0[1]-uy*len*.55,c0[0]+ux*len*.55,c0[1]+uy*len*.55); gx.addColorStop(0,rgb(mulv(fc,.78))); gx.addColorStop(.6,rgb(fc)); gx.addColorStop(1,rgb(mixv(fc,[255,244,226],.12))); x.globalAlpha=.26; x.fillStyle=gx; x.beginPath(); x.ellipse(c0[0],c0[1],len*.55,w*.5,ang,0,6.283); x.fill(); }   /* only a breath of each feather's own tone: the body's round light and shade stay in charge */
+        if(m.k){ x.fillStyle=x.strokeStyle=rgb(shade(m.mc,n)); x.globalAlpha=(m.ma||.9)*.62;
           if(m.k==="center"){ x.beginPath(); x.ellipse(c0[0]+ux*len*.05,c0[1]+uy*len*.05,len*.28,w*.2,ang,0,6.283); x.fill(); }
           else if(m.k==="tip"){ const tx=c0[0]+ux*len*.32, ty=c0[1]+uy*len*.32, vx=-uy, vy=ux; x.beginPath(); x.moveTo(tx+ux*len*.2,ty+uy*len*.2); x.lineTo(tx-vx*w*.3,ty-vy*w*.3); x.lineTo(tx-ux*len*.05,ty-uy*len*.05); x.lineTo(tx+vx*w*.3,ty+vy*w*.3); x.closePath(); x.fill(); }
           else if(m.k==="bar"){ const vx=-uy, vy=ux; for(const o2 of m.bars||[.0]){ const bx=c0[0]+ux*len*o2, by=c0[1]+uy*len*o2; x.lineWidth=Math.max(.5,len*.12); x.beginPath(); x.moveTo(bx-vx*w*.42,by-vy*w*.42); x.quadraticCurveTo(bx-ux*len*.08,by-uy*len*.08,bx+vx*w*.42,by+vy*w*.42); x.stroke(); } }
           else if(m.k==="v"){ const vx=-uy, vy=ux, tx=c0[0]+ux*len*.3, ty=c0[1]+uy*len*.3; x.lineWidth=Math.max(.5,len*.1); x.beginPath(); x.moveTo(tx-ux*len*.25-vx*w*.3,ty-uy*len*.25-vy*w*.3); x.lineTo(tx,ty); x.lineTo(tx-ux*len*.25+vx*w*.3,ty-uy*len*.25+vy*w*.3); x.stroke(); }
           else if(m.k==="shaft"){ x.lineWidth=Math.max(.4,len*.07); x.beginPath(); x.moveTo(c0[0]-ux*len*.35,c0[1]-uy*len*.35); x.lineTo(c0[0]+ux*len*.4,c0[1]+uy*len*.4); x.stroke(); } }
-        if(m.e){ x.globalAlpha=(m.ea||.85)*.7; x.strokeStyle=rgb(shade(m.e,n)); x.lineWidth=Math.max(.45,len*(m.ew||.1)); x.beginPath(); x.ellipse(c0[0],c0[1],len*.52,w*.47,ang,-1.15,1.15); x.stroke(); } }
+        if(m.e){ x.globalAlpha=(m.ea||.85)*.4; x.strokeStyle=rgb(shade(m.e,n)); x.lineWidth=Math.max(.35,len*(m.ew||.1)*.7); x.beginPath(); x.ellipse(c0[0],c0[1],len*.52,w*.47,ang,-1.15,1.15); x.stroke(); } }
       x.globalAlpha=1; };
     const WPL={
       pheasant:{cov:[188,150,100],cov2:[204,170,120],cm:[70,50,32],ce:[236,222,190],cs:1.15,prim:[120,94,66],pb:[206,184,140]},
