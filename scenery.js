@@ -3624,12 +3624,12 @@ const ambient=(function(){
     oriole:{head:.98,bl:10.5,bd:3.6,cone:.3,tail:1.02,full:.98,upright:.95},
     waxwing:{head:1.02,bl:6.6,bd:3.8,cone:.25,tail:.86,full:1.08,crest:1,upright:.95},
     /* the ground birds, walking the near rise: long legs with a heel on the killdeer, the woodcock's long bill and high-set eye, the gamebirds round and deep-bodied */
-    killdeer:{head:.8,bl:9.5,bd:2.4,cone:0,tail:1.2,full:.92,deep:.95,ground:1,leg:6.4,knee:1},
-    woodcock:{head:1.0,bl:50,bd:2.9,cone:0,tail:.42,full:1.14,deep:1.1,ground:1,leg:2.0,eyeS:.25,eyeTh:1.0,eyeR:1.35},
-    bobwhite:{head:.82,bl:5.6,bd:4.6,cone:.8,tail:.5,full:1.28,deep:1.14,ground:1,leg:2.6},
-    grouse:{head:.72,bl:6,bd:4.2,cone:.6,tail:1.05,full:1.2,deep:1.12,ground:1,leg:2.9,crest:1,feath:1,tbar:1,tband:1},
-    wpw:{head:1.05,bl:2.4,bd:2.6,cone:0,tail:1.3,full:1.05,deep:.78,ground:1,leg:.5,eyeS:1.0,eyeTh:.5,eyeR:1.55,flat:1},
-    pheasant:{head:.62,bl:8,bd:3.9,cone:.5,tail:2.1,ptail:1,full:1.02,deep:1.02,ground:1,leg:4.4,tbar:1}};
+    killdeer:{head:.62,bl:9.5,bd:2.4,cone:0,tail:1.15,full:.9,deep:.92,blen:1.05,ground:1,leg:6.4,knee:1,neck:1.5,neckA:.95,neckW:1.05},
+    woodcock:{head:.76,bl:44,bd:2.9,cone:0,tail:.42,full:1.14,deep:1.1,ground:1,leg:2.0,eyeS:.25,eyeTh:1.0,eyeR:1.35},
+    bobwhite:{head:.56,bl:5.6,bd:4.6,cone:.8,tail:.5,full:1.24,deep:1.1,ground:1,leg:2.6,neck:.9,neckA:.55,neckW:1.35},
+    grouse:{head:.5,bl:6,bd:4.2,cone:.6,tail:1.0,full:1.18,deep:1.1,blen:1.15,ground:1,leg:2.9,neck:1.7,neckA:.72,neckW:1.25,crest:1,feath:1,tbar:1,tband:1},
+    wpw:{head:.84,bl:2.4,bd:2.6,cone:0,tail:1.3,full:1.05,deep:.78,ground:1,leg:.5,eyeS:1.0,eyeTh:.5,eyeR:1.55,flat:1},
+    pheasant:{head:.44,bl:8.5,bd:3.9,cone:.5,tail:2.3,ptail:1,full:1.0,deep:1.0,blen:1.25,ground:1,leg:4.4,tbar:1,neck:4.2,neckA:1.2,neckW:.9}};
   function cmPath(c,P,closed){ const n=P.length, g=i=>P[closed? (i+n)%n : Math.max(0,Math.min(n-1,i))]; c.moveTo(P[0][0],P[0][1]);
     for(let i=0;i<(closed? n : n-1);i++){ const p0=g(i-1), p1=g(i), p2=g(i+1), p3=g(i+2); c.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1]); } if(closed) c.closePath(); }
   function perchBird2D(x,C,S,o){   /* o: {look (-1..1), nod, flick, gape, breath, crouch, wflick, lit (0..1 how much the sun-side shows), sunSide (+1 right / -1 left in bird space)} */
@@ -3757,8 +3757,9 @@ const ambient=(function(){
     const P2=P[2], PJ=w=>{ const ze=P2+(w[2]-P2)*.12, k=P2/ze; return proj(w[0]*k,w[1]*k,P2); };   /* seen from a little way off: nearly orthographic about the bird, so a wing toward us doesn't balloon */
     const cr=o.crouch||0, br=(1+Math.sin(o.breath||0)*.012)*(1-.1*(1-(o.fold==null? 1 : o.fold)));
     /* body sections [along, half-width, half-height, centre-height], tail end first; a little fuller and lower when it crouches */
-    const deepK=sp.deep||1, BS0=[[-5.6,.85,.7,.55],[-4.6,1.6,1.45,.2],[-3.1,2.3,2.25,-.25],[-1.3,2.75*full,2.8,-.45-cr*.2],[.6,2.85*full,2.95,-.38-cr*.25],[2.2,2.65*full,2.75,-.1],[3.4,2.2,2.3,.35],[4.2,1.75,1.9,.75]].map(q=>[q[0],q[1]*br,q[2]*br*deepK,q[3]*deepK]), BS=BS0;
-    const neck=W(P,A,Y,Z,3.7,0,.9+cr*-.3), HO=v3.a(neck,v3.s(v3.a(v3.s(HF,.55*(1-sinP)+.25),v3.s(HY,.35+.55*sinP-cr*.4)),Kw));
+    const BL=sp.blen||1, deepK=sp.deep||1, BS0=[[-5.6,.85,.7,.55],[-4.6,1.6,1.45,.2],[-3.1,2.3,2.25,-.25],[-1.3,2.75*full,2.8,-.45-cr*.2],[.6,2.85*full,2.95,-.38-cr*.25],[2.2,2.65*full,2.75,-.1],[3.4,2.2,2.3,.35],[4.2,1.75,1.9,.75]].map(q=>[q[0]*BL,q[1]*br,q[2]*br*deepK,q[3]*deepK]), BS=BS0;
+    const NKL=sp.neck||0, nb=NKL? W(P,A,Y,Z,3.0*BL,0,.4*deepK) : null, nka=(sp.neckA||.8)+Math.min(0,o.nod||0)*1.25+(o.headUp||0)*.2, ndir=NKL? v3.n(v3.a(v3.s(hdg,Math.cos(nka)),v3.s(UPW,Math.sin(nka)))) : null;
+    const neck=NKL? v3.a(nb,v3.s(ndir,NKL*Kw)) : W(P,A,Y,Z,3.7*BL,0,.9+cr*-.3), HO=NKL? v3.a(neck,v3.s(v3.a(v3.s(HF,.55),v3.s(HY,.25)),Kw*hs)) : v3.a(neck,v3.s(v3.a(v3.s(HF,.55*(1-sinP)+.25),v3.s(HY,.35+.55*sinP-cr*.4)),Kw));
     const HS=[[-1.3,1.75,1.8,-.35],[-.2,2.0,2.05,-.05],[.8,2.05,2.08,.12],[1.7,1.85,1.88,.18],[2.45,1.45,1.5,.1],[2.95,1.0,1.05,0],[3.25,.62,.68,-.08]].map(q=>[q[0]*hs,q[1]*hs*(sp.flat? 1.12 : 1),q[2]*hs*(sp.flat? .78 : 1),q[3]*hs]);
     const interp=(S,s)=>{ let i=0; while(i<S.length-2&&S[i+1][0]<s) i++; const a=S[i], b=S[i+1], k=Math.max(0,Math.min(1,(s-a[0])/(b[0]-a[0]))), e=k*k*(3-2*k)*.5+k*.5; return [s,lerp(a[1],b[1],e),lerp(a[2],b[2],e),lerp(a[3],b[3],e)]; };
     const NT=28;
@@ -3794,10 +3795,16 @@ const ambient=(function(){
       if(K==="bobwhite"){ let c=mixv(C.breast,C.back,sm(.1,.45,v)); c=mixv(c,C.belly,sm(.05,-.45,v)*sm(2.4,.5,s)); return mixv(c,[24,18,14],sm(3.2,3.5,s)*sm(.2,-.1,v)); }   /* chestnut flanks, pale belly, the black band under the white throat */
       if(K==="grouse"){ let c=mixv(C.belly,C.back,sm(-.25,.35,v)); return mixv(c,[24,18,14],sm(2.9,3.2,s)*sm(4,3.6,s)*sm(.45,.25,Math.abs(v))*sm(-.6,-.3,v)); }   /* the black ruff on the side of the neck */
       if(K==="wpw"){ return mixv(C.belly,C.back,sm(-.3,.3,v)); }
-      if(K==="pheasant"){ let c=mixv(C.breast,C.back,sm(0,.5,v)); c=mixv(c,C.belly,sm(-.45,-.8,v)*sm(1.5,-1,s)); c=mixv(c,[128,140,126],sm(-2.8,-3.6,s)*sm(.05,.35,v)); c=mixv(c,[26,62,50],sm(3.55,3.75,s)); return mixv(c,[244,242,236],sm(3.25,3.38,s)*sm(3.72,3.6,s)); }   /* copper, the grey-green rump, the white ring below the dark green neck */
+      if(K==="pheasant"){ let c=mixv(C.breast,C.back,sm(0,.5,v)); c=mixv(c,C.belly,sm(-.45,-.8,v)*sm(1.5,-1,s)); c=mixv(c,[128,140,126],sm(-2.8,-3.6,s)*sm(.05,.35,v)); return c; }   /* copper, the grey-green rump, the white ring below the dark green neck */
       if(K==="waxwing"){ let c=mixv(C.breast,C.back,sm(-.1,.45,v)); c=mixv(c,[132,130,136],sm(-1.5,-4.2,s)*sm(-.1,.5,v)); c=mixv(c,C.belly,sm(-.6,-3,s)*sm(.15,-.45,v)); return mixv(c,[238,236,230],sm(-3.8,-5.2,s)*sm(-.1,-.6,v)); }   /* silky fawn breast, grey rump, pale yellow belly, white under the tail */
       if(K==="jay"){ let c=mixv(mixv(C.belly,C.breast,sm(-2.5,1,s)),C.back,sm(-.2,.25,v)); return mixv(c,[16,16,22],sm(2.7,3.2,s)*sm(4.4,3.9,s)*sm(.45,.2,v)); }   /* blue back, grey-white breast, the black necklace across the upper breast */
       return mixv(mixv(C.breast,C.back,sm(-.1,.5,v)),C.breast2,sm(-.2,-.8,v)*.3); };
+    const neckCol=(f,th)=>{ const v=Math.sin(th), hc=headCol0(-1.2*hs,th);
+      if(K==="pheasant"){ let c=mixv([26,64,52],[60,34,86],sm(.3,.9,v)*.4); c=mixv(c,[244,242,236],sm(.08,.14,f)*sm(.32,.24,f)); return mixv(mixv(C.breast,C.back,sm(0,.5,v)),c,sm(-.05,.1,f)); }   /* copper below, then the white ring, then the glossy green neck */
+      if(K==="killdeer"){ let c=mixv([248,246,240],C.back,sm(.45,.7,v)); c=mixv(c,[18,16,14],sm(.0,.1,f)*sm(.42,.32,f)*sm(.6,.4,v)); c=mixv(c,[248,246,240],sm(.42,.5,f)*sm(.8,.72,f)); return mixv(c,hc,sm(.8,1,f)); }   /* the black band, the white collar right round */
+      if(K==="bobwhite"){ let c=mixv([24,18,14],C.back,sm(.2,.5,v)); return mixv(c,hc,sm(.45,.8,f)); }
+      if(K==="grouse"){ let c=mixv(C.belly,C.back,sm(-.3,.3,v)); c=mixv(c,[22,16,12],sm(.4,.2,Math.abs(v))*sm(-.7,-.3,v)*sm(.75,.5,f)); return mixv(c,hc,sm(.75,1,f)); }   /* the black ruff on each side */
+      return mixv(bodyCol0(3.8,th),hc,sm(.3,1,f)); };
     const headCol=(s,th)=>{ const c0=headCol0(s,th); return mixv(c0,bodyCol0(4,th),sm(-.2,-1.3,s/hs)*(C.hood? .35 : .55)); };
     const headCol0=(s,th)=>{ const v=Math.sin(th), fr=s/hs; let c=C.head;
       if(K==="robin"){ c=mixv(C.head,C.throat,sm(-.2,-.6,v)); c=mixv(c,[236,232,222],sm(-.45,-.8,v)*sm(1.2,2.2,fr)); }   /* the white throat */
@@ -3810,13 +3817,13 @@ const ambient=(function(){
       else if(K==="bobwhite"){ c=mixv(C.head,[246,244,238],sm(-.08,-.25,v)*sm(-.2,.3,fr)); c=mixv(c,[22,16,12],sm(-.08,-.25,v)*sm(.3,-.2,fr)); c=mixv(c,[22,16,12],sm(.16,.24,v)*sm(.4,.32,v)*sm(-1.2,-.8,fr)); c=mixv(c,[246,244,238],sm(.38,.44,v)*sm(.58,.52,v)*sm(-1,-.6,fr)); c=mixv(c,[88,52,34],sm(.62,.75,v)); }   /* white throat and brow, the black mask between, dark crown */
       else if(K==="grouse"){ c=mixv(C.throat,C.head,sm(-.4,.1,v)); c=mixv(c,mulv(C.head,.6),sm(.22,.3,v)*sm(.42,.34,v)*sm(.4,.9,fr)); }
       else if(K==="wpw"){ c=mixv(C.head,mulv(C.head,.55),sm(.55,.8,v)*sm(.2,.6,Math.sin(fr*9))); c=mixv(c,[236,228,206],sm(-.3,-.42,v)*sm(-.6,-.5,v)*sm(-.6,0,fr)*sm(1.8,1.2,fr)); c=mixv(c,[48,38,28],sm(-.05,-.2,v)*sm(1.2,2,fr)*.6); }   /* bark-mottled, with the pale band across the throat */
-      else if(K==="pheasant"){ c=mixv(C.head,[66,36,92],sm(.25,.95,v)*.55); const d=Math.hypot((fr-1.25)/1.15,(v-.28)/.48); c=mixv(c,[196,28,26],sm(1.05,.85,d)); }   /* glossy green with a purple sheen, the red face */
+      else if(K==="pheasant"){ c=mixv(C.head,[66,36,92],sm(.25,.95,v)*.55); const d=Math.hypot((fr-1.3)/1.55,(v-.25)/.6); c=mixv(c,[204,30,28],sm(1.05,.85,d)); }   /* glossy green with a purple sheen, the red face */
       else if(K==="waxwing"){ c=mixv(C.head,[236,232,224],sm(.66,.7,v)*sm(.8,.74,v)*sm(2.0,2.8,fr)*.85); c=mixv(c,[12,10,10],sm(-.08,.06,v)*sm(.7,.6,v)*sm(-.4,.3,fr)); c=mixv(c,[16,12,12],sm(-.3,-.55,v)*sm(1.7,2.4,fr)); c=mixv(c,[236,232,224],sm(-.02,-.12,v)*sm(-.3,-.38,v)*sm(1.6,2.4,fr)*.7); }   /* the black mask through the eye, edged white above, the black chin with its white line */
       else if(K==="cardinal"){ c=mixv(C.head,[18,10,10],Math.max(sm(2.0,2.8,fr)*sm(.55,.2,v),sm(1.0,2.0,fr)*sm(-.2,-.55,v))); }   /* the black face round the bill and down the chin */
       return c; };
     /* the folded wing on the near side: a curved shell lying on the flank, shoulder to the crossed wingtips over the tail */
     const wl=K==="finch"||K==="bunting"? .92 : 1;
-    const wingSurf=(sd)=>{ const top=[[3.3,1.5],[1.2,2.3],[-1.4,2.35],[-4,1.75],[-6.4,1.05],[-8.3*wl,.5]], bot=[[3.3,.3],[1.6,-.9],[-1,-1.45],[-3.6,-1.05],[-6.0,-.15],[-8.3*wl,.5]];
+    const wingSurf=(sd)=>{ const top=[[3.3,1.5],[1.2,2.3],[-1.4,2.35],[-4,1.75],[-6.4,1.05],[-8.3*wl,.5]].map(q=>[q[0]*BL,q[1]*deepK]), bot=[[3.3,.3],[1.6,-.9],[-1,-1.45],[-3.6,-1.05],[-6.0,-.15],[-8.3*wl,.5]].map(q=>[q[0]*BL,q[1]*deepK]);
       const at=(arr,u)=>{ const f2=u*(arr.length-1), i=Math.min(arr.length-2,Math.floor(f2)), k=f2-i, a=arr[i], b=arr[i+1], e=k*k*(3-2*k); return [lerp(a[0],b[0],e),lerp(a[1],b[1],e)]; };
       const NU=22, NV=7, G=[], GP=[]; for(let i=0;i<=NU;i++){ const u=i/NU, t0=at(top,u), b0=at(bot,u), row=[], rp=[]; for(let j=0;j<=NV;j++){ const v=j/NV, bx=lerp(t0[0],b0[0],v), by=lerp(t0[1],b0[1],v);
           const S=interp(BS,Math.max(BS[0][0],Math.min(BS[BS.length-1][0],bx))), w=Math.max(.75,S[1]), q=Math.max(-1,Math.min(1,(by-S[3])/S[2])), zz=(bx<-5.4? lerp(.75,.95,v) : w*Math.sqrt(Math.max(.04,1-q*q)))+.22+(1-Math.abs(v-.5)*2)*.15;
@@ -3839,7 +3846,7 @@ const ambient=(function(){
       for(let r=0;r<3;r++) for(let i=0;i<8;i++){ const c0=g(.04+i*.045+r*.05,.12+r*.22+i*.05); if(c0[0]==null) continue; x.fillStyle=rgb(mixv(C.wing2,C.back,.3),.16); x.beginPath(); x.ellipse(c0[0],c0[1],px*.5,px*.3,0,0,6.283); x.fill(); x.strokeStyle=rgb(mixv(C.wing2,[240,236,226],.4),.22); x.lineWidth=lw(.05); x.beginPath(); x.ellipse(c0[0],c0[1],px*.6,px*.36,0,.3,2.8); x.stroke(); }
       if(C.jay){ x.strokeStyle="rgba(10,12,22,.75)"; x.lineWidth=lw(.13); for(let i=0;i<9;i++){ const u0=.3+i*.075; x.beginPath(); x.moveTo(...g(u0,.08)); x.lineTo(...g(u0+.03,.95)); x.stroke(); }   /* the jay's fine black barring */
         for(let i=0;i<7;i++){ const c0=g(.34+i*.05,.88+(i%2)*.04); x.fillStyle="rgba(244,244,240,.85)"; x.beginPath(); x.ellipse(c0[0],c0[1],px*.3,px*.17,.5,0,6.283); x.fill(); } }   /* and the white tips of the secondaries */
-      if(C.wm){ let s3=7; const RN=()=>{ s3=(s3*1664525+1013904223)>>>0; return s3/4294967296; }; for(let k=0;k<90;k++){ const u=.04+RN()*.9, v=.05+RN()*.9, c0=g(u,v), big=RN()<.3; x.fillStyle=rgb(big? C.wm : mixv(C.wing2,[236,224,196],.5),big? .7 : .45); x.beginPath(); x.ellipse(c0[0],c0[1],px*(big? .5 : .3),px*(big? .28 : .16),.3,0,6.283); x.fill(); } }   /* the mottled, pale-edged feathers of a bird that hides on the ground */
+      if(C.wm){ let s3=7; const RN=()=>{ s3=(s3*1664525+1013904223)>>>0; return s3/4294967296; }; for(let k=0;k<170;k++){ const u=.04+RN()*.9, v=.05+RN()*.9, c0=g(u,v), big=RN()<.4; x.fillStyle=rgb(big? C.wm : mixv(C.wing2,[236,224,196],.5),big? .65 : .45); x.beginPath(); x.ellipse(c0[0],c0[1],px*(big? .3 : .2),px*(big? .14 : .08),.35,0,6.283); x.fill(); } }   /* the mottled, pale-edged feathers of a bird that hides on the ground */
       if(K==="waxwing"){ for(let i=0;i<4;i++){ const c0=g(.4+i*.06,.9); x.fillStyle="rgba(196,26,22,.85)"; x.beginPath(); x.ellipse(c0[0],c0[1],px*.2,px*.09,.5,0,6.283); x.fill(); }   /* the little red waxy tips that give it its name */
         x.strokeStyle="rgba(240,238,232,.6)"; x.lineWidth=lw(.12); x.beginPath(); x.moveTo(...g(.62,.4)); x.lineTo(...g(.9,.5)); x.stroke(); }
       if(C.bars&&!C.jay){ for(const [u0,u1,w0] of K==="finch"? [[.08,.3,.32],[.2,.4,.24]] : [[.12,.34,.28]]){ x.strokeStyle=rgb(shade(C.bars,v3.n(v3.a(v3.s(Z,sd),v3.s(Y,.4))))); x.lineWidth=lw(w0); x.beginPath(); x.moveTo(...g(u0,.1)); x.quadraticCurveTo(...g((u0+u1)/2+.03,.5),...g(u1,.92)); x.stroke(); } }   /* crisp white wing bars */
@@ -3860,17 +3867,18 @@ const ambient=(function(){
       else if(!under&&C.bars){ x.strokeStyle=rgb(shade(C.bars,n)); x.lineWidth=Math.max(.5,Kw*F0/P[2]*.35); x.beginPath(); x.moveTo(...Pw(.2,1.5)); x.lineTo(...Pw(-.6,8)); x.stroke(); }
       x.restore(); };
     /* the tail: closed, or fanned as it brakes; tipped up or down from the line of the body */
-    const drawTail=()=>{ const tu=(o.tailUp||0)*.55-.08, TA=v3.n(v3.a(v3.s(A,-Math.cos(tu)),v3.s(Y,Math.sin(tu)))), TN=v3.n(v3.x(TA,Z)), root=W(P,A,Y,Z,-5.0,0,.45);
+    const drawTail=()=>{ const tu=(o.tailUp||0)*.55-.08, TA=v3.n(v3.a(v3.s(A,-Math.cos(tu)),v3.s(Y,Math.sin(tu)))), TN=v3.n(v3.x(TA,Z)), root=W(P,A,Y,Z,-5.0*BL,0,.45);
       const TL=7.6*(sp.tail||1)*(C.tailLen? C.tailLen/1.25 : 1), fan=o.tail||0, half=lerp(C.jay? 1.75 : 1.05,3.6,fan), up=v3.d(TN,toEye)<0, n=up? v3.s(TN,-1) : TN;
       const T=(a,s)=>PJ([root[0]+(TA[0]*a+Z[0]*s)*Kw,root[1]+(TA[1]*a+Z[1]*s)*Kw,root[2]+(TA[2]*a+Z[2]*s)*Kw]);
       const notch=sp.notch? .7 : 0, pts=sp.ptail? [T(0,-.85),T(TL*.35,-1.0),T(TL*.8,-.5),T(TL,0),T(TL*.8,.5),T(TL*.35,1.0),T(0,.85)] : [T(0,-.85),T(TL*.55,-lerp(half,.9,.3)),T(TL,-half),T(TL+.15,-half*.5),T(TL-notch,0),T(TL+.15,half*.5),T(TL,half),T(TL*.55,lerp(half,.9,.3)),T(0,.85)];
       const g0=T(0,0), g1=T(TL,0), gr=x.createLinearGradient(g0[0],g0[1],g1[0],g1[1]); gr.addColorStop(0,rgb(shade(C.tail,n))); gr.addColorStop(1,rgb(shade(C.tail2||C.tail,n)));
       { const Tt=(a,s,h)=>PJ([root[0]+(TA[0]*a+Z[0]*s+TN[0]*h)*Kw,root[1]+(TA[1]*a+Z[1]*s+TN[1]*h)*Kw,root[2]+(TA[2]*a+Z[2]*s+TN[2]*h)*Kw]); const sd2=v3.d(Z,toEye)>0? 1 : -1, th0=.95, th1=.4;   /* the stacked feathers give the closed tail its depth, seen from the side */
-        x.fillStyle=rgb(shade(C.tail2||C.tail,v3.s(Z,sd2))); x.beginPath(); cmPath(x,[Tt(0,sd2*.8,th0),Tt(TL*.6,sd2*half*.6,th0*.6),Tt(TL,sd2*half*.4,th1),Tt(TL,sd2*half*.4,-th1),Tt(TL*.6,sd2*half*.6,-th0*.6),Tt(0,sd2*.8,-th0)],true); x.fill(); }
+        x.fillStyle=rgb(shade(C.tail2||C.tail,v3.s(Z,sd2))); x.beginPath(); cmPath(x,[Tt(0,sd2*.8,th0),Tt(TL*.6,sd2*half*.6,th0*.6),Tt(TL,sd2*half*.4,th1),Tt(TL,sd2*half*.4,-th1),Tt(TL*.6,sd2*half*.6,-th0*.6),Tt(0,sd2*.8,-th0)],true); x.fill();
+        if(sp.tbar){ x.strokeStyle="rgba(30,20,12,.75)"; x.lineWidth=Math.max(.6,Kw*F0/P[2]*(sp.ptail? .4 : .18)); for(let a2=TL*.14;a2<TL*(sp.tband? .74 : .96);a2+=sp.ptail? TL*.07 : TL*.1){ const k2=a2/TL, th=lerp(th0,th1,k2)*1.05, w2=sd2*lerp(.8,half*.4,k2)*.9; x.beginPath(); x.moveTo(...Tt(a2,w2,th)); x.quadraticCurveTo(...Tt(a2-.35,w2,0),...Tt(a2,w2,-th)); x.stroke(); } } }   /* the bars seen across the edge of the closed tail */
       x.fillStyle=gr; x.beginPath(); cmPath(x,pts,true); x.fill();
       const px=Kw*F0/P[2]; x.lineWidth=Math.max(.3,px*.07); for(let i=-3;i<=3;i++){ if(!i) continue; const s1=i/3*half*.85; x.strokeStyle=rgb(mixv(C.tail,[250,246,236],.35),.28); x.beginPath(); x.moveTo(...T(.5,i*.12)); x.lineTo(...T(TL-.3,s1)); x.stroke(); }
       if(C.jay){ x.strokeStyle="rgba(10,12,22,.6)"; x.lineWidth=Math.max(.4,px*.12); for(let a=TL*.25;a<TL*.95;a+=TL*.09){ const w2=lerp(.9,half,a/TL); x.beginPath(); x.moveTo(...T(a,-w2)); x.lineTo(...T(a+.2,w2)); x.stroke(); } x.fillStyle="rgba(246,246,242,.95)"; for(const sd of [-1,1]){ x.beginPath(); cmPath(x,[T(TL*.86,sd*half*.55),T(TL,sd*half),T(TL+.1,sd*half*.5)],true); x.fill(); } }   /* barred black, with white corners */
-      if(sp.tbar){ x.strokeStyle="rgba(26,18,12,.55)"; x.lineWidth=Math.max(.5,px*(sp.ptail? .22 : .14)); for(let a=TL*.12;a<TL*(sp.tband? .74 : .95);a+=sp.ptail? TL*.075 : TL*.1){ const w2=sp.ptail? lerp(1.1,.5,a/TL) : lerp(.9,half,a/TL); x.beginPath(); x.moveTo(...T(a,-w2)); x.quadraticCurveTo(...T(a-.4,0),...T(a,w2)); x.stroke(); } }   /* the barred tail */
+      if(sp.tbar&&!sp.ptail){ x.strokeStyle=sp.ptail? "rgba(30,20,12,.8)" : "rgba(26,18,12,.6)"; x.lineWidth=Math.max(.6,px*(sp.ptail? .42 : .16)); for(let a=TL*.12;a<TL*(sp.tband? .74 : .95);a+=sp.ptail? TL*.075 : TL*.1){ const w2=sp.ptail? lerp(1.1,.5,a/TL) : lerp(.9,half,a/TL); x.beginPath(); x.moveTo(...T(a,-w2)); x.quadraticCurveTo(...T(a-.4,0),...T(a,w2)); x.stroke(); } }   /* the barred tail */
       if(sp.tband){ x.fillStyle=rgb(shade([30,24,20],n)); x.beginPath(); cmPath(x,[T(TL*.78,-half*.95),T(TL*.9,-half),T(TL*.9,half),T(TL*.78,half*.95)],true); x.fill(); x.fillStyle=rgb(shade([176,168,152],n),.8); x.beginPath(); cmPath(x,[T(TL*.92,-half),T(TL,-half),T(TL+.15,0),T(TL,half),T(TL*.92,half)],true); x.fill(); }   /* the grouse's broad black band and pale tip */
       if(K==="wpw"){ x.fillStyle=rgb([244,240,230],.92); for(const sd of [-1,1]){ x.beginPath(); cmPath(x,[T(TL*.68,sd*half*.6),T(TL,sd*half),T(TL+.12,sd*half*.4),T(TL*.7,sd*half*.35)],true); x.fill(); } }   /* the male's white tail corners */
       if(K==="killdeer"){ x.fillStyle=rgb(shade([30,26,22],n)); x.beginPath(); cmPath(x,[T(TL*.6,-half*.9),T(TL*.9,-half),T(TL*.9,half),T(TL*.6,half*.9)],true); x.fill(); x.strokeStyle=rgb([246,244,238],.9); x.lineWidth=Math.max(.6,px*.3); x.beginPath(); x.moveTo(...T(TL*.95,-half)); x.lineTo(...T(TL+.1,0)); x.lineTo(...T(TL*.95,half)); x.stroke(); }   /* orange tail with its black band and white tip */
@@ -3880,7 +3888,7 @@ const ambient=(function(){
     const drawLeg=(i,near)=>{ const LGk=o.legs==null? 1 : o.legs; if(LGk<.03) return; const sd=i? 1 : -1, hip=W(P,A,Y,Z,-.6,sd*.8,-2.1-cr*.2);
       const tuck=W(P,A,Y,Z,-3.2,sd*.6,-2.6), ft=o.feet&&o.feet[i]? v3.l(tuck,o.feet[i],LGk) : v3.l(tuck,W(P,A,Y,Z,-1.2,sd*.8,-5),LGk), H1=PJ(hip), F1=PJ(ft), px=Kw*F0/P[2];
       x.save(); x.globalAlpha*=Math.min(1,LGk*2); x.strokeStyle=rgb(mulv(C.leg,near? 1 : .7)); x.lineCap="round"; x.lineWidth=Math.max(.8,px*.32);
-      if(sp.leg){ const hl=v3.a(v3.l(hip,ft,sp.knee? .45 : .3),v3.s(hdg,-Kw*sp.leg*(sp.knee? .2 : .12))), HL=PJ(hl); x.save(); x.strokeStyle=rgb(mulv(sp.feath? mixv(C.belly,C.back,.7) : sp.knee? C.leg : mixv(C.breast,C.back,.4),near? .9 : .65)); x.lineWidth=Math.max(1,px*(sp.knee? .4 : .6)); x.beginPath(); x.moveTo(...H1); x.lineTo(...HL); x.stroke(); x.restore(); if(sp.feath){ x.lineWidth=Math.max(1,px*.55); x.strokeStyle=rgb(mulv(mixv(C.back,C.leg,.5),near? .9 : .65)); } x.beginPath(); x.moveTo(...HL); x.lineTo(...F1); x.stroke(); }   /* the visible leg below the belly is the shank, from the heel bent back to the foot */
+      if(sp.leg){ const hl=v3.a(v3.l(hip,ft,sp.knee? .45 : .22),v3.s(hdg,-Kw*sp.leg*(sp.knee? .2 : .08))), HL=PJ(hl); if(sp.knee||sp.feath){ x.save(); x.strokeStyle=rgb(mulv(sp.feath? mixv(C.belly,C.back,.7) : sp.knee? C.leg : mixv(C.breast,C.back,.4),near? .9 : .65)); x.lineWidth=Math.max(1,px*(sp.knee? .4 : .6)); x.beginPath(); x.moveTo(...H1); x.lineTo(...HL); x.stroke(); x.restore(); } if(sp.feath){ x.lineWidth=Math.max(1,px*.55); x.strokeStyle=rgb(mulv(mixv(C.back,C.leg,.5),near? .9 : .65)); } x.beginPath(); x.moveTo(...HL); x.lineTo(...F1); x.stroke(); }   /* the visible leg below the belly is the shank, from the heel bent back to the foot */
       else { x.beginPath(); x.moveTo(...H1); x.lineTo(...F1); x.stroke(); }
       const fw=v3.n([hdg[0],0,hdg[2]]), dn=[0,1,0], br2=(o.brad||Kw)*.9; x.lineWidth=Math.max(.6,px*.2);
       for(const [fx,fz,dd] of [[1.3,.35,1],[1.4,0,1],[1.25,-.35,1],[-1.0,0,.8]]){ const e=v3.a(ft,v3.a(v3.s(fw,fx*Kw),v3.a(v3.s(latH,fz*Kw),v3.s(dn,br2*dd*LGk)))), m=v3.a(ft,v3.a(v3.s(fw,fx*.7*Kw),v3.s(latH,fz*.7*Kw))), E=PJ(e), M=PJ(m);
@@ -3924,25 +3932,29 @@ const ambient=(function(){
         else { x.fillStyle=col; x.beginPath(); x.ellipse(p[0],p[1],sz*.55,sz*.32,Math.atan2(ay,ax),0,6.283); x.fill(); } }
       x.globalAlpha=1; };
     const MK={
-      woodcock:(s,th,r)=>{ const v=Math.sin(th); if(v>.15) return r<.55? ["dot",[40,30,24],.7,.75] : r<.75? ["streak",[196,190,176],.9,.55] : ["dot",[176,140,100],.5,.6]; return r<.12? ["bar",[150,110,76],.5,.35] : null; },
-      bobwhite:(s,th,r)=>{ const v=Math.sin(th); if(s>3.3) return null; if(v<.0&&s>-2.5) return ["scal",[26,20,16],.55,.75]; if(Math.abs(v)<.45) return r<.5? ["streak",[240,232,214],.9,.7] : ["dot",[60,40,28],.5,.6]; return r<.6? ["dot",[56,40,30],.6,.7] : ["dot",[200,170,120],.4,.6]; },
-      grouse:(s,th,r)=>{ const v=Math.sin(th); if(v<-.2) return ["bar",[120,92,64],.7,.7]; return r<.65? ["bar",[46,36,28],.75,.7] : ["scal",[214,196,160],.55,.6]; },
-      pheasant:(s,th,r)=>{ const v=Math.sin(th); if(s>3.2) return null; if(v<.45&&s>-2.6) return ["scal",[22,14,10],.5,.85]; if(v>=.45) return r<.6? ["dot",[30,22,16],.6,.8] : ["scal",[230,214,170],.55,.6]; return null; },
-      wpw:(s,th,r)=>{ const v=Math.sin(th); return r<.45? ["dot",[36,28,20],.6,.8] : r<.7? ["streak",[188,170,140],.8,.6] : ["bar",[60,48,34],.6,.6]; },
+      woodcock:(s,th,r)=>{ const v=Math.sin(th); if(v>.15) return r<.5? ["dot",[40,30,24],.38,.75] : r<.68? ["streak",[196,190,176],.8,.55] : ["dot",[176,140,100],.3,.6]; return r<.12? ["bar",[150,110,76],.4,.35] : null; },
+      bobwhite:(s,th,r)=>{ const v=Math.sin(th); if(s>3.3) return null; if(v<.0&&s>-2.5) return ["scal",[26,20,16],.55,.75]; if(Math.abs(v)<.45) return r<.5? ["streak",[240,232,214],.8,.7] : ["dot",[60,40,28],.3,.6]; return r<.6? ["dot",[56,40,30],.35,.7] : ["dot",[200,170,120],.25,.6]; },
+      grouse:(s,th,r)=>{ const v=Math.sin(th); if(v<-.2) return ["bar",[110,84,58],.6,.7]; return r<.6? ["bar",[46,36,28],.55,.7] : r<.85? ["dot",[214,196,160],.28,.75] : ["streak",[60,46,34],.6,.6]; },
+      pheasant:(s,th,r)=>{ const v=Math.sin(th); if(s>3.2) return null; if(v<.45&&s>-2.6) return ["scal",[22,14,10],.36,.85]; if(v>=.45) return r<.55? ["dot",[30,22,16],.34,.8] : ["scal",[230,214,170],.34,.65]; return null; },
+      wpw:(s,th,r)=>{ const v=Math.sin(th); return r<.45? ["dot",[36,28,20],.32,.8] : r<.7? ["streak",[188,170,140],.7,.6] : ["bar",[60,48,34],.45,.6]; },
       killdeer:null};
     const F0=o.F||H*.5;   /* screen pixels per world unit at depth 1 */
-    const body=loft(BS,P,A,Y,Z,30), head=loft(HS,HO,HF,HY,HZ,22);
+    const body=loft(BS,P,A,Y,Z,30), head=loft(HS,HO,HF,HY,HZ,22), bodyColN=(s2,th)=>bodyCol(s2/BL,th);
+    let neckL=null; if(NKL){ const na=v3.n(v3.m(HO,nb)), nL=Math.hypot(...v3.m(HO,nb))/Kw; let ny=v3.m(UPW,v3.s(na,v3.d(UPW,na))); if(Math.hypot(...ny)<.05) ny=Y; ny=v3.n(ny); const nz=v3.x(na,ny), rw=(sp.neckW||1)*1.25*hs+.25;
+      const NS=[[-.8,2.1*full,2.2*deepK,0],[nL*.25,rw*1.35,rw*1.4,0],[nL*.6,rw*1.05,rw*1.08,0],[nL*.85,rw*.95,rw,.05],[nL+.4*hs,1.55*hs,1.6*hs,.1*hs]];
+      neckL=loft(NS,nb,na,ny,nz,14); neckL.nL=nL; }
     let crestL=null; if(sp.crest){ const CS=[[1.4,1.0,.6,1.2],[.5,.8,.62,1.9],[-.4,.5,.5,2.6],[-1.0,.22,.28,3.1],[-1.25,.06,.08,3.3]].map(q=>[q[0]*hs,q[1]*hs,q[2]*hs,q[3]*hs]);
       crestL=loft(CS.slice().reverse(),HO,HF,HY,HZ,10); }
     const near=v3.d(Z,toEye)>0? 1 : -1, fold=o.fold==null? 1 : o.fold;
-    const sil=new Path2D(); outline(body,sil); outline(head,sil); if(crestL) outline(crestL,sil);
+    const sil=new Path2D(); outline(body,sil); if(neckL) outline(neckL,sil); outline(head,sil); if(crestL) outline(crestL,sil);
     x.save(); x.lineJoin="round"; x.lineCap="round";
     spreadWing(-near,1-fold); drawLeg(near>0? 0 : 1,false);
     drawTail();
     { x.save(); x.filter=`blur(${Math.max(.6,Kw*F0/P[2]*.35).toFixed(1)}px)`; x.fillStyle=rgb(mulv(mixv(C.back,C.breast,.5),.6),.8); x.fill(sil); x.restore(); }   /* the soft fluff of the outline */
-    fillQuads(body,bodyCol);
-    x.save(); x.clip(sil); feathers(body,P,A,Y,Z,17,3.2,bodyCol); if(MK[K]) marks(body,23,4.2,MK[K]); x.restore();
+    fillQuads(body,bodyColN);
+    x.save(); x.clip(sil); feathers(body,P,A,Y,Z,17,3.2,bodyColN); if(MK[K]) marks(body,23,7,(s2,th,r)=>MK[K](s2/BL,th,r)); x.restore();
     if(crestL) fillQuads(crestL,()=>C.head);
+    if(neckL){ const nc=(s2,th)=>neckCol(s2/neckL.nL,th); fillQuads(neckL,nc); x.save(); x.clip(sil); feathers(neckL,nb,null,null,null,31,2.4,nc); if(MK[K]) marks(neckL,37,3,(s2,th,r)=>K==="grouse"||K==="bobwhite"? MK[K](3,th,r) : null); x.restore(); }
     fillQuads(head,headCol);
     { x.save(); x.clip(sil); feathers(head,HO,HF,HY,HZ,29,2.2,headCol);
       if(K==="robin"&&C.streak){ x.strokeStyle="rgba(30,26,24,.55)"; x.lineWidth=Math.max(.35,Kw*F0/P[2]*.09); for(let k=0;k<5;k++){ const s=(1.3+k*.28)*hs, th=-Math.PI/2+near*(.25+k*.06); const a2=PJ(W(HO,HF,HY,HZ,s,head.R[0][1]*0+interp(HS,s)[1]*Math.cos(th),interp(HS,s)[3]+interp(HS,s)[2]*Math.sin(th))), b2=PJ(W(HO,HF,HY,HZ,s-.35,interp(HS,s-.35)[1]*Math.cos(th-near*.25),interp(HS,s-.35)[3]+interp(HS,s-.35)[2]*Math.sin(th-near*.25))); x.beginPath(); x.moveTo(...a2); x.lineTo(...b2); x.stroke(); } }   /* the streaked white throat */
