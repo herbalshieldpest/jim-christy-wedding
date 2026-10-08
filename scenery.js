@@ -891,23 +891,31 @@ const ambient=(function(){
   const SV_BOT=[[0,.6],[.1,.6],[.2,.6],[.28,.598],[.32,.582],[.4,.566],[.5,.56],[.6,.556],[.7,.546],[.8,.552],[.9,.55],[1,.556]];   /* where the trees stop and the goldenrod starts, in the photo */
   const svBot=fx=>{ for(let i=1;i<SV_BOT.length;i++) if(fx<=SV_BOT[i][0]){ const [x0,y0]=SV_BOT[i-1], [x1,y1]=SV_BOT[i]; return y0+(y1-y0)*(fx-x0)/(x1-x0); } return SV_BOT[SV_BOT.length-1][1]; };
   let svLay=null, svKey="";
-  function makeSvLayers(){ const k=.5, w=Math.ceil(W*k), h=Math.ceil(H*k), c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d",{willReadFrequently:true}), m=cover();
-    x.drawImage(photo,m.ox*k,m.oy*k,m.iw*m.s*k,m.ih*m.s*k); let d; try{ d=x.getImageData(0,0,w,h); }catch(e){ return null; }
-    const b=document.createElement("canvas"); b.width=w; b.height=h; const bx=b.getContext("2d",{willReadFrequently:true}); bx.filter="blur(2px)"; bx.drawImage(c,0,0); const db=bx.getImageData(0,0,w,h).data, sd=d.data, out=x.createImageData(w,h), o=out.data;
-    const near=new Float32Array(w*h);
-    for(let yy=0;yy<h;yy++){ const fy=((yy/k)-m.oy)/(m.ih*m.s); if(fy<.36||fy>.62) continue; for(let xx=0;xx<w;xx++){ const fx=Math.max(0,Math.min(1,((xx/k)-m.ox)/(m.iw*m.s))), bot=svBot(fx); if(fy>bot) continue;
-        const ry=ridgeY(SKYL.far,fx); if(yy/k<ry+2) continue;
-        const i=(yy*w+xx)*4, r=sd[i], g=sd[i+1], bl=sd[i+2], l=r*.3+g*.59+bl*.11, lb=db[i]*.3+db[i+1]*.59+db[i+2]*.11; if(l>150) continue;
-        const hazy=Math.max(0,Math.min(1,(bl-g+6)/18));   /* the far blue mountain, too far off to see a leaf turn */
-        const leafy=Math.max(0,Math.min(1,(g-bl+12)/36)), hi=Math.max(0,Math.min(1,(l-lb)/14+.45)), fade=Math.min(1,(bot-fy)/.012), a=leafy*hi*fade*(1-hazy); if(a<.06) continue;
-        o[i]=255; o[i+1]=255; o[i+2]=255; o[i+3]=Math.round(255*a); near[yy*w+xx]=Math.max(0,Math.min(1,(fy-.42)/.16)); } }
+  function makeSvLayers(){ const m=cover(), k=MOBILE()? .5 : Math.min(1,1600/W), w=Math.ceil(W*k), ps=m.s*k;   /* photo pixels to working pixels */
+    const topY=fx=>ridgeY(SKYL.near,fx)*k+.004*m.ih*ps, botY=fx=>(m.oy+svBot(fx)*m.ih*m.s)*k;
+    let ya=1e9, yb=0; for(let i=0;i<=40;i++){ const fx=i/40; ya=Math.min(ya,topY(fx)); yb=Math.max(yb,botY(fx)); } const oy=Math.max(0,Math.floor(ya)-2), h=Math.ceil(Math.min(H*k,yb+2)-oy); if(h<4) return null;
+    const mk=()=>{ const c=document.createElement("canvas"); c.width=w; c.height=h; return [c,c.getContext("2d",{willReadFrequently:true})]; };
+    /* only the woods on the middle ridge and the treeline below it: not the far mountain behind, not the goldenrod in front */
+    const region=x=>{ x.beginPath(); for(let i=0;i<=80;i++){ const fx=i/80, sx=m.ox*k+fx*m.iw*ps; i? x.lineTo(sx,topY(fx)-oy) : x.moveTo(sx,topY(fx)-oy); } for(let i=80;i>=0;i--){ const fx=i/80; x.lineTo(m.ox*k+fx*m.iw*ps,botY(fx)-oy); } x.closePath(); };
+    const [c,x]=mk(); x.drawImage(photo,m.ox*k,m.oy*k-oy,m.iw*ps,m.ih*ps); x.globalCompositeOperation="destination-in"; region(x); x.fillStyle="#000"; x.fill(); x.globalCompositeOperation="source-over";
+    let sd; try{ sd=x.getImageData(0,0,w,h).data; }catch(e){ return null; }
+    const blurOf=r=>{ const [b,bx]=mk(); bx.filter=`blur(${Math.max(.5,r*ps).toFixed(2)}px)`; bx.drawImage(c,0,0); return bx.getImageData(0,0,w,h).data; };   /* blurred inside the woods only, so the sky and the field never bleed in */
+    const d2=blurOf(1.5), d4=blurOf(4), d22=blurOf(22), lum=(D,i)=>D[i]*.3+D[i+1]*.59+D[i+2]*.11;
+    /* the evergreens: crowns darker and cooler than the woods around them. Their needles don't turn, so the wave goes past them */
+    const [cc,cx]=mk(), ci=cx.createImageData(w,h); for(let i=0;i<w*h*4;i+=4){ if(sd[i+3]<128) continue; const v=Math.max(0,Math.min(1,(lum(d22,i)-lum(d4,i)-3)/9))*Math.max(0,Math.min(1,((d22[i]-d22[i+1])-(d4[i]-d4[i+1])+1)/7)); ci.data[i+3]=Math.round(255*v); }
+    cx.putImageData(ci,0,0); const [cb,cbx]=mk(); cbx.filter=`blur(${Math.max(.5,2*ps).toFixed(2)}px)`; cbx.drawImage(cc,0,0); const cf=cbx.getImageData(0,0,w,h).data;
+    const out=x.createImageData(w,h), o=out.data, near=new Float32Array(w*h), pts=[];
+    for(let yy=0;yy<h;yy++) for(let xx=0;xx<w;xx++){ const i=(yy*w+xx)*4; if(sd[i+3]<20) continue; const r=sd[i], g=sd[i+1], bl=sd[i+2], l=r*.3+g*.59+bl*.11; if(l>150) continue;
+      const fx=(xx/k-m.ox)/(m.iw*m.s), fy=((yy+oy)/k-m.oy)/(m.ih*m.s), bot=svBot(Math.max(0,Math.min(1,fx))), conif=Math.min(1,cf[i+3]/255*1.7);
+      const leafy=Math.max(0,Math.min(1,(g-bl+12)/36)), hi=Math.max(0,Math.min(1,(l-lum(d2,i))/6+.35)), a=leafy*hi*(1-conif)*Math.min(1,(bot-fy)/.012)*(sd[i+3]/255); if(a<.05) continue;
+      o[i]=o[i+1]=o[i+2]=255; o[i+3]=Math.round(255*a); near[yy*w+xx]=Math.max(0,Math.min(1,(fy-.42)/.14)); if(a>.3) pts.push(yy*w+xx); }
     x.clearRect(0,0,w,h); x.putImageData(out,0,0);
-    const lay=[], pts=[]; for(let i=0;i<w*h;i++) if(o[i*4+3]>60) pts.push(i); let ya=h, yb=0; for(const q of pts){ const yq=(q/w)|0; if(yq<ya) ya=yq; if(yq>yb) yb=yq; } lay.y0=Math.max(0,ya-6); lay.y1=Math.min(h,yb+6);
-    for(let n=0;n<4;n++){ const L=document.createElement("canvas"); L.width=w; L.height=h; const lx=L.getContext("2d"); lx.fillStyle="#fff";
-      const sc=Math.max(.7,W/1600), cnt=Math.min(260,Math.round(pts.length/220)); for(let j=0;j<cnt;j++){ const p=pts[(Math.random()*pts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(2.2+nr*5.5)*sc*(.7+Math.random()*.6);
-        const sub=3+((Math.random()*4)|0); for(let q=0;q<sub;q++){ const cx=px+(Math.random()-.5)*R*1.8, cy=py+(Math.random()-.5)*R*1.1, r=R*(.45+Math.random()*.45), gg=lx.createRadialGradient(cx,cy,0,cx,cy,r);
-          gg.addColorStop(0,"rgba(255,255,255,.75)"); gg.addColorStop(.55,"rgba(255,255,255,.4)"); gg.addColorStop(1,"rgba(255,255,255,0)"); lx.fillStyle=gg; lx.beginPath(); lx.ellipse(cx,cy,r,r*.75,0,0,6.283); lx.fill(); } }   /* a soft patch of a crown, the leaves in it all turning together; the photo's own leaf texture comes through it below */
-      lx.globalAlpha=1; lx.globalCompositeOperation="destination-in"; lx.drawImage(c,0,0); lay.push({c:L,f:1.6+Math.random()*1.4,ph:Math.random()*6.283}); }   /* only where there's a crown of leaves to catch it */
+    const lay=[]; lay.oy=oy; lay.k=k; let qa=h, qb=0; for(const q of pts){ const yq=(q/w)|0; if(yq<qa) qa=yq; if(yq>qb) qb=yq; } lay.y0=Math.max(0,qa-4); lay.y1=Math.min(h,qb+4);
+    const sc=w/1280; for(let n=0;n<4;n++){ const [Lc,lx]=mk(); lx.fillStyle="#fff";
+      const cnt=Math.min(1600,Math.round(pts.length/90)); for(let j=0;j<cnt;j++){ const p=pts[(Math.random()*pts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(1.6+nr*4.2)*sc*(.6+Math.random()*.7);
+        const sub=2+((Math.random()*4)|0); for(let q=0;q<sub;q++){ const ex=px+(Math.random()-.5)*R*2, ey=py+(Math.random()-.5)*R*1.2, r=R*(.4+Math.random()*.5), gg=lx.createRadialGradient(ex,ey,0,ex,ey,r);
+          gg.addColorStop(0,"rgba(255,255,255,.8)"); gg.addColorStop(.5,"rgba(255,255,255,.45)"); gg.addColorStop(1,"rgba(255,255,255,0)"); lx.fillStyle=gg; lx.beginPath(); lx.ellipse(ex,ey,r,r*.7,0,0,6.283); lx.fill(); } }   /* a sprig of a crown, the leaves in it turning together; the photo's own leaf texture shows through it */
+      lx.globalAlpha=1; lx.globalCompositeOperation="destination-in"; lx.drawImage(c,0,0); lay.push({c:Lc,f:1.6+Math.random()*1.4,ph:Math.random()*6.283}); }
     return lay; }
   const svT=document.createElement("canvas"), svX=svT.getContext("2d"), svW=document.createElement("canvas"), svWX=svW.getContext("2d"), svM=document.createElement("canvas"), svMX=svM.getContext("2d");
   const svP=(()=>{ const c=document.createElement("canvas"); c.width=256; c.height=1; const x=c.getContext("2d"), d=x.createImageData(256,1);   /* the gust's profile: a quick leading edge, the leaves flipping, then a long settling tail behind */
@@ -928,7 +936,7 @@ const ambient=(function(){
       if(!drew) return; const M=svMX; M.globalCompositeOperation="source-over"; M.globalAlpha=1; M.clearRect(0,0,w,h); M.drawImage(l.c,0,0); M.globalCompositeOperation="destination-in"; M.drawImage(svW,0,0);
       T.globalCompositeOperation="lighter"; T.globalAlpha=.8+.2*Math.sin(t*l.f*4+l.ph); T.drawImage(svM,0,0); any=true; });   /* each little crown patch turning as the gust gets to it */
     if(!any) return; T.globalAlpha=1; T.globalCompositeOperation="source-in"; T.fillStyle="rgba(204,222,200,.95)"; T.fillRect(0,0,w,h);
-    ctx.save(); ctx.globalAlpha=svA*(nA>.3? .25 : 1); ctx.globalCompositeOperation="screen"; ctx.drawImage(svT,0,0,W,H); ctx.restore(); }
+    ctx.save(); ctx.globalAlpha=svA*(nA>.3? .25 : 1); ctx.globalCompositeOperation="screen"; ctx.drawImage(svT,0,0,w,h,0,svLay.oy/svLay.k,w/svLay.k,h/svLay.k); ctx.restore(); }
   /* ---- a sun shower: rain falling while the sun is still out, every drop lit gold, splashing on the lawn ---- */
   let ssDrops=null, ssSplash=[];
   function drawSunShower(dt,dark){ if(ssA<=.01){ ssDrops=null; ssSplash.length=0; return; } const n=MOBILE()? 170 : 420, hz=gnd().vy, sp=sun(), sc=H/800;
@@ -6873,14 +6881,14 @@ const ambient=(function(){
   /* seen from where we really are: the view turns toward wherever it is in front of us */
   function closeView(P){ const ez=v3.n(P), ex=v3.n(v3.x([0,1,0],ez)), ey=v3.x(ez,ex); return (x,y,z)=>[x*ex[0]+y*ex[1]+z*ex[2],-(x*ey[0]+y*ey[1]+z*ey[2]),x*ez[0]+y*ez[1]+z*ez[2]]; }
   function closePost(cv,x,sz,sx,sy,z,dark,h){
-    x.setTransform(1,0,0,1,0,0); rigLight(x,sz/2,sz*.3,sz*.7,sz*.4,sun().x-sx,0);
+    x.setTransform(1,0,0,1,0,0); const wk=h.warm??1; rigLight(x,sz/2,sz*.3,sz*.7,sz*.4,sun().x-sx,1-wk);
     x.globalCompositeOperation="source-atop"; const sdx=Math.sign(sun().x-sx)||1;
     if(h.moon&&nA>.3){ /* a night animal by moonlight: cool and silvery, the moon catching its upper edge, the rest sinking into the blue-black */
       const k=Math.min(1,(nA-.3)/.5), mo=moonAt? Math.sign(moonAt[0]-sx)||-1 : -1; x.fillStyle=`rgba(14,20,40,${(.42*k).toFixed(3)})`; x.fillRect(0,0,sz,sz);
       const ml=x.createLinearGradient(sz/2-mo*sz*.22,sz*.6,sz/2+mo*sz*.22,sz*.35); ml.addColorStop(0,"rgba(0,0,0,0)"); ml.addColorStop(1,`rgba(190,210,240,${(.3*k).toFixed(3)})`); x.fillStyle=ml; x.fillRect(0,0,sz,sz);
       if(k<1){ x.globalAlpha=1-k; x.fillStyle="rgba(255,160,76,.14)"; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
-    else { x.fillStyle="rgba(255,160,76,.14)"; x.fillRect(0,0,sz,sz);
-    const rl=x.createLinearGradient(sz/2-sdx*sz*.2,0,sz/2+sdx*sz*.2,0); rl.addColorStop(0,"rgba(20,12,6,.18)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,"rgba(255,196,120,.24)"); x.fillStyle=rl; x.fillRect(0,0,sz,sz); }
+    else { x.fillStyle=`rgba(255,160,76,${(.14*wk).toFixed(3)})`; x.fillRect(0,0,sz,sz);
+    const rl=x.createLinearGradient(sz/2-sdx*sz*.2,0,sz/2+sdx*sz*.2,0); rl.addColorStop(0,"rgba(20,12,6,.18)"); rl.addColorStop(.6,"rgba(255,196,120,0)"); rl.addColorStop(1,`rgba(255,196,120,${(.24*wk).toFixed(3)})`); x.fillStyle=rl; x.fillRect(0,0,sz,sz); }
     if(!h.bg||(h.bgT=(h.bgT||0)-1)<=0){ h.bgT=6; const ip=toImg(sx,sy); h.bg=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[200,170,130]; }
     const haze=Math.min(.3,Math.max(0,(z-2)/16)); if(haze>0){ x.fillStyle=rgb(h.bg,haze); x.fillRect(0,0,sz,sz); }
     if(SC.dim()){ x.fillStyle="rgba(20,14,6,.14)"; x.fillRect(0,0,sz,sz); } else { const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,sz,sz); x.globalAlpha=1; } }
@@ -7048,37 +7056,40 @@ const ambient=(function(){
      the bullseye on its brow, and four clear wings netted with veins, each with its tan stigma, the fore and hind pairs beating out of step */
   const DF_FW=[[0,0],[1.2,-.08],[2.6,-.1],[3.9,-.04],[4.7,.18,1],[4.6,.5],[3.8,.72],[2.4,.8],[1.2,.72],[.4,.48]];
   const DF_HW=[[0,0],[1.2,-.06],[2.6,-.08],[3.8,-.02],[4.55,.2,1],[4.4,.55],[3.6,.86],[2.4,1.16],[1.3,1.46],[.6,1.46],[.15,.9]];
-  function darnerParts(d,lt,vm){ const B=d.B, out=[], C=(c,a)=>rgb(mulv(c,lt),a), sh=c=>[C(mulv(c,.55)),C(mixv(c,[255,240,210],.28))];
+  function darnerParts(d,lt,vm){ const B=d.B, out=[], C=(c,a)=>rgb(mulv(c,lt),a), sh=c=>[C(mulv(c,.5)),C(mixv(c,[255,240,210],.16))];
     const P=q=>{ const v=toCam(B,q[0],q[1],q[2]); return [v[0],v[1],v[2],q[3]||0]; }, add=(pts,c,o)=>out.push(Object.assign({p:pts.map(P),c},o||{}));
-    const nearS=B.r[2]<0? 1 : -1, GR=[104,156,70], BL=[64,128,200], DK=[44,38,62], ab=a=>-.012*a*a+(d.curlA||0)*a*a*.01;
-    const AB=[[.95,.34],[.5,.38],[.05,.33],[-.45,.19],[-.9,.21],[-1.6,.23],[-2.4,.23],[-3.2,.22],[-4.0,.21],[-4.8,.2],[-5.4,.19],[-5.7,.15]];
+    const nearS=B.r[2]<0? 1 : -1, GR=[82,118,50], BL=[70,108,146], DK=[34,30,36], ab=a=>-.012*a*a+(d.curlA||0)*a*a*.01, GL=c=>C(mixv(c,[255,248,228],.4),.2);
+    const AB=[[.95,.31],[.5,.34],[.05,.29],[-.45,.16],[-.9,.18],[-1.6,.19],[-2.4,.19],[-3.2,.18],[-4.0,.175],[-4.8,.165],[-5.4,.155],[-5.7,.12]];
     add(AB.slice(0,3).map(([a,r])=>[a,ab(a),0,r]),C(GR),{sh:sh(GR)});
-    add(AB.slice(2).map(([a,r])=>[a,ab(a),0,r]),C(BL),{sh:sh(BL)});                                                             /* the slim blue abdomen */
-    add(AB.slice(2,11).map(([a,r])=>[a,ab(a)+r*.78,0,r*.32]),C(DK),{bias:-.02});                                               /* its dark dorsal stripe */
-    for(let i=3;i<AB.length-1;i++){ const [a,r]=AB[i]; for(const sd of [-1,1]) add([[a,ab(a)+r*.2,sd*r*.8,r*.22],[a-.06,ab(a-.06)-r*.55,sd*r*.6,r*.16]],C(mixv(BL,DK,.6)),{bias:-.015}); }   /* the dark joins between segments */
+    for(let i=2;i<AB.length-1;i++){ const [a0,r0]=AB[i], [a1,r1]=AB[i+1], fr=(i-2)/(AB.length-3), c=mixv(mixv(BL,[96,78,74],Math.max(0,(fr-.55)/.45)*.8),[120,150,92],Math.max(0,1-fr*5)*.5);   /* the slim abdomen, segment by segment: green-blue at the base, steel blue down its length, going dusky brown toward the tip */
+      add([[a0-.03,ab(a0-.03),0,r0*.97],[(a0+a1)/2,ab((a0+a1)/2),0,(r0+r1)/2],[a1+.05,ab(a1+.05),0,r1*.92]],C(c),{sh:sh(c)});
+      add([[a0-.04,ab(a0-.04),0,r0*1.01],[a0-.1,ab(a0-.1),0,r0*.99]],C(mixv(c,DK,.55)),{bias:-.012});   /* the dark ring at each join */
+      add([[a0-.12,ab(a0-.12)+r0*.62,0,r0*.2],[a1+.12,ab(a1+.12)+r1*.62,0,r1*.18]],GL(c),{bias:-.025}); }   /* the sheen of light along its back */
+    add(AB.slice(2,11).map(([a,r])=>[a,ab(a)+r*.82,0,r*.2]),C(DK,.8),{bias:-.02});                                               /* its thin dark dorsal line */
     for(const sd of [-1,1]) add([[-5.65,ab(-5.65),sd*.05,.06],[-6.15,ab(-6.15)+.04,sd*.1,.035]],C(DK));                          /* the claspers at the tip */
-    add([[1.0,.0,0,.48],[1.8,.08,0,.58],[2.6,.1,0,.48]],C(GR),{sh:sh(GR)});                                                       /* the stout green thorax */
-    add([[1.3,.5,0,.12],[2.2,.55,0,.12]],C(mixv(GR,[220,230,160],.3)),{bias:-.04});
+    add([[1.0,.0,0,.46],[1.8,.08,0,.55],[2.6,.1,0,.45]],C(GR),{sh:sh(GR)});                                                       /* the stout green thorax */
+    add([[1.25,.36,0,.16],[2.25,.42,0,.15]],GL(GR),{bias:-.04});   /* its glossy shoulder in the light */
+    for(const sd of [-1,1]) add([[1.25,.05,sd*.42,.05],[2.3,-.05,sd*.4,.045]],C(mixv(GR,DK,.5),.6),{bias:-.03});   /* the faint seams down its sides */
     for(const sd of [-1,1]){ const far=sd!==nearS, c=C(far? mulv(DK,.7) : mulv(DK,.85));                                          /* legs folded up under the thorax like a basket */
-      for(const [hx,kx,tx] of [[2.4,2.9,3.4],[2.0,2.5,3.0],[1.6,2.0,2.5]]) add([[hx,-.35,sd*.18,.07],[kx,-.95,sd*.42,.055],[tx,-.8,sd*.3,.035]],c,{bias:-.01}); }
+      for(const [hx,kx,tx] of [[2.4,2.9,3.4],[2.0,2.5,3.0],[1.6,2.0,2.5]]) add([[hx,-.35,sd*.18,.045],[kx,-.95,sd*.42,.035],[tx,-.8,sd*.3,.022]],c,{bias:-.01}); }
     const Hc=[3.05,.05,0], Hh=(u,v,w,r)=>[...headPt(Hc,d.hp||0,d.hy||0,u,v,w),r];
-    add([Hh(.25,-.12,0,.32),Hh(.38,-.3,0,.2)],C([170,186,96]),{sh:sh([170,186,96]),bias:-.03});                                 /* the yellow-green face */
-    add([Hh(.3,.16,0,.16)],C([70,110,180]),{bias:-.06}); add([Hh(.34,.2,0,.09)],C(DK),{bias:-.08});                              /* the bullseye on its brow */
-    for(const sd of [-1,1]){ const e=Hh(-.05,.2,sd*.29,.48); add([e],C([92,132,128]),{sh:[C([46,70,74]),C([170,214,206])],bias:-.05});   /* the huge eyes, meeting on top */
-      add([Hh(-.12,.4,sd*.36,.12)],"rgba(236,250,246,.35)",{bias:-.09}); }
+    add([Hh(.25,-.12,0,.24),Hh(.36,-.28,0,.15)],C([128,132,76]),{sh:sh([128,132,76]),bias:-.03});                                 /* the yellow-green face */
+    add([Hh(.3,.15,0,.13)],C([60,74,98]),{bias:-.06}); add([Hh(.34,.19,0,.07)],C(DK),{bias:-.08});                              /* the bullseye on its brow */
+    for(const sd of [-1,1]){ const e=Hh(-.05,.18,sd*.27,.41); add([e],C([58,76,48]),{sh:[C([20,26,20]),C([104,124,84])],bias:-.05});   /* the huge compound eyes, meeting on top, green-brown and glassy */
+      add([Hh(-.14,.36,sd*.31,.06)],"rgba(250,252,240,.6)",{bias:-.09}); add([Hh(-.02,.42,sd*.22,.1)],"rgba(200,220,210,.07)",{bias:-.085}); }   /* a sharp glint, and the soft sky reflection across the top */
     const wingL=(hg,sd,OL,ph,sweep)=>OL.map(([s,c,k])=>{ const sp=v3.n([sweep,Math.sin(ph),sd*Math.cos(ph)]); return [hg[0]+sp[0]*s-c,hg[1]+sp[1]*s,hg[2]+sp[2]*s,k?-1:0]; });
     for(const sd of [-1,1]) for(const [hg,OL,ph0,len,sw2,amber] of [[[2.2,.42,sd*.15],DF_FW,0,4.7,.12,0],[[1.3,.4,sd*.15],DF_HW,Math.PI*.55,4.55,-.05,1]]){
       const ph=d.amp*Math.sin(d.beat+ph0)+(d.phB==null? .12 : d.phB), wl=wingL(hg,sd,OL,ph,sw2);
       const fan=[[...hg,0]]; for(let i=0;i<=8;i++){ const a2=.12-d.amp+i/8*d.amp*2, sp=v3.n([sw2,Math.sin(a2),sd*Math.cos(a2)]); fan.push([hg[0]+sp[0]*len-.4,hg[1]+sp[1]*len,hg[2]+sp[2]*len,0]); }
-      add(fan,C([220,228,236],.08),{poly:true,bias:.3});                                                                            /* the shimmer of the wingbeat */
-      for(const g of [-.55,.55]) add(wingL(hg,sd,OL,ph+g*d.amp*.5,sw2),C([226,234,242],.05),{poly:true,bias:.2});                 /* ghosts either side of the stroke */
-      add(wl,C([228,236,244],.28),{poly:true});                                                                                    /* the clear membrane */
+      if(d.amp>.2) add(fan,C([226,232,238],.022),{poly:true,bias:.3});                                                                            /* the shimmer of the wingbeat */
+      for(const g of [-.55,.55]) if(d.amp>.2) add(wingL(hg,sd,OL,ph+g*d.amp*.5,sw2),C([226,234,242],.025),{poly:true,bias:.2});                 /* ghosts either side of the stroke */
+      add(wl,C([232,238,244],.15),{poly:true}); add(wl.slice(0,6).concat([v3.l(wl[0],wl[6],.25).slice(0,3).concat(0)]),`rgba(${200+(sd>0?20:0)},${226},${236-(sd>0?18:0)},.05)`,{poly:true,bias:-.004});   /* the clear membrane, barely there, with a faint rainbow sheen toward the front */                                                                                    /* the clear membrane */
       if(amber) add([[...hg,0],...wl.slice(6,10).map(q=>[...v3.l(hg,q,.32),0])],C([206,160,80],.16),{poly:true,bias:-.005});
       const LE=wl.slice(0,5), TE=[wl[0]].concat(wl.slice(5).reverse());
-      add(LE.map(q=>[...q.slice(0,3),.03]),C([46,40,36],.62),{bias:-.01});                                                       /* the stiff leading edge */
-      for(const f of [.28,.56]){ const vv=[]; for(let i=0;i<=8;i++){ const s=i/8, a=LE[Math.min(4,Math.round(s*4))], b=TE[Math.min(TE.length-1,Math.round(s*(TE.length-1)))]; vv.push([...v3.l(a,b,f).slice(0,3),.012]); } add(vv,C([60,56,52],.32),{bias:-.012}); }   /* the long veins */
-      for(let i=1;i<=9;i++){ const s=i/10, a=LE[Math.min(4,Math.round(s*4))], b=TE[Math.min(TE.length-1,Math.round(s*(TE.length-1)))]; add([[...v3.l(a,b,.04).slice(0,3),.008],[...v3.l(a,b,.9).slice(0,3),.006]],C([60,56,52],.2),{bias:-.011}); }   /* and the fine cross-veins */
-      const p1=v3.l(LE[3],LE[4],.42), p2=v3.l(LE[3],LE[4],.72); add([[...v3.l(p1,wl[5],.06).slice(0,3),.06],[...v3.l(p2,wl[5],.06).slice(0,3),.06]],C([160,124,66],.92),{bias:-.02}); }   /* the tan stigma */
+      add(LE.map(q=>[...q.slice(0,3),.022]),C([40,36,32],.7),{bias:-.01});                                                       /* the stiff leading edge */
+      for(const f of [.28,.56]){ const vv=[]; for(let i=0;i<=8;i++){ const s=i/8, a=LE[Math.min(4,Math.round(s*4))], b=TE[Math.min(TE.length-1,Math.round(s*(TE.length-1)))]; vv.push([...v3.l(a,b,f).slice(0,3),.009]); } add(vv,C([60,56,52],.34),{bias:-.012}); }   /* the long veins */
+      for(let i=1;i<=9;i++){ const s=i/10, a=LE[Math.min(4,Math.round(s*4))], b=TE[Math.min(TE.length-1,Math.round(s*(TE.length-1)))]; add([[...v3.l(a,b,.04).slice(0,3),.006],[...v3.l(a,b,.9).slice(0,3),.005]],C([60,56,52],.2),{bias:-.011}); }   /* and the fine cross-veins */
+      const p1=v3.l(LE[3],LE[4],.42), p2=v3.l(LE[3],LE[4],.72); add([[...v3.l(p1,wl[5],.06).slice(0,3),.045],[...v3.l(p2,wl[5],.06).slice(0,3),.045]],C([120,92,56],.85),{bias:-.02}); }   /* the tan stigma */
     return out; }
   let dragF=null, nextDragF=rnd(90,200); const dfCv=document.createElement("canvas"), dfCx=dfCv.getContext("2d");
   function startDragF(){ const F=H*.5, cx=W/2, cy=H*.52, z=rnd(.14,.17), s=Math.random()<.5? -1 : 1, hs=[W*(Math.random()<.5? rnd(.2,.38) : rnd(.62,.8)),H*rnd(.6,.72)], s0=[W*(s<0? rnd(-.1,.25) : rnd(.75,1.1)),H*rnd(.18,.45)], z0=7;
@@ -7121,7 +7132,7 @@ const ambient=(function(){
     const z=Pc[2]; if(z<.05) return; const u=K*F/z, sz=Math.ceil(Math.min(1800,14*u)), sx=cx+Pc[0]*F/z, sy=cy-Pc[1]*F/z; d.sx=sx; d.sy=sy; d.z=z;
     if(dfCv.width<sz||dfCv.height<sz) dfCv.width=dfCv.height=sz;
     const x=dfCx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,dfCv.width,dfCv.height); x.translate(sz/2,sz/2);
-    rigDraw(x,darnerParts(d,dark?.55:.86,vm),closeView(Pc),u); closePost(dfCv,x,sz,sx,sy,z,dark,d); }
+    d.warm=.35; rigDraw(x,darnerParts(d,dark?.55:.86,vm),closeView(Pc),u); closePost(dfCv,x,sz,sx,sy,z,dark,d); }
   /* ---- a southern flying squirrel gliding past at dusk: soft grey-brown fur above and creamy white below, the furred skin stretched taut from wrist to ankle
      into a square sail, the flat feathery tail steering behind, and huge dark night eyes ---- */
   /* the southern flying squirrel, built in 3-D: a small round body in soft olive-grey fur over a creamy white belly; the patagium, the furred skin stretched
