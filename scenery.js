@@ -7944,13 +7944,14 @@ const ambient=(function(){
       steerClear([fox,skunk,cub,mom,coyote,coy2,bobcat,pheasW,dog,lab,racc,beaver,...["hog","possum","otter","porc"].map(k=>WAD[k].get()),...quails,...buns,...wcs,...sqs,...smalls,doe,doe&&doe.fawn]);
       for(const pl of PLUGS) if(pl.lawn) try{ pl.lawn(L,dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }
+    if(img) drawLogCrawler(dt,dark);   /* the stick lies in the lawn: the near leaves, the spider's web and the tall foreground grass all stand in front of it */
     for(const m of motes) if(m.L===1) drawMote(m);
     for(const l of leaves) if(!l.off&&l.D<5) leaf(l, dark?.7:1);           /* the near ones, in front of everything in the field */
     if(img) drawSamaras(true,dark);
     for(const m of motes) if(m.L===2) drawMote(m);
     if(img) drawWeb(dt,dark);
     if(img) drawBig(dt,dark);
-    ctx.globalAlpha=1; if(img){ dogScare(dt); drawGreet(dt,dark); drawTrail(dt,dark); drawLogCrawler(dt,dark); drawMoths(dt,dark,"near"); drawBats(dt,dark); drawFlock(dt,dark); drawJays(dt,dark); drawJM(dt,dark); drawCmon(dt,dark); drawBanner(dt,dark); drawPerchBird(dt,dark); drawHawkG(dt,dark,"near"); drawPheasFront(dt,dark); drawHum(dt,dark); drawMantF(dt,dark); drawDragF(dt,dark); drawFsq(dt,dark); } ctx.globalAlpha=1;
+    ctx.globalAlpha=1; if(img){ dogScare(dt); drawGreet(dt,dark); drawTrail(dt,dark); drawMoths(dt,dark,"near"); drawBats(dt,dark); drawFlock(dt,dark); drawJays(dt,dark); drawJM(dt,dark); drawCmon(dt,dark); drawBanner(dt,dark); drawPerchBird(dt,dark); drawHawkG(dt,dark,"near"); drawPheasFront(dt,dark); drawHum(dt,dark); drawMantF(dt,dark); drawDragF(dt,dark); drawFsq(dt,dark); } ctx.globalAlpha=1;
     nightLayerEnd(nlMain);
     if(img) for(const pl of PLUGS) if(pl.light) try{ pl.light(dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
     ctx.setTransform(1,0,0,1,0,0); if(img) filmPass();
