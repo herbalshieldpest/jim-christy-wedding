@@ -5108,7 +5108,7 @@ const ambient=(function(){
     { const C0=logC; if(C0&&!C0.hold&&C0.a>.3&&C0.t<C0.life-2){   /* the rise is already up: no new rise, no new camera move, just a hand-over */
         if(!GB[kind]){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); }
         C0.next=kind; C0.life=Math.max(C0.life,C0.t+40);
-        if(C0.bird){ const g=C0.gb; g.hurry=true; if(GB[C0.bird].fly){ if(g.mode==="ground") g.leaveAt=0; } }   /* the bird takes itself off, and the stick comes in when it's gone */
+        if(C0.bird){ const g=C0.gb; g.hurry=true; if(g.mode==="ground"){ g.flushT=rnd(.4,1.1); g.state="stop"; g.st=0; g.yawT=g.yaw; g.lookTo=pick([-.5,.5]); } }   /* something's coming: it freezes, head up, then flushes */   /* the bird takes itself off, and the stick comes in when it's gone */
         return; } } const gbird=!!GB[kind]; if(!gbird){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); } const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.42,.5)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.021;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
     const L={kind,side,t:0,u:.22,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
@@ -5326,11 +5326,15 @@ const ambient=(function(){
     }
     ctx.restore();
     /* the animal, in the limb's frame */
-    if(L.next&&!L.bird){ L.anA=Math.max(0,(L.anA??1)-dt*.9); if(L.anA<=0&&!GB[L.next]){ const k=L.next; L.next=null; L.kind=k; L.u=k==="turtle"? .3 : .22; L.state=k==="turtle"? "pause" : "go"; L.st=0; L.dur=rnd(2,3); L.ph=0; L.dir=1; } }   /* one animal slips away, the next comes out onto the same stick */
-    else L.anA=Math.min(1,(L.anA??1)+dt*.9);
-    if(L.next&&GB[L.next]&&(L.anA??1)<=0){ L.sa=Math.max(0,(L.sa??1)-dt*.8); if(L.sa<=0){ toBird(L); L.sa=1; } }   /* the stick fades away, then a bird comes to the bare rise */
+    let walked=false;
+    if(L.next&&!L.bird&&L.anA>0){   /* the one on the stick walks off along it, out past the broken end and down into the grass */
+      const sk=L.kind==="skink", tu=L.kind==="turtle"; L.dir=1; L.state="go"; L.head+=(0-L.head)*Math.min(1,dt*4); L.look*=.9; L.ph+=dt*(sk? 10 : tu? 3 : 6); L.u+=dt*(sk? .16 : tu? .035 : .075); walked=true;
+      if(L.u>.97) L.anA=Math.max(0,L.anA-dt*(tu? 1.2 : 2.4)); }
+    if(L.next&&!L.bird&&L.anA<=0&&!GB[L.next]){ const k=L.next; L.next=null; L.kind=k; L.u=.04; L.state="go"; L.st=0; L.dur=rnd(2.5,4); L.ph=0; L.dir=1; L.head=0; L.look=0; L.entering=true; }   /* then the next comes out of the grass at the near end and onto the stick */
+    if(L.entering){ L.anA=Math.min(1,L.anA+dt*1.4); if(L.anA>=1) L.entering=false; } else if(!L.next) L.anA=Math.min(1,(L.anA??1)+dt*.9);
+    if(L.next&&GB[L.next]&&(L.anA??1)<=0){ L.sa=Math.max(0,(L.sa??1)-dt*.8); if(L.sa<=0){ toBird(L); L.sa=1; } }   /* the stick fades away once its animal is gone, then a bird comes to the bare rise */
     else L.sa=Math.min(1,(L.sa??1)+dt*.8);
-    stepLogAnimal(L,dt);
+    if(!walked) stepLogAnimal(L,dt);
     { ctx.save(); ctx.globalAlpha=L.a*(L.anA??1)*(L.sa??1); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);
       const xl=L.u*Ln, r=R(xl), fo=nightK>.3? fireOn(L) : null; L.fireK=fo? fo.k : 0; const sunS2=fo? fo.dirX*L.dir*((L.side<0? 1 : -1)) : sunS;   /* at the campfire, the firelight takes the sun's part */
       ctx.translate(xl,-sag(xl)); ctx.scale(L.dir,1);   /* on the limb's axis; the animal sits on the round of it, seen from a little above */
@@ -5373,12 +5377,13 @@ const ambient=(function(){
   function handOver(L){ if(GB[L.next]) toBird(L); else toStick(L); }
   function toBird(L){ const k=L.next, GS=GB[k]; L.next=null; L.bird=k; L.kind=k; L.u=GS.fly? rnd(.38,.55) : -.07; L.life=L.t+400; L.sa=1; L.anA=1;
     L.gb={state:GS.fly? "stop" : "walk",st:0,dur:GS.fly? rnd(1.5,2.5) : rnd(3,5),ph:0,peck:0,peckT:rnd(.4,1.2),look:0,lookTo:0,lookT:1,bob:0,fade:1,nod:0,mode:GS.fly? "in" : "ground",ft:0,fph:0,landT:9,leaveAt:GS.stay? L.t+rnd(...GS.stay) : 1e9}; }   /* the next bird comes in onto the same rise */
-  function toStick(L){ const k=L.next; L.next=null; L.bird=null; L.gb=null; L.kind=k; L.u=k==="turtle"? .3 : .22; L.state=k==="turtle"? "pause" : "go"; L.st=0; L.dur=k==="turtle"? rnd(3,5) : rnd(1.8,2.8); L.ph=0; L.dir=1; L.head=0; L.look=0; L.life=L.t+(k==="turtle"? rnd(40,55) : rnd(28,36)); L.sa=0; L.anA=0; L.img=null; L.key=null; }   /* the stick fades in where the bird was, and its animal with it */
-  function stepGroundBird(L,dt){ const g=L.gb, S=GB[L.bird]; g.fph+=dt*(S.fhz||8)*6.283;
+  function toStick(L){ const k=L.next; L.next=null; L.bird=null; L.gb=null; L.kind=k; L.u=.04; L.state="go"; L.entering=true; L.st=0; L.dur=rnd(2.5,4); L.ph=0; L.dir=1; L.head=0; L.look=0; L.life=L.t+(k==="turtle"? rnd(40,55) : rnd(28,36)); L.sa=0; L.anA=0; L.img=null; L.key=null; }   /* the stick fades in where the bird was, and its animal with it */
+  function stepGroundBird(L,dt){ const g=L.gb, S=GB[L.bird]; g.fph+=dt*(g.flushed&&!S.fly? 15 : (S.fhz||8))*6.283;
     if(g.mode==="in"){ if(g.ft===0){ try{ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx||W/2)/W*2-1,true); else if(S.twit) natureSfx.sing&&natureSfx.sing("woodcock",(L.sx||W/2)/W*2-1,true); }catch(e){} }
-      g.ft+=dt; if(g.ft>=S.fdur){ g.mode="ground"; g.landT=0; g.st=0; } return; }
+      g.ft+=dt; if(g.ft>=S.fdur){ g.mode="ground"; g.landT=0; g.st=0; if(g.hurry) g.flushT=rnd(1.2,2); } return; }   /* (if it was already wanted off, it lands, settles a moment, and goes) */
     if(g.mode==="out"){ g.ft+=dt; if(g.ft>=1.9&&!g.gone){ g.gone=true; if(L.next) handOver(L); else L.life=Math.min(L.life,L.t); } return; }
-    if(g.hurry&&!S.fly&&g.state!=="walk"){ g.state="walk"; g.st=0; g.dur=99; }   /* a walker just keeps walking, briskly, off the end */
+    if(g.hurry&&g.flushT==null&&g.mode==="ground") g.flushT=rnd(.4,1);
+    if(g.flushT!=null){ g.flushT-=dt; g.peck=0; if(g.flushT<=0){ g.flushT=null; g.mode="out"; g.ft=0; g.flushed=true; try{ const xf=(L.sx||W/2)/W; if(S.fly){ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,xf*2-1,true); else natureSfx.flush&&natureSfx.flush("grouse",xf); } else natureSfx.flush&&natureSfx.flush(L.bird==="pheasant"? "pheas" : "grouse",xf); }catch(e){} } return; }   /* the burst of wings */
     g.landT+=dt; if(S.fly&&L.t>g.leaveAt&&g.peck<=0&&!(g.singing>0)){ g.mode="out"; g.ft=0; try{ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx||W/2)/W*2-1,true); else if(S.twit) natureSfx.sing&&natureSfx.sing("woodcock",(L.sx||W/2)/W*2-1,true); }catch(e){} return; }
     g.st+=dt;
     if(S.sit){ g.state="stop"; g.singT=(g.singT??1.5)-dt; if(g.singT<=0&&L.a>.6&&L.t<L.life-3){ g.singT=rnd(6,9); g.singing=4.6; try{ natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx/W*2-1)*.7,true); }catch(e){} }
