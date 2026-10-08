@@ -4916,12 +4916,17 @@ const ambient=(function(){
      the same way the campfire is, so walkers route round it smoothly instead of being shoved about */
   function stickObs(){ const L=logC; if(!L||L.a<=.05) return []; const N=18, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, G=gnd(), o=[];
     for(let i=0;i<=N;i++){ const xl=i/N*Ln, r=L.Rf(xl), ly=-L.sag(xl)+r*.3, sx=L.x0+ca*xl*mx-sa*ly, sy=L.y0+sa*xl*mx+ca*ly, g=Math.max(4,sy-G.vy), gp=toGround(sx,sy); if(!gp||!isFinite(gp.Xw)) continue;
-      const hwD=(r*1.3+8)*GF/(g*g), stepX=Ln/N*Math.abs(ca)/g*XM, gb=toGround(sx,H+20), Db=gb&&isFinite(gb.Dw)? Math.min(gp.Dw,gb.Dw) : gp.Dw;
+      const hwD=(r*1.3+H*.05)*GF/(g*g),   /* keep a clear gap behind it too, so nobody's legs vanish behind the stick as if walking into it */ stepX=Ln/N*Math.abs(ca)/g*XM, gb=toGround(sx,H+20), Db=gb&&isFinite(gb.Dw)? Math.min(gp.Dw,gb.Dw) : gp.Dw;
       /* each circle reaches from just behind the stick right down to the bottom of the frame: the rise in front of it is off limits too, so nothing can pass between us and the stick */
       if(window.Campfire&&Campfire.on){ o.push({Xw:gp.Xw,Dw:gp.Dw,r:Math.max(hwD,stepX*.75)}); continue; }   /* at the fire, only the stick itself is in the way */
       const Dc=(gp.Dw+hwD+Db)/2, rr=(gp.Dw+hwD-Db)/2+hwD*.5; o.push({Xw:gp.Xw,Dw:Dc,r:Math.max(rr,stepX*.75)}); }
     return o; }
   PLUGS.push({obstacles:stickObs});
+  /* the dogs move inside their own step, after the lawn's steering has run, so they are kept off the stick right there, before they're drawn: no crossing, no flicker */
+  function stickPush(o){ if(!logC||!o||o.Xw==null) return; const obs=stickObs(); if(!obs.length) return;
+    const out=(kx,kd,pad)=>{ for(const b of obs){ const dx=(o[kx]-b.Xw)*XM, dz=o[kd]-b.Dw, d=Math.hypot(dx,dz), r=b.r*pad; if(d<r){ const ux=d>1e-4? dx/d : (o[kx]<b.Xw? -1 : 1), uz=d>1e-4? dz/d : 0; o[kx]=b.Xw+ux*r/XM; o[kd]=b.Dw+uz*r; } } };
+    out("Xw","Dw",1); if(o.tX!=null&&o.tD!=null) out("tX","tD",1.3); }
+  { const sd=stepDog; stepDog=function(d,dt){ const r=sd.apply(this,arguments); try{ stickPush(d); }catch(e){} return r; }; }
   /* is anyone walking out to the fire standing in front of the stick (nearer us than it, where it is)? then it is drawn first, behind them; otherwise it is drawn over whoever walks behind it */
   function stickBehindSomeone(){ const L=logC; if(!L) return false; let ppl=[]; try{ ppl=(window.Campfire&&Campfire.people)||[]; }catch(e){} if(!ppl.length) return false;
     const N=16, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, pl=[]; for(let i=0;i<=N;i++){ const xl=i/N*Ln, ly=-L.sag(xl)+L.Rf(xl)*.5; pl.push([L.x0+ca*xl*mx-sa*ly, L.y0+sa*xl*mx+ca*ly]); }
