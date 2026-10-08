@@ -4922,9 +4922,11 @@ const ambient=(function(){
       const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw2,ch2); x.globalAlpha=1; }
       if(nA>.005){ x.globalCompositeOperation="saturation"; x.fillStyle=`rgba(128,128,128,${(.72*nA).toFixed(3)})`; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="multiply"; x.fillStyle=`rgb(${Math.round(255-nA*143)},${Math.round(255-nA*127)},${Math.round(255-nA*85)})`; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; x.fillStyle=`rgba(4,6,16,${(.38*nA).toFixed(3)})`; x.fillRect(0,0,cw2,ch2); } }
     /* the face of the rise turned a little away from the sun behind it: darker toward us, the crest lit */
-    { const top=Math.min(...crest.map(p2=>p2[1])), g=x.createLinearGradient(0,top,0,H); g.addColorStop(0,"rgba(10,8,2,.06)"); g.addColorStop(.25,"rgba(10,8,2,.2)"); g.addColorStop(1,"rgba(6,4,2,.38)"); x.fillStyle=g; x.fillRect(0,0,cw2,ch2); }
-    x.globalCompositeOperation="destination-in"; x.filter=`blur(${(H*.004).toFixed(1)}px)`; x.fillStyle="#000"; x.fill(path); x.filter="none"; x.globalCompositeOperation="source-over";
+    { const top=Math.min(...crest.map(p2=>p2[1])), g=x.createLinearGradient(0,top,0,H); g.addColorStop(0,"rgba(10,8,2,0)"); g.addColorStop(.12,"rgba(10,8,2,.14)"); g.addColorStop(1,"rgba(6,4,2,.3)"); x.fillStyle=g; x.fillRect(0,0,cw2,ch2); }
+    x.globalCompositeOperation="destination-in"; x.filter=`blur(${(H*.016).toFixed(1)}px)`; x.fillStyle="#000"; x.save(); x.translate(0,H*.012); x.fill(path); x.restore(); x.filter="none";   /* a soft edge: the nearer lawn melts into the field rather than being cut out */ x.globalCompositeOperation="source-over";
     /* the far end eases back into the field */
+    /* the air between us and the field beyond: a soft lift of light just behind the crest, so the rise reads by depth and not by an outline */
+    { const day=1-Math.min(1,nA*1.2); x.save(); x.filter=`blur(${(H*.022).toFixed(1)}px)`; x.globalCompositeOperation="screen"; x.strokeStyle=nA>.3? `rgba(70,84,120,${(.16*nA).toFixed(2)})` : `rgba(150,126,86,${(.32*day).toFixed(2)})`; x.lineWidth=H*.05; x.lineCap="round"; x.beginPath(); crest.slice(4,52).forEach((p2,i)=>i? x.lineTo(p2[0],p2[1]-H*.03) : x.moveTo(p2[0],p2[1]-H*.03)); x.stroke(); x.restore(); }
 
     /* the near grass, blade by blade: the closer to us, the longer and broader each one, coloured from the lawn right where it grows, lit at the tip by the low sun behind */
     { const top=Math.min(...crest.map(p2=>p2[1])), x0b=Math.min(...crest.map(p2=>p2[0])), x1b=Math.max(...crest.map(p2=>p2[0])); let id=null; try{ id=x.getImageData(0,0,cw2,ch2).data; }catch(e){}
@@ -4938,10 +4940,10 @@ const ambient=(function(){
         x.beginPath(); x.moveTo(bx-w,by); x.quadraticCurveTo(bx+lean*.35+cv-w*.5,by-h*.55,bx+lean,by-h); x.quadraticCurveTo(bx+lean*.35+cv+w*.5,by-h*.55,bx+w,by); x.closePath(); x.fill(); } }
     /* the far end eases back into the field */
     { const e=S(Ln*1.32,0), b2=S(Ln*.8,0), g=x.createLinearGradient(b2[0],0,e[0],0); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; }
-    /* backlit grass tips along the crest (drawn after the blades) */
+    /* no outline along the crest: the grass itself breaks the skyline */
     { const day=1-Math.min(1,nA*1.2); x.save(); x.filter="blur(1.2px)"; x.strokeStyle=nA>.3? `rgba(150,170,210,${(.18*nA).toFixed(2)})` : `rgba(255,214,150,${(.3*day).toFixed(2)})`; x.lineWidth=3; x.beginPath(); crest.slice(0,50).forEach((p2,i)=>i? x.lineTo(p2[0],p2[1]+1.5) : x.moveTo(p2[0],p2[1]+1.5)); x.stroke(); x.restore(); }
     /* and a ragged fringe of the nearer, taller grass standing up along the crest against the field behind */
-    { let sd=L.seed+11; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }; const day=1-Math.min(1,nA*1.2); for(let i=0;i<46;i++){ const f=i/46, p2=crest[Math.min(crest.length-1,Math.floor(f*50)+(RN()<.5? 0 : 1))]; for(let j=0;j<5;j++){ const bx=p2[0]+(RN()-.5)*14, by=p2[1]+2+RN()*4, h=4+RN()*RN()*16, lean=(RN()-.5)*h*.6;
+    { let sd=L.seed+11; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }; const day=1-Math.min(1,nA*1.2); for(let i=0;i<70;i++){ const f=i/70, p2=crest[Math.min(crest.length-1,Math.floor(f*52)+(RN()<.5? 0 : 1))], cl=RN()<.35? 1.8 : 1; for(let j=0;j<Math.round(3+RN()*6);j++){ const bx=p2[0]+(RN()-.5)*16, by=p2[1]+H*.004+RN()*H*.016, h=(4+RN()*RN()*H*.026)*cl, lean=(RN()-.5)*h*.6;
         x.strokeStyle=nA>.3? `rgba(40,46,58,.8)` : `rgba(${Math.round(70+RN()*60)},${Math.round(70+RN()*50)},${Math.round(30+RN()*20)},.85)`; x.lineWidth=.8+RN(); x.beginPath(); x.moveTo(bx,by); x.quadraticCurveTo(bx+lean*.3,by-h*.6,bx+lean,by-h); x.stroke();
         if(day>.3&&RN()<.5){ x.strokeStyle=`rgba(255,210,140,${(.45*day).toFixed(2)})`; x.lineWidth=.7; x.beginPath(); x.moveTo(bx+lean*.6,by-h*.6); x.lineTo(bx+lean,by-h); x.stroke(); } } } }
     { const ys=crest.map(p2=>p2[1]), xs=crest.map(p2=>p2[0]); const x0=Math.max(0,Math.floor(Math.min(...xs)-W*.12)), y0=Math.max(0,Math.floor(Math.min(...ys)-H*.08)), x1=Math.min(cw2,Math.ceil(Math.max(...xs)+W*.12)); L.hillBox=[x0,y0,Math.max(1,x1-x0),Math.max(1,ch2-y0)]; }
