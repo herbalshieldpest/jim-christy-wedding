@@ -4813,7 +4813,7 @@ const ambient=(function(){
     return (x,y)=>{ const xi=Math.floor(x), yi=Math.floor(y), xf=x-xi, yf=y-yi, a=h(xi,yi), b=h(xi+1,yi), c=h(xi,yi+1), d=h(xi+1,yi+1), u=f(xf), v=f(yf); return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v; }; }
   /* the bark as data, not a picture: a height field of long corky ridges braiding along the limb with V-shaped furrows between them and small checks across the ridge tops,
      plus where the moss and lichen grow and how the colour drifts. It is lit later, pixel by pixel, as part of the round limb, so the light falls on it the way it falls on the field */
-  function makeBarkMap(async){ const Wt=1536, Ht=512, n1=vnoise(11), n2=vnoise(29), n3=vnoise(47), n4=vnoise(83), fbm=(n,X,Y,o)=>{ let v=0, a=.5, f=1; for(let i=0;i<o;i++){ v+=a*n(X*f,Y*f); f*=2.03; a*=.5; } return v; };
+  function makeBarkMap(async){ const Wt=W<700? 640 : 1024, Ht=W<700? 160 : 256,   /* smaller than before: the stick is slimmer now, and it builds quickly even on a phone */ n1=vnoise(11), n2=vnoise(29), n3=vnoise(47), n4=vnoise(83), fbm=(n,X,Y,o)=>{ let v=0, a=.5, f=1; for(let i=0;i<o;i++){ v+=a*n(X*f,Y*f); f*=2.03; a*=.5; } return v; };
     const sm=(e0,e1,v)=>{ const t2=Math.max(0,Math.min(1,(v-e0)/(e1-e0))); return t2*t2*(3-2*t2); };
     const Hf=new Float32Array(Wt*Ht), MO=new Float32Array(Wt*Ht), LI=new Float32Array(Wt*Ht), AL=new Float32Array(Wt*Ht), BK=new Float32Array(Wt*Ht);
     const CX=170, CY=24, gx=Math.ceil(Wt/CX)+3, gy=Math.ceil(Ht/CY)+3, pts=new Float32Array(gx*gy*2); let sd=7; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
@@ -4830,11 +4830,11 @@ const ambient=(function(){
     if(!async){ rows(0,Ht); M.done=true; return M; }
     let y=0; const step=()=>{ if(barkMap!==M) return; if(M.done) return; rows(y,Math.min(Ht,y+24)); y+=24; if(y>=Ht) M.done=true; else setTimeout(step,30); }; setTimeout(step,30); M.finish=()=>{ if(!M.done){ rows(y,Ht); y=Ht; M.done=true; } }; return M; }
   setTimeout(()=>{ if(!barkMap&&window.SCENERY_LOGS_ON) barkMap=makeBarkMap(true); },9000);   /* (not while the stick is switched off) */   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
-  const LOGS_ON=window.SCENERY_LOGS_ON=false;   /* the stick and the animals that come out on it (skink, eft, painted turtle, slimy salamander) are switched off for now: flip to true to bring them back */
-  function startLogCrawler(kind){ if(!LOGS_ON) return; if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.5,.58)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.034;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
+  const LOGS_ON=window.SCENERY_LOGS_ON=true;   /* the stick and the animals that come out on it (skink, eft, painted turtle, slimy salamander) are switched off for now: flip to true to bring them back */
+  function startLogCrawler(kind){ if(!LOGS_ON) return; if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.42,.5)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.021;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
     const L={kind,side,t:0,u:.1,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
-      ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*rnd(.97,1.0), len, R0, seed:Math.floor(rnd(0,9999)),
+      ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*(W<700? rnd(.8,.83) : rnd(.97,1.0)), len, R0, seed:Math.floor(rnd(0,9999)),
       splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), twigs:[], knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
       blades:Array.from({length:520},()=>({u:Math.random()*1.06-.03,h:rnd(.12,.75),l:rnd(-.4,.4),c:Math.random(),w:rnd(.6,1.3),bend:rnd(-.3,.3)}))};
     /* a real limb is never a tube: it thickens at an old branch joint, wavers, and tapers to the break */
@@ -4854,7 +4854,7 @@ const ambient=(function(){
   const logR=(L,xl)=>L.Rf(Math.max(0,Math.min(L.len,xl)));
   /* render the limb once per change of light into its own canvas: every pixel is a point on the round of the limb, with the bark's own normal,
      lit by the low sun, the sky's fill from above and the warm-green bounce off the lawn; shadows in the furrows, moss on top, the broken end showing pale torn wood */
-  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9;
+  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=W<700? 1 : Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9;
     let yMin=1e9, yMax=-1e9; for(let i=0;i<=60;i++){ const xl=i/60*Ln, y0=-L.sag(xl); yMin=Math.min(yMin,y0-L.Rf(xl)); yMax=Math.max(yMax,y0+L.Rf(xl)); }
     for(const st of L.stubs){ const r=L.Rf(st.xs), y0=-L.sag(st.xs)-r*.3, ty=y0+Math.sin(st.th)*st.len; yMin=Math.min(yMin,ty-r); }
     const yT=yMin-R0*.4-H*.01, yB=yMax+R0*.3+H*.022;
@@ -4984,7 +4984,7 @@ const ambient=(function(){
   /* the stick's line on the ground, for anyone else walking the lawn (the two of them coming out to the fire) to plan a way round it */
   window.SceneryStickPts=()=>{ const L=logC; if(!L||L.a<=.05) return null; const N=12, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, out=[];
     for(let i=0;i<=N;i++){ const xl=i/N*Ln*1.04, ly=-L.sag(Math.min(Ln,xl)), sx=L.x0+ca*xl*mx-sa*ly, sy=L.y0+sa*xl*mx+ca*ly, gp=toGround(sx,sy); if(gp&&isFinite(gp.Xw)&&gp.Dw>0) out.push({Xw:gp.Xw,Dw:gp.Dw}); } return out.length>1? out : null; };
-  function drawLogCrawler(dt,dark){ nextLogAuto-=(lull>0? 0 : dt); if(!logC&&nextLogAuto<=0){ if(stageBusy()||nA>.3||(barkMap&&!barkMap.done)) nextLogAuto=rnd(15,30); else { startLogCrawler(pick(["skink","skink","eft","eft","turtle","slimy"])); nextLogAuto=rnd(160,320); } }   /* now and then a skink or an eft comes out on its own, onto a stick in the grass */
+  function drawLogCrawler(dt,dark){ nextLogAuto-=(lull>0? 0 : dt); if(!logC&&nextLogAuto<=0){ if(stageBusy()||nA>.3||(barkMap&&!barkMap.done)) nextLogAuto=rnd(15,30); else { startLogCrawler(pick(["skink","skink","eft","eft","turtle","slimy"])); nextLogAuto=rnd(260,480); } }   /* now and then a skink or an eft comes out on its own, onto a stick in the grass */
     if(!logC) return; const L=logC; L.t+=dt; if(window.Campfire&&Campfire.on&&L.side<0&&L.life>L.t) L.life=L.t;   /* a stick on the left would lie in the fire ring: it fades away; one on the right stays, and the two of them walk round it */
     const fadeOut=L.t>L.life; L.a= fadeOut? Math.max(0,L.a-dt*.6) : Math.min(1,L.a+dt*.7); if(fadeOut&&L.a<=0){ logC=null; return; }
     const sp=sun(), sunS=Math.sign(sp.x-(L.x0+Math.cos(L.ang)*L.len*.5*-L.side))||1, lt=dark? .42 : 1, Ln=L.len, nightK=Math.min(1,nA*1.2);
@@ -5008,7 +5008,7 @@ const ambient=(function(){
       gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
       gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
     /* shallow focus: with something this close in the lens, the field and hills beyond fall softly out of focus, more the farther they are */
-    { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; const hb=L.hillBox||[0,0,W,H], ks=L.hill.width/W; ctx.drawImage(L.hill,hb[0]*ks,hb[1]*ks,hb[2]*ks,hb[3]*ks,hb[0],hb[1],hb[2],hb[3]); ctx.restore(); }   /* the rise of ground it lies on */
+    if(false){ const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L);   /* (the rise under the stick is off: simpler) */ ctx.save(); ctx.globalAlpha=L.a; const hb=L.hillBox||[0,0,W,H], ks=L.hill.width/W; ctx.drawImage(L.hill,hb[0]*ks,hb[1]*ks,hb[2]*ks,hb[3]*ks,hb[0],hb[1],hb[2],hb[3]); ctx.restore(); }   /* the rise of ground it lies on */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
        A soft occlusion right under the stick where no sky reaches, and a fainter shade falling toward us from the low sun behind */
@@ -5034,20 +5034,20 @@ const ambient=(function(){
     { ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);
       const xl=L.u*Ln, r=R(xl), fo=nightK>.3? fireOn(L) : null; L.fireK=fo? fo.k : 0; const sunS2=fo? fo.dirX*L.dir*((L.side<0? 1 : -1)) : sunS;   /* at the campfire, the firelight takes the sun's part */
       ctx.translate(xl,-sag(xl)); ctx.scale(L.dir,1);   /* on the limb's axis; the animal sits on the round of it, seen from a little above */
-      if(L.kind==="turtle"){ const S=H*.00115; drawTurtleLog(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
-      else { const S=H*.0023*(L.kind==="eft"? 1.3 : 1); drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
+      if(L.kind==="turtle"){ const S=H*.001; drawTurtleLog(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
+      else { const S=H*.002*(L.kind==="eft"? 1.25 : 1); drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
       ctx.restore(); }
     /* the real grass laid back over the stick's foot */
     if(nA<.6){ ctx.save(); ctx.globalAlpha=L.a*(1-nA/.6); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.drawImage(gs,L.imgX,L.imgY,cw/k,chh/k); ctx.restore(); }   /* by night the blades are lost in the dark anyway; let them go rather than glow */
     /* tall grass right in front, nearer than everything: a few loose clumps of slender arching leaves of all heights, tips drooping over, a seed stem here and there; light to draw (no filters) */
-    { if(!L.tall){ const cl=[], nC=3+Math.floor(Math.random()*2); for(let c=0;c<nC;c++){ const u=.06+(c+Math.random()*.8)/nC*.92, n=3+Math.floor(Math.random()*3);
+    { if(!L.tall){ const cl=[], nC=3+Math.floor(Math.random()*2); for(let c=0;c<nC;c++){ const u=.06+(c+Math.random()*.8)/nC*.92, n=2+Math.floor(Math.random()*3);
           for(let k=0;k<n;k++) cl.push({u:u+rnd(-.015,.015),ang:rnd(-.35,.28)+(k-n/2)*.1,hx:rnd(.03,.13),droop:rnd(.1,.7),w:rnd(2.6,5)*(H/800),ph:rnd(0,6),seed:Math.random()<.25,c:Math.random(),dir:Math.random()<.5? -1 : 1}); }
         L.tall=cl; }
       const ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, day=1-Math.min(1,nA*1.2), g=L.gc||[110,110,60], NS=12;
       ctx.save(); ctx.globalAlpha=L.a; ctx.lineCap="round";
-      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx0=L.x0+ca*xl*mx-sa*ly, sy0=L.y0+sa*xl*mx+ca*ly, by=H+8, len=(by-sy0)+H*tg.hx;
+      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx0=L.x0+ca*xl*mx-sa*ly, sy0=L.y0+sa*xl*mx+ca*ly, by=Math.min(H+8,sy0+H*.07), len=(by-sy0)+H*tg.hx;
         const a0=tg.ang+Math.sin(t*1.05+tg.ph)*.04+Math.sin(t*2.3+tg.ph*1.7)*.012, bx=sx0-Math.sin(a0)*(by-sy0), Lp=[], Rp=[]; let px=bx, py=by;
-        for(let i=0;i<=NS;i++){ const s2=i/NS, an=a0+tg.dir*tg.droop*s2*s2*2.2, w=tg.w*Math.pow(1-s2,.85); Lp.push([px-Math.cos(an)*w,py-Math.sin(an)*w]); Rp.push([px+Math.cos(an)*w,py+Math.sin(an)*w]); px+=Math.sin(an)*len/NS; py-=Math.cos(an)*len/NS; }
+        for(let i=0;i<=NS;i++){ const s2=i/NS, an=a0+tg.dir*tg.droop*s2*s2*2.2, w=tg.w*.7*Math.pow(1-s2,.85)*(.45+.55*Math.min(1,s2*5));   /* narrow where it leaves the turf, fullest a little way up, tapering to a fine tip */ Lp.push([px-Math.cos(an)*w,py-Math.sin(an)*w]); Rp.push([px+Math.cos(an)*w,py+Math.sin(an)*w]); px+=Math.sin(an)*len/NS; py-=Math.cos(an)*len/NS; }
         const col=mulv(mixv(g,[48,58,22],.45+tg.c*.3),(.45+tg.c*.3)*(1-nA*.55));
         ctx.fillStyle=rgb(col); ctx.beginPath(); Lp.forEach((q,i)=>i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); for(let i=Rp.length-1;i>=0;i--) ctx.lineTo(Rp[i][0],Rp[i][1]); ctx.closePath(); ctx.fill();
         if(day>.2){ ctx.strokeStyle=`rgba(255,214,146,${(.34*day).toFixed(2)})`; ctx.lineWidth=Math.max(.5,tg.w*.28); ctx.beginPath(); for(let i=4;i<Lp.length;i++) i>4? ctx.lineTo(Lp[i][0],Lp[i][1]) : ctx.moveTo(Lp[i][0],Lp[i][1]); ctx.stroke(); }   /* a lit edge */
