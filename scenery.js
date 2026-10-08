@@ -4740,104 +4740,108 @@ const ambient=(function(){
      stem passing behind and in front, with its lobed, toothed leaves turned autumn colours and glowing where the sun comes through them.
      The animals are painted the same way: a smooth body seen from a little above, rounded by its light, with skin texture, markings and eyes,
      legs stepping in a proper diagonal gait with splayed toes, a soft contact shadow on the bark, and the same light, grain and haze as the photo. ---- */
-  let logC=null, barkTex=null;
+  let logC=null, barkMap=null;
   /* a small value-noise and fbm, for the bark */
   function vnoise(seed){ const P=new Uint8Array(512); let s=seed>>>0; for(let i=0;i<256;i++) P[i]=i; for(let i=255;i>0;i--){ s=(s*1664525+1013904223)>>>0; const j=s%(i+1); const t2=P[i]; P[i]=P[j]; P[j]=t2; } for(let i=0;i<256;i++) P[i+256]=P[i];
     const f=t2=>t2*t2*(3-2*t2), h=(x,y)=>P[(P[x&255]+(y&255))&511]/255;
     return (x,y)=>{ const xi=Math.floor(x), yi=Math.floor(y), xf=x-xi, yf=y-yi, a=h(xi,yi), b=h(xi+1,yi), c=h(xi,yi+1), d=h(xi+1,yi+1), u=f(xf), v=f(yf); return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v; }; }
-  function makeBark(){ const Wt=1024, Ht=320, c=document.createElement("canvas"); c.width=Wt; c.height=Ht; const x=c.getContext("2d"), id=x.createImageData(Wt,Ht), d=id.data;
-    const n1=vnoise(11), n2=vnoise(29), n3=vnoise(47), n4=vnoise(83), fbm=(n,X,Y,o)=>{ let v=0, a=.5, f=1; for(let i=0;i<o;i++){ v+=a*n(X*f,Y*f); f*=2.03; a*=.5; } return v; };
-    const u0=X=>X/Wt; const sm=(e0,e1,v)=>{ const t2=Math.max(0,Math.min(1,(v-e0)/(e1-e0))); return t2*t2*(3-2*t2); };
-    /* first the height of the bark: thick plates running along the limb, split by deep wandering furrows and broken by cross-checks, with a fine grit over all */
-    const Hf=new Float32Array(Wt*Ht), LI=new Float32Array(Wt*Ht), MO=new Float32Array(Wt*Ht);
-    /* the plates are cells of a stretched cellular noise: long along the limb, narrow across it, their borders the fissures between them */
-    const CX=260, CY=44, gx=Math.ceil(Wt/CX)+2, gy=Math.ceil(Ht/CY)+2, pts=new Float32Array(gx*gy*2); let sd=7; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
-    for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ pts[(j*gx+i)*2]=(i+RN())*CX; pts[(j*gx+i)*2+1]=(j+RN())*CY; }
-    for(let y=0;y<Ht;y++) for(let X=0;X<Wt;X++){ const u=X/Wt, v=y/Ht, wx=X+fbm(n2,u*5,v*3,3)*60, wy=y+(fbm(n1,u*3,v*2,3)-.5)*40+(fbm(n3,u*18,v*4,2)-.5)*8, ci=Math.floor(wx/CX), cj=Math.floor(wy/CY); let f1=1e9, f2=1e9;
+  /* the bark as data, not a picture: a height field of long corky ridges braiding along the limb with V-shaped furrows between them and small checks across the ridge tops,
+     plus where the moss and lichen grow and how the colour drifts. It is lit later, pixel by pixel, as part of the round limb, so the light falls on it the way it falls on the field */
+  function makeBarkMap(async){ const Wt=1536, Ht=512, n1=vnoise(11), n2=vnoise(29), n3=vnoise(47), n4=vnoise(83), fbm=(n,X,Y,o)=>{ let v=0, a=.5, f=1; for(let i=0;i<o;i++){ v+=a*n(X*f,Y*f); f*=2.03; a*=.5; } return v; };
+    const sm=(e0,e1,v)=>{ const t2=Math.max(0,Math.min(1,(v-e0)/(e1-e0))); return t2*t2*(3-2*t2); };
+    const Hf=new Float32Array(Wt*Ht), MO=new Float32Array(Wt*Ht), LI=new Float32Array(Wt*Ht), AL=new Float32Array(Wt*Ht), BK=new Float32Array(Wt*Ht);
+    const CX=170, CY=24, gx=Math.ceil(Wt/CX)+3, gy=Math.ceil(Ht/CY)+3, pts=new Float32Array(gx*gy*2); let sd=7; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+    for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ pts[(j*gx+i)*2]=(i-1+RN())*CX; pts[(j*gx+i)*2+1]=(j-1+RN())*CY; }
+    const rows=(y0,y1)=>{ for(let y=y0;y<y1;y++) for(let X=0;X<Wt;X++){ const u=X/Wt, v=y/Ht, wx=X+fbm(n2,u*4,v*4,3)*90, wy=y+(fbm(n1,u*2.5,v*3,3)-.5)*18+(fbm(n3,u*24,v*6,2)-.5)*5, ci=Math.floor(wx/CX)+1, cj=Math.floor(wy/CY)+1; let f1=1e9, f2=1e9;
       for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ const ii=ci+di, jj=cj+dj; if(ii<0||jj<0||ii>=gx||jj>=gy) continue; const k=(jj*gx+ii)*2, dx=(pts[k]-wx)/CX, dy=(pts[k+1]-wy)/CY, dd=Math.sqrt(dx*dx+dy*dy); if(dd<f1){ f2=f1; f1=dd; } else if(dd<f2) f2=dd; }
-      const edge=(f2-f1)*(.7+fbm(n3,u*40,v*8,2)*.8), fiss=sm(.06,.55,edge), grit=fbm(n4,u*150,v*52,3), lump=fbm(n1,u*44,v*12,4), xc=sm(.62,.7,fbm(n2,u*60+3,v*9,2))*sm(.5,.9,fiss), strand=fbm(n4,u*8,v*90,2);   /* long corky ridges, V-furrows between, small cross-checks across the ridge tops */
-      Hf[y*Wt+X]=Math.pow(fiss,.85)*(.5+.35*lump+.15*strand)*(1-xc*.55)+grit*.16;
-      LI[y*Wt+X]=fbm(n3,u*7+9,v*8,5); MO[y*Wt+X]=fbm(n2,u*10+4,v*12,5)+fbm(n4,u*90,v*70,2)*.25; }
-    /* then lit as relief, from above: each slope that faces up catches light, the furrows sink into shadow */
-    for(let y=0;y<Ht;y++) for(let X=0;X<Wt;X++){ const i=y*Wt+X, h=Hf[i], hu=Hf[Math.max(0,y-1)*Wt+X], hd=Hf[Math.min(Ht-1,y+1)*Wt+X], hl=Hf[y*Wt+Math.max(0,X-1)], hr=Hf[y*Wt+Math.min(Wt-1,X+1)];
-      const sl=(hu-hd)*4.2+(hl-hr)*1.2, sh=Math.max(.3,Math.min(1.35,.88+sl)), dep=.32+.68*Math.min(1,h*1.3);
-      const wv=fbm(n1,u0(X)*3,y/Ht*2,3), dk=1-dep; let r=(118+wv*24)*dep*sh-dk*10, g=(110+wv*20)*dep*sh-dk*12, b=(98+wv*14)*dep*sh-dk*14; const v=y/Ht;   /* weathered grey-brown ridges, warm brown in the furrows */
-      const li=LI[i]; if(li>.62){ const k=Math.min(1,(li-.62)*6)*(h>.3?1:.3); r=lerp(r,176*sh,k*.75); g=lerp(g,186*sh,k*.75); b=lerp(b,160*sh,k*.75); if(((X*7+y*13)%11)<2) { r*=.82; g*=.84; } }   /* crusty grey-green lichen */
-      const mo=MO[i]; if(v<.45&&mo>.55&&h>.25){ const k=Math.min(1,(mo-.55)*5)*Math.min(1,(.45-v)*4); r=lerp(r,(64+mo*36)*sh,k*.8); g=lerp(g,(72+mo*40)*sh,k*.8); b=lerp(b,(34+mo*10)*sh,k*.8); }   /* moss on top of the plates */
-      const n=(Math.sin(X*12.9898+y*78.233)*43758.5453)%1*14; d[i*4]=r+n; d[i*4+1]=g+n; d[i*4+2]=b+n; d[i*4+3]=255; }
-    x.putImageData(id,0,0); return c; }
-  function startLogCrawler(kind){ if(!barkTex) barkTex=makeBark(); const side=Math.random()<.5? -1 : 1;
-    logC={kind,side,t:0,u:.1,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
-      ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*rnd(.97,1.0), len:W*rnd(.6,.68)*Math.max(.9,Math.min(1.3,1100/W)),
-      leaves:Array.from({length:0},(_,i)=>({u:.12+i*.17+rnd(-.04,.04),c:pick([[132,58,34],[150,84,40],[112,92,44],[146,104,52],[120,60,38]]),s:rnd(.85,1.25),r:rnd(-.9,.9),tilt:rnd(.45,.9),front:Math.random()<.8,hole:Math.random()<.35,brown:Math.random()})),
-      knots:Array.from({length:3},()=>({u:rnd(.2,.9),v:rnd(-.3,.5),s:rnd(.7,1.3)})), lich:Array.from({length:0},()=>({u:rnd(.05,.95),v:rnd(-.8,.2),s:rnd(.6,1.4)})), stubs:[],
-      blades:Array.from({length:260},()=>({u:Math.random()*1.05-.02,h:rnd(.18,.7),l:rnd(-.35,.35),c:Math.random()}))}; }
-  /* the limb in its own frame: x along it from the near end (0) to the broken end (len), y across it (negative = top); radius tapers with distance */
-  const logR=(L,xl)=>H*.085*lerp(1,.52,xl/L.len);
+      const edge=(f2-f1)*(.85+fbm(n3,u*40,v*8,2)*.35), fV=sm(.02,.32,edge), ph=wy/CY+fbm(n2,u*3,v*2.5,3)*2.4+fbm(n3,u*9,v*6,2)*.7, fd=sm(.25,.6,fbm(n1,u*22,v*3,3)), fS=1-(1-sm(.04,.42,Math.abs(Math.sin(Math.PI*ph))))*(.25+.75*fd), brk=sm(.5,.68,fbm(n4,u*9+2,v*5,3)), fiss=fS*lerp(1,fV,brk*.85),   /* long furrows that wander, fade and merge so the ridges braid; here and there a ridge broken into blocks */ grit=fbm(n4,u*170,v*60,3), lump=fbm(n1,u*44,v*12,4), xc=sm(.62,.7,fbm(n2,u*60+3,v*9,2))*sm(.5,.9,fiss), strand=Math.pow(fbm(n4,u*6,v*150,3),1.5)*1.4;
+      const i=y*Wt+X, plate=Math.min(1,fiss*1.25); const crumb=fbm(n3,u*90,v*26,3), pit=sm(.62,.75,fbm(n1,u*130,v*40,2)); const wood=Math.pow(plate,.75)*(.42+.22*lump+.18*strand+.28*crumb)*(1-xc*.45)*(1-pit*.35)+grit*.2;
+      /* patches of the old bark still clinging: thick, broken into blocky plates, raised above the bare grey wood with a torn lip at the edge */
+      const bm=fbm(n3,u*4.5+11,v*3.5+5,4)+fbm(n4,u*30,v*20,2)*.12, bk=sm(.5,.53,bm), bp=sm(.03,.28,(f2-f1)), bark=.62+.3*bp*(.6+.4*crumb)+grit*.12-(1-bp)*.35;
+      Hf[i]=lerp(wood,bark,bk); BK[i]=bk;   /* flat-topped, stringy ridges with sharp narrow furrows */
+      MO[i]=fbm(n2,u*9+4,v*7,5)+fbm(n4,u*120,v*90,2)*.18; LI[i]=fbm(n3,u*8+9,v*9,5); AL[i]=fbm(n1,u*3+7,v*4,4); } };
+    const M={Wt,Ht,Hf,MO,LI,AL,BK,done:false};
+    if(!async){ rows(0,Ht); M.done=true; return M; }
+    let y=0; const step=()=>{ if(barkMap!==M) return; if(M.done) return; rows(y,Math.min(Ht,y+24)); y+=24; if(y>=Ht) M.done=true; else setTimeout(step,30); }; setTimeout(step,30); M.finish=()=>{ if(!M.done){ rows(y,Ht); y=Ht; M.done=true; } }; return M; }
+  setTimeout(()=>{ if(!barkMap) barkMap=makeBarkMap(true); },9000);   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
+  function startLogCrawler(kind){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const side=Math.random()<.5? -1 : 1, len=W*rnd(.6,.68)*Math.max(.9,Math.min(1.3,1100/W)), R0=H*.085;
+    const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
+    const L={kind,side,t:0,u:.1,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
+      ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*rnd(.97,1.0), len, R0, seed:Math.floor(rnd(0,9999)),
+      splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
+      blades:Array.from({length:520},()=>({u:Math.random()*1.06-.03,h:rnd(.12,.75),l:rnd(-.4,.4),c:Math.random(),w:rnd(.6,1.3),bend:rnd(-.3,.3)}))};
+    /* a real limb is never a tube: it thickens at an old branch joint, wavers, and tapers to the break */
+    L.Rf=xl=>{ const u=xl/len; return R0*lerp(1,.56,u)*(1+.045*Math.sin(u*9+s1)+.03*Math.sin(u*23+s2)+.16*Math.exp(-Math.pow((u-knob)/.06,2))); };
+    L.sag=xl=>Math.sin(xl/len*Math.PI)*H*.008+Math.sin(xl/len*5+s2)*H*.003;
+    logC=L; }
+  const logR=(L,xl)=>L.Rf(Math.max(0,Math.min(L.len,xl)));
+  /* render the limb once per change of light into its own canvas: every pixel is a point on the round of the limb, with the bark's own normal,
+     lit by the low sun, the sky's fill from above and the warm-green bounce off the lawn; shadows in the furrows, moss on top, the broken end showing pale torn wood */
+  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9, yT=-R0*1.35-H*.012, yB=R0*1.25;
+    const cw=Math.ceil((x1+padL)*k), chh=Math.ceil((yB-yT)*k); let c=L.img; if(!c){ c=L.img=document.createElement("canvas"); } if(c.width!==cw||c.height!==chh){ c.width=cw; c.height=chh; }
+    const x=c.getContext("2d"), id=x.createImageData(cw,chh), d=id.data; L.imgX=-padL; L.imgY=yT; L.imgK=k;
+    const toneMap=v=>{ const q=v/(1+v*.6)*1.6; return Math.max(0,Math.min(255,Math.pow(Math.max(0,q),1/2.2)*255)); };   /* light adds in linear, shown through a soft shoulder like film */
+    const sunC=lg.sunC, skyC=lg.skyC, bnc=lg.bnc;
+    /* the geometry, bark and its response to the sun's direction are worked out once; after that only the strength and colour of the light change, which is cheap */
+    if(!L.buf||L.buf.dir!==lg.dir||L.buf.n!==cw*chh){ L.buf=null; const N2=cw*chh, bf={dir:lg.dir,n:N2,D:new Float32Array(N2*3),S:new Float32Array(N2*3),O:new Float32Array(N2*3),M:new Float32Array(N2*3),cov:new Float32Array(N2),gr:new Float32Array(N2)};
+    const el=.5, se=Math.sin(el), ce=Math.cos(el), U=[0,se,ce], V=[0,-ce,se];
+    const Lv=v3.n(lg.L);
+    const samp=(A,u,v)=>{ u=((u%B.Wt)+B.Wt)%B.Wt; v=((v%B.Ht)+B.Ht)%B.Ht; const x0=u|0, y0=v|0, fx=u-x0, fy=v-y0, x2=(x0+1)%B.Wt, y2=(y0+1)%B.Ht; const a=A[y0*B.Wt+x0], b=A[y0*B.Wt+x2], cc=A[y2*B.Wt+x0], dd=A[y2*B.Wt+x2]; return a+(b-a)*fx+(cc-a)*fy+(a-b-cc+dd)*fx*fy; };
+    const sm=(e0,e1,v)=>{ const t2=Math.max(0,Math.min(1,(v-e0)/(e1-e0))); return t2*t2*(3-2*t2); };
+    const knots=L.knots.map(kn=>({u:kn.u*Ln,ph:kn.ph,s:kn.s}));
+    for(let py=0;py<chh;py++){ const yl=yT+(py+.5)/k;
+      for(let px=0;px<cw;px++){ const xl=-padL+(px+.5)/k, xc=Math.max(0,Math.min(Ln,xl)), R=L.Rf(xc), y0=-L.sag(xc), a=-(yl-y0)/R;
+        /* the broken end: a ragged line of splinters, with the torn pale wood showing just behind it */
+        let endX=Ln+R*.06*Math.sin(a*9+L.seed); for(const s of L.splint) endX+=R*s.h*Math.exp(-Math.pow((a-s.a)/s.w,2));
+        const ea=Math.abs(a); if(ea>1.08||xl>endX+1/k) continue;
+        const aa=Math.max(-1,Math.min(1,a)), cz=Math.sqrt(Math.max(0,1-aa*aa)), n0=[0,aa*U[1]+cz*V[1],aa*U[2]+cz*V[2]], phi=Math.atan2(n0[1],n0[2]);
+        const tu=xl*1.75+8, tv=phi*R*2+B.Ht*.5;
+        let h=samp(B.Hf,tu,tv); const hx=(samp(B.Hf,tu+2,tv)-samp(B.Hf,tu-2,tv))*.75, hy=(samp(B.Hf,tu,tv+2)-samp(B.Hf,tu,tv-2))*.75;
+        /* old knots where twigs fell away: a raised collar with a dark socket */
+        let kn=0; for(const q of knots){ const du=(xl-q.u)/(R*.22*q.s), dv=(phi-q.ph)/(.32*q.s), dd=Math.sqrt(du*du+dv*dv); if(dd<2.2){ kn+=.35*Math.exp(-Math.pow((dd-1)/.4,2))-.45*Math.exp(-Math.pow(dd/.5,2)); } } h+=kn;
+        const top=Math.max(0,n0[2]), mo=sm(.62,.74,samp(B.MO,tu*.6,tv*.6)+top*.18-.06)*sm(.25,.7,top)*(1-sm(.2,.6,-kn)), li=sm(.64,.72,samp(B.LI,tu*.7,tv*.7))*(1-mo)*sm(-.9,-.2,n0[2]+.3);
+        const bump=4*(1-mo*.6), T=[0,n0[2],-n0[1]];
+        let n=[-hx*bump*.5,n0[1]-hy*bump*.5*T[1],n0[2]-hy*bump*.5*T[2]]; if(mo>0){ const g2=(samp(B.MO,tu*3.1,tv*3.1)-.5)*2.4*mo; n[0]+=g2*.5; n[1]+=g2*.3*T[1]; n[2]+=g2*.3*T[2]; } n=v3.n(n);
+        /* albedo: weathered grey on the ridge tops, warm dark brown down in the furrows, drifts of colour along the limb; dull olive moss; pale crusty lichen */
+        const al=samp(B.AL,tu*.5,tv*.5), dep=Math.max(0,Math.min(1,h*1.25));
+        let r=lerp(.032,.1,dep)*(.7+.6*al), g=lerp(.022,.085,dep)*(.7+.55*al), b=lerp(.014,.068,dep)*(.7+.5*al);
+        const bkv=samp(B.BK,tu,tv); if(bkv>0){ const f3=.75+.5*samp(B.AL,tu*3,tv*3); r=lerp(r,lerp(.016,.06,dep)*f3,bkv); g=lerp(g,lerp(.012,.048,dep)*f3,bkv); b=lerp(b,lerp(.008,.034,dep)*f3,bkv); }   /* the bark darker and browner than the weathered wood */
+        if(li>0){ const f2=.85+.3*samp(B.Hf,tu*3,tv*3); r=lerp(r,.24*f2,li*.7); g=lerp(g,.25*f2,li*.7); b=lerp(b,.2*f2,li*.7); }
+        if(mo>0){ const f2=.7+.6*samp(B.MO,tu*4,tv*4); r=lerp(r,.045*f2,mo); g=lerp(g,.05*f2,mo); b=lerp(b,.012*f2,mo); }
+        let wood=0; if(xl>endX-R*.22*cz-2/k){ wood=sm(endX-R*.22*cz-2/k,endX-R*.22*cz,xl); const fib=.8+.4*samp(B.Hf,xl*6,a*90), ring=.9+.1*Math.sin(Math.sqrt(aa*aa+((xl-endX)/(R*.3))**2)*40); r=lerp(r,.26*fib*ring,wood); g=lerp(g,.19*fib*ring,wood); b=lerp(b,.11*fib*ring,wood); n=v3.n(v3.l(n,[1,n[1]*.3,n[2]*.3+.3],wood*.8)); }
+        /* light: the sun with the ridges' own shadows, the sky from above, the lawn's bounce from below, deep occlusion in the furrows and where the limb meets the ground */
+        const dif=Math.max(0,v3.d(n,Lv)); let shd=1; if(dif>0){ const lu=Lv[0]*9, lv=(Lv[1]*T[1]+Lv[2]*T[2])*9, h2=samp(B.Hf,tu+lu,tv+lv)+kn*.5; shd=1-Math.max(0,Math.min(.75,(h2-h-.06)*3))*(1-wood); }
+        const ao=(.5+.5*Math.min(1,h*1.15+wood*.5))*lerp(.35,1,sm(-1,-.35,aa)), sky=.5+.5*n[2], bo=Math.max(0,-n[2]*.7+.3);
+        const rim=Math.pow(1-Math.max(0,v3.d(n,V)),3)*Math.max(0,Lv[1])*(mo*.9+.25)*shd;
+        const q=py*cw+px, q3=q*3, ds=dif*shd, sa=sky*ao, ba=bo*ao; bf.D[q3]=r*ds; bf.D[q3+1]=g*ds; bf.D[q3+2]=b*ds; bf.S[q3]=r*sa; bf.S[q3+1]=g*sa; bf.S[q3+2]=b*sa; bf.O[q3]=r*ba; bf.O[q3+1]=g*ba; bf.O[q3+2]=b*ba; bf.M[q3]=rim*.35; bf.M[q3+1]=rim*.3; bf.M[q3+2]=rim*.22;
+        /* the edge: anti-aliased, and roughened by the bark and moss standing proud of the outline */
+        const edgePx=(1-ea)*R*k+(h-.45)*2.2*k+mo*1.5*k*(n0[2]>0? 1 : 0), cov=Math.max(0,Math.min(1,edgePx+.5))*Math.max(0,Math.min(1,(endX-xl)*k+.5));
+        bf.cov[q]=Math.max(0,cov); bf.gr[q]=(Math.random()-.5)*5; } }
+    L.buf=bf; }
+    { const bf=L.buf, N2=bf.n; for(let q=0;q<N2;q++){ const cv=bf.cov[q]; if(cv<=0) continue; const q3=q*3, i4=q*4, gr=bf.gr[q];
+        d[i4]=toneMap(bf.D[q3]*sunC[0]+bf.S[q3]*skyC[0]+bf.O[q3]*bnc[0]+bf.M[q3]*sunC[0])+gr; d[i4+1]=toneMap(bf.D[q3+1]*sunC[1]+bf.S[q3+1]*skyC[1]+bf.O[q3+1]*bnc[1]+bf.M[q3+1]*sunC[1])+gr; d[i4+2]=toneMap(bf.D[q3+2]*sunC[2]+bf.S[q3+2]*skyC[2]+bf.O[q3+2]*bnc[2]+bf.M[q3+2]*sunC[2])+gr; d[i4+3]=cv*255; } }
+    x.putImageData(id,0,0);
+    /* graded into the photograph: the page's own colour cast over the limb */
+    const tn=tint(); if(tn.a>0){ x.globalCompositeOperation="source-atop"; x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,chh); x.globalAlpha=1; x.globalCompositeOperation="source-over"; } }
+  function limbLight(L,dark){ const sp=sun(), nightK=Math.min(1,nA*1.2), midX=L.x0+Math.cos(L.ang)*L.len*.5*-L.side, sunS=Math.sign(sp.x-midX)||1, lx=(L.side<0? 1 : -1)*sunS*Math.min(1,Math.abs(sp.x-midX)/(W*.5)+.25);
+    const elev=Math.max(.12,Math.min(.85,(H*.62-sp.y)/H+.15)), g=L.gc||[110,110,60], day=(1-nightK)*(dark? .45 : 1);
+    /* the low sun is behind the field: it lights the top and far side, rims the near edge; the near face is in the sky's cool shade */
+    const sunC=[2.3*day,1.6*day,.95*day], skyC=[lerp(.2,.04,nightK)*(dark? .6 : 1),lerp(.23,.05,nightK)*(dark? .6 : 1),lerp(.3,.1,nightK)*(dark? .6 : 1)], bnc=[Math.pow(g[0]/255,2.2)*1.1*day+.01,Math.pow(g[1]/255,2.2)*1.1*day+.012,Math.pow(g[2]/255,2.2)*.9*day+.012];
+    const L3=[Math.round(lx*10)/10*.55,.7,Math.round(elev*10)/10]; return {L:L3,sunC,skyC,bnc,dir:L3.join(","),key:[Math.round(lx*10),Math.round(elev*20),Math.round(nightK*25),dark?1:0,Math.round(tint().a*20)].join(",")}; }
   function drawLogCrawler(dt,dark){ if(!logC) return; const L=logC; L.t+=dt;
     const fadeOut=L.t>L.life; L.a= fadeOut? Math.max(0,L.a-dt*.6) : Math.min(1,L.a+dt*.7); if(fadeOut&&L.a<=0){ logC=null; return; }
     const sp=sun(), sunS=Math.sign(sp.x-(L.x0+Math.cos(L.ang)*L.len*.5*-L.side))||1, lt=dark? .42 : 1, Ln=L.len, nightK=Math.min(1,nA*1.2);
     if(!L.gc||(L.gcT=(L.gcT||0)-1)<=0){ L.gcT=30; const ip=toImg(L.x0-L.side*W*.3,L.y0-H*.04); L.gc=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[110,110,60]; }
-    const grass=L.gc;
+    const grass=L.gc, lg=limbLight(L,dark); L.rT=(L.rT||0)-dt; if(!L.img||(L.key!==lg.key&&L.rT<=0)){ const t0=performance.now(); renderLimb(L,lg); L.key=lg.key; L.rT=.6+(performance.now()-t0)/1000*8; }   /* relit as the light changes, never more than a small share of the time */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
-    const R=xl=>logR(L,xl), N=48, sag=xl=>Math.sin(xl/Ln*Math.PI)*H*.006;
-    const outline=new Path2D(); for(let i=0;i<=N;i++){ const xl=i/N*Ln; outline[i? "lineTo" : "moveTo"](xl,-R(xl)-sag(xl)+Math.sin(i*1.9)*R(xl)*.02); }
-    { const e=Ln, r=R(e); outline.lineTo(e+r*.18,-r*.6); outline.lineTo(e+r*.32,-r*.15); outline.lineTo(e+r*.2,r*.2); outline.lineTo(e+r*.1,r*.75); }   /* the jagged broken end */
-    for(let i=N;i>=0;i--){ const xl=i/N*Ln; outline.lineTo(xl,R(xl)-sag(xl)); } outline.closePath();
-    /* its shadow on the grass, falling away from the sun and soft */
-    ctx.save(); ctx.filter=`blur(${(H*.016).toFixed(1)}px)`; ctx.fillStyle=`rgba(14,10,4,${(.42*(1-nightK*.4)).toFixed(2)})`; ctx.beginPath(); for(let i=0;i<=N;i++){ const xl=i/N*Ln; ctx.lineTo(xl+H*.01,R(xl)*.55-sag(xl)); } for(let i=N;i>=0;i--){ const xl=i/N*Ln; ctx.lineTo(xl+H*.03,R(xl)*1.35-sag(xl)); } ctx.closePath(); ctx.fill(); ctx.restore();
-    /* grape leaves and vine behind the limb */
-    const vineAt=(xl,ph=0)=>{ const th=xl/(H*.13)+.6+ph+Math.sin(xl/(H*.05))*.12, r=R(xl); return {x:xl+Math.sin(th)*r*.15, y:-sag(xl)-Math.cos(th)*r*1.04, front:Math.sin(th)>0, th}; };
-    const drawVine=front=>{ ctx.lineCap="round"; for(const [ph,wk,end] of [[0,1,.93],[.5,.6,.7]]){ let prev=null; for(let i=0;i<=220;i++){ const xl=i/220*Ln*end, v=vineAt(xl,ph); if(v.front===front&&prev&&prev.front===front){ const w=Math.max(1.2,H*.0085*wk*lerp(1,.45,xl/Ln)), vy=v.y-(front? 0 : 0);
-          ctx.strokeStyle=rgb(mulv([46,36,28],lt*(front? 1 : .5))); ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(v.x,vy); ctx.stroke();   /* a woody grape vine, shaggy-barked, two strands twisting round the limb */
-          if(front){ ctx.strokeStyle=rgb(mulv([120,100,78],lt),.45); ctx.lineWidth=w*.3; ctx.beginPath(); ctx.moveTo(prev.x,prev.y-w*.28); ctx.lineTo(v.x,vy-w*.28); ctx.stroke();
-            if(i%3===0){ ctx.strokeStyle=rgb(mulv([92,74,56],lt),.6); ctx.lineWidth=Math.max(.5,w*.12); ctx.beginPath(); ctx.moveTo(v.x-w*.4,vy-w*.2); ctx.lineTo(v.x+w*.5,vy+w*.15); ctx.stroke(); } }   /* light along its top, the bark peeling in strips */
-          else { ctx.strokeStyle="rgba(0,0,0,.25)"; ctx.lineWidth=w*.6; ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(v.x,vy); ctx.stroke(); } } prev=v; } } };
-    const leaf=(lf,front)=>{ const xl=lf.u*Ln, v={x:xl,y:-R(xl)*lerp(.95,.2,lf.s-.85)-sag(xl)}; if(lf.front!==front) return; const sz=H*.075*lf.s*lerp(1,.75,lf.u);
-      ctx.save(); ctx.translate(v.x,v.y); ctx.rotate(Math.PI/2+lf.r*.8+Math.sin(t*1.1+lf.u*12)*.04); ctx.scale(1,lf.tilt);   /* hanging off the vine, down the face of the limb */
-      ctx.strokeStyle=rgb(mulv([70,56,40],lt)); ctx.lineWidth=Math.max(.8,sz*.03); ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(sz*.2,-sz*.1,sz*.35,0); ctx.stroke(); ctx.translate(sz*.35,0);
-      /* a grape leaf: heart-shaped, three shallow lobes, a toothed margin */
-      const bump=(a,c,wt)=>wt*Math.exp(-Math.pow((a-c)/.5,2)), pts=[]; for(let i=0;i<=96;i++){ const a=-Math.PI+i/96*Math.PI*2, lob=Math.max(bump(a,0,1),bump(a,1.2,.86),bump(a,-1.2,.86),bump(a,2.3,.66),bump(a,-2.3,.66)), notch=1-.55*Math.exp(-Math.pow((Math.abs(a)-Math.PI)/.28,2)), tooth=1+.035*Math.sin(a*30), rr=sz*.5*(.74+.26*lob)*notch*tooth; pts.push([sz*.5+Math.cos(a)*rr,Math.sin(a)*rr]); }   /* the grape leaf: a heart-shaped base, a pointed middle lobe and two side lobes, a toothed edge */
-      const lp=new Path2D(); pts.forEach((q,i)=>lp[i? "lineTo" : "moveTo"](q[0],q[1])); lp.closePath();
-      const c0=lf.c, g=ctx.createRadialGradient(sz*.2,0,0,sz*.55,0,sz*.7); g.addColorStop(0,rgb(mulv(mixv(c0,[90,70,40],.25),lt))); g.addColorStop(.7,rgb(mulv(c0,lt))); g.addColorStop(1,rgb(mulv(mixv(c0,[90,50,30],lf.brown*.5),lt*.85)));
-      ctx.fillStyle=g; ctx.fill(lp);
-      ctx.save(); ctx.clip(lp);
-      if(!dark){ const back=Math.max(0,Math.min(1,(H*.55-sp.y)/(H*.4))); ctx.globalCompositeOperation="lighter"; const gg=ctx.createRadialGradient(sz*.6,-sz*.1,0,sz*.6,0,sz*.8); gg.addColorStop(0,`rgba(255,170,70,${(.18*back).toFixed(3)})`); gg.addColorStop(1,"rgba(255,170,70,0)"); ctx.fillStyle=gg; ctx.fillRect(-sz,-sz,sz*3,sz*2); ctx.globalCompositeOperation="source-over"; }   /* the sun glowing through it */
-      ctx.strokeStyle=rgb(mulv(mixv(c0,[240,210,150],.35),lt),.55); ctx.lineWidth=Math.max(.5,sz*.022); ctx.beginPath(); for(const a of [-1.2,-.6,0,.6,1.2]){ ctx.moveTo(0,0); ctx.quadraticCurveTo(sz*.3*Math.cos(a)+sz*.1,sz*.3*Math.sin(a),sz*.55+Math.cos(a)*sz*.48,Math.sin(a)*sz*.46); } ctx.stroke();   /* the palmate veins */
-      ctx.strokeStyle=rgb(mulv(c0,lt*.6),.28); ctx.lineWidth=Math.max(.3,sz*.01); ctx.beginPath(); for(let k=0;k<26;k++){ const a=k*2.4, r0=sz*(.15+(k%7)*.06); ctx.moveTo(sz*.55+Math.cos(a)*r0,Math.sin(a)*r0); ctx.lineTo(sz*.55+Math.cos(a+.5)*(r0+sz*.07),Math.sin(a+.5)*(r0+sz*.07)); } ctx.stroke();   /* the fine net */
-      if(lf.brown>.55){ ctx.fillStyle=rgb(mulv([92,58,32],lt),.55); ctx.beginPath(); ctx.arc(sz*.9,sz*.18,sz*.18*lf.brown,0,6.283); ctx.fill(); }   /* a dry brown patch at the edge */
-      ctx.restore();
-      if(lf.hole){ ctx.globalCompositeOperation="destination-out"; ctx.beginPath(); ctx.ellipse(sz*.62,-sz*.14,sz*.06,sz*.04,.4,0,6.283); ctx.fill(); ctx.globalCompositeOperation="source-over"; }
-      ctx.strokeStyle=rgb(mulv(c0,lt*.55),.5); ctx.lineWidth=Math.max(.4,sz*.012); ctx.stroke(lp);
-      ctx.restore(); };
-    drawVine(false); for(const lf of L.leaves) if(!lf.front) leaf(lf,false);
-    /* the limb itself: the bark texture wrapped round it */
-    ctx.save(); ctx.clip(outline);
-    { const r0=R(0); ctx.drawImage(barkTex,0,0,barkTex.width,barkTex.height,-2,-r0-H*.01,Ln+R(Ln)*.5,r0*2+H*.01); }
-    { const gl=(grass[0]*.3+grass[1]*.59+grass[2]*.11)/105, k=Math.max(.45,Math.min(.85,gl*.85)); ctx.globalCompositeOperation="multiply"; ctx.fillStyle=rgb(mulv(mixv([255,236,210],mulv(grass,2),.35),k)); ctx.fillRect(-10,-H,Ln+H,H*2); ctx.globalCompositeOperation="source-over"; }   /* graded into the photo's own colours */
-    /* rounded by the light: lit along the top and on the sun's side, falling into shadow underneath, warm bounce from the grass at the very bottom */
-    { const NB=28; for(let k=0;k<NB;k++){ const f=-1+(k+.5)/NB*2, a=Math.asin(Math.max(-1,Math.min(1,f))), nY=-Math.sin(-a), lightT=Math.max(0,Math.cos(a+.75)), shade=Math.max(0,f-.15)/.85;   /* f: -1 top .. +1 bottom of the round */
-        const col= f<0? (dark? `rgba(170,190,230,${(.22*lightT).toFixed(3)})` : `rgba(255,214,150,${(.32*lightT*lightT).toFixed(3)})`) : `rgba(10,8,6,${(.62*shade*shade+.05).toFixed(3)})`;
-        ctx.strokeStyle=col; ctx.beginPath(); for(let i=0;i<=N;i++){ const xl=i/N*Ln, r=R(xl); i? ctx.lineTo(xl,f*r-sag(xl)) : ctx.moveTo(xl,f*r-sag(xl)); } ctx.lineWidth=R(Ln*.3)*2/NB*1.25; ctx.stroke(); }
-      const bot=ctx.createLinearGradient(0,0,0,R(0)); bot.addColorStop(.7,"rgba(0,0,0,0)"); bot.addColorStop(1,"rgba(60,56,20,.25)"); ctx.fillStyle=bot; ctx.fillRect(0,0,Ln,R(0)); }   /* the round of it: lit across the top, falling into deep shadow underneath, a little green bounce from the grass */
-    { const g=ctx.createLinearGradient(0,0,Ln,0), toward=(L.side<0? 1 : -1)*sunS; g.addColorStop(0,`rgba(255,180,100,${(toward<0? .14 : 0)*(1-nightK)})`); g.addColorStop(1,`rgba(255,180,100,${(toward>0? .14 : 0)*(1-nightK)})`); ctx.globalCompositeOperation="lighter"; ctx.fillStyle=g; ctx.fillRect(0,-H,Ln,H*2); ctx.globalCompositeOperation="source-over"; }
-    /* knots where old twigs fell away: a dark eye ringed by the bark rolling over it, and pale crusts of lichen */
-    for(const kn of L.knots){ const xl=kn.u*Ln, r=R(xl), cy=kn.v*r-sag(xl), rw=r*.11*kn.s, rh=rw*(1-Math.abs(kn.v))*.75+rw*.15;
-      ctx.fillStyle="rgba(30,22,14,.3)"; ctx.beginPath(); ctx.ellipse(xl,cy,rw*1.8,rh*1.4,0,0,6.283); ctx.fill(); ctx.fillStyle=rgb(mulv([150,132,104],lt),.3); ctx.beginPath(); ctx.ellipse(xl,cy-rh*.5,rw*1.3,rh*.6,0,Math.PI,6.283); ctx.fill();
-      ctx.fillStyle="rgba(24,16,10,.6)"; ctx.beginPath(); ctx.ellipse(xl,cy+rh*.1,rw*.6,rh*.6,0,0,6.283); ctx.fill(); }
-    for(const lc of L.lich){ const xl=lc.u*Ln, r=R(xl), cy=lc.v*r-sag(xl), sz=r*.2*lc.s; ctx.fillStyle=rgb(mulv([150,160,132],lt*(1-Math.max(0,lc.v)*.6)),.22); for(let k=0;k<14;k++){ const a=k*2.4+lc.u*9; ctx.beginPath(); ctx.ellipse(xl+Math.cos(a)*sz*.8,cy+Math.sin(a)*sz*.35,sz*.55,sz*.28,a*.3,0,6.283); ctx.fill(); } }
-    if(nightK>0){ ctx.fillStyle=`rgba(10,14,30,${(.45*nightK).toFixed(3)})`; ctx.fillRect(0,-H,Ln+H,H*2); }
-    ctx.restore();
-    /* a broken twig stub or two standing up off the top */
-    for(const st of L.stubs){ const xl=st.u*Ln, r=R(xl), bx=xl, by=-r*.82-sag(xl), ln=r*st.l, a=-Math.PI/2+st.a, tx=bx+Math.cos(a)*ln, ty=by+Math.sin(a)*ln, w0=r*.16, w1=r*.1, nx=-Math.sin(a), ny=Math.cos(a);
-      const g=ctx.createLinearGradient(bx+nx*w0,by+ny*w0,bx-nx*w0,by-ny*w0); g.addColorStop(0,rgb(mulv([60,50,40],lt))); g.addColorStop(.6,rgb(mulv([128,114,94],lt*(1-nightK*.5)))); g.addColorStop(1,rgb(mulv([92,80,66],lt)));
-      ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(bx+nx*w0*1.4,by+ny*w0*1.4+r*.05); ctx.lineTo(tx+nx*w1,ty+ny*w1); ctx.lineTo(tx-nx*w1*.3,ty-ny*w1*.3-ln*.08); ctx.lineTo(tx-nx*w1,ty-ny*w1); ctx.lineTo(bx-nx*w0*1.4,by-ny*w0*1.4+r*.05); ctx.closePath(); ctx.fill();
-      ctx.fillStyle=rgb(mulv([150,128,96],lt*(1-nightK*.5))); ctx.beginPath(); ctx.ellipse(tx,ty,w1*.9,w1*.4,a+Math.PI/2,0,6.283); ctx.fill(); }
-    /* the broken end: pale wood, rings, splinters */
-    { const e=Ln, r=R(e), ys=sag(e); ctx.save(); ctx.translate(e+r*.12,-ys); ctx.fillStyle=rgb(mulv([70,56,44],lt)); ctx.beginPath(); ctx.ellipse(0,0,r*.32,r*.98,0,0,6.283); ctx.fill(); ctx.fillStyle=rgb(mulv([138,116,88],lt*(dark? .7 : 1))); ctx.beginPath(); ctx.ellipse(r*.02,0,r*.25,r*.86,0,0,6.283); ctx.fill();
-      ctx.strokeStyle=rgb(mulv([92,72,52],lt),.35); ctx.lineWidth=Math.max(.6,r*.02); for(let k=1;k<7;k++){ ctx.beginPath(); ctx.ellipse(-r*.02,r*.05,r*.28*k/6,r*.92*k/6,0,0,6.283); ctx.stroke(); }
-      ctx.fillStyle=rgb(mulv([80,62,44],lt),.5); ctx.beginPath(); ctx.ellipse(-r*.04,r*.1,r*.05,r*.14,0,0,6.283); ctx.fill(); ctx.restore(); }
-    drawVine(true); for(const lf of L.leaves) if(lf.front) leaf(lf,true);
+    const R=xl=>logR(L,xl), N=48, sag=L.sag;
+    /* its shadow on the grass: a dark core right under it where no sky reaches, and a long soft shadow falling toward us from the low sun behind */
+    ctx.save(); ctx.filter=`blur(${(H*.02).toFixed(1)}px)`; ctx.fillStyle=`rgba(10,8,3,${(.5*(1-nightK*.5)).toFixed(2)})`; ctx.beginPath(); for(let i=0;i<=N;i++){ const xl=i/N*Ln*1.02; ctx.lineTo(xl-H*.01*lg.L[0],R(xl)*.4-sag(xl)); } for(let i=N;i>=0;i--){ const xl=i/N*Ln*1.02; ctx.lineTo(xl-H*.04*lg.L[0],R(xl)*1.75-sag(xl)+H*.015); } ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.filter=`blur(${(H*.006).toFixed(1)}px)`; ctx.fillStyle=`rgba(6,4,2,${(.55*(1-nightK*.4)).toFixed(2)})`; ctx.beginPath(); for(let i=0;i<=N;i++){ const xl=i/N*Ln; ctx.lineTo(xl,R(xl)*.75-sag(xl)); } for(let i=N;i>=0;i--){ const xl=i/N*Ln; ctx.lineTo(xl,R(xl)*1.12-sag(xl)); } ctx.closePath(); ctx.fill(); ctx.restore();
+    /* grass behind the limb's far side, poking up past its top line */
+    ctx.lineCap="round"; for(let i=0;i<L.blades.length;i+=3){ const b2=L.blades[i], xl=b2.u*Ln, r=R(Math.max(0,Math.min(Ln,xl))), base=-r*.55-sag(xl), hgt=r*b2.h*.8, sw=Math.sin(t*1.3+b2.u*30)*H*.002;
+      const col=mulv(mixv(grass,[70,80,36],b2.c*.4),lt*(.5+b2.c*.35)*(1-nightK*.5)); ctx.strokeStyle=rgb(col,.9); ctx.lineWidth=Math.max(.8,H*.0018*b2.w); ctx.beginPath(); ctx.moveTo(xl,base); ctx.quadraticCurveTo(xl+b2.l*hgt*.3,base-hgt*.6,xl+b2.l*hgt+sw,base-hgt); ctx.stroke(); }
+    ctx.drawImage(L.img,L.imgX,L.imgY,L.img.width/L.imgK,L.img.height/L.imgK);
     ctx.restore();
     /* the animal, in the limb's frame */
     stepLogAnimal(L,dt);
@@ -4847,10 +4851,12 @@ const ambient=(function(){
       const S=H*.0027*(L.kind==="skink"? 1 : 1.3);
       drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS*L.dir,r/S,.5);
       ctx.restore(); }
-    /* grass growing up in front of the limb's foot, seating it in the lawn */
+    /* the lawn growing up in front of the limb, seating it in the grass: fine blades in the photo's own greens, lit at the tips by the low sun */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.lineCap="round";
-    for(const b2 of L.blades){ const xl=b2.u*Ln, r=R(Math.max(0,Math.min(Ln,xl))), base=r*1.05-sag(xl)+H*.02, hgt=r*b2.h*1.3, sw=Math.sin(t*1.4+b2.u*30)*H*.003;
-      const col=mulv(mixv(grass,[60,70,30],b2.c*.5),lt*(.6+b2.c*.5)), w0=Math.max(1,H*.0035*(1.2-b2.c*.5)), tx=xl+b2.l*hgt+sw, ty=base-hgt*.85; ctx.fillStyle=rgb(col,.95); ctx.beginPath(); ctx.moveTo(xl-w0,base); ctx.quadraticCurveTo(xl+b2.l*hgt*.3-w0*.4,base-hgt*.5,tx,ty); ctx.quadraticCurveTo(xl+b2.l*hgt*.3+w0*.4,base-hgt*.5,xl+w0,base); ctx.closePath(); ctx.fill(); }
+    for(const b2 of L.blades){ const xl=b2.u*Ln, r=R(Math.max(0,Math.min(Ln,xl))), base=r*1.15-sag(xl)+H*.02, hgt=r*b2.h*1.35, sw=Math.sin(t*1.4+b2.u*30)*H*.003;
+      const col=mulv(mixv(grass,[52,62,24],b2.c*.55),lt*(.55+b2.c*.5)*(1-nightK*.45)), w0=Math.max(.7,H*.0026*b2.w*(1.2-b2.c*.5)), tx=xl+b2.l*hgt+sw, ty=base-hgt*(.9-Math.abs(b2.bend)*.3);
+      ctx.fillStyle=rgb(col,.96); ctx.beginPath(); ctx.moveTo(xl-w0,base); ctx.quadraticCurveTo(xl+b2.l*hgt*.3+b2.bend*hgt*.3-w0*.4,base-hgt*.55,tx,ty); ctx.quadraticCurveTo(xl+b2.l*hgt*.3+b2.bend*hgt*.3+w0*.4,base-hgt*.55,xl+w0,base); ctx.closePath(); ctx.fill();
+      if(!dark&&b2.c>.55){ ctx.strokeStyle=`rgba(255,214,140,${(.25*(1-nightK)).toFixed(2)})`; ctx.lineWidth=w0*.5; ctx.beginPath(); ctx.moveTo(lerp(xl,tx,.6),lerp(base,ty,.6)); ctx.lineTo(tx,ty); ctx.stroke(); } }
     ctx.restore();
     L.sx=L.x0+Math.cos(L.ang)*L.u*Ln*-L.side; L.sy=L.y0-H*.08; }
   function stepLogAnimal(L,dt){ const sk=L.kind==="skink";
@@ -4880,7 +4886,7 @@ const ambient=(function(){
     const nS=SECT.length;
     /* light: the sun's side and from above, a cool sky fill; the eye toward us */
     const Ls=v3.n([sunSide*.55,.15,.82]), V=[0,-ce,se];
-    const lit=dark? .55 : 1, K=lt*lit;
+    const lit=dark? .55 : 1, K=lt*lit*(1-nightK*.72);
     const PAL= sk? {base:[44,38,32],stripe:[206,190,140],tail:[66,98,170],tail2:[44,66,124],belly:[176,170,150]} : {base:[206,90,38],dark:[150,58,24],spot:[200,40,26],ring:[34,16,8],belly:[232,160,70]};
     const colAt=(s,th)=>{ let c=PAL.base; if(sk&&s>svl-4) c=mixv(mixv(PAL.base,PAL.tail,Math.min(1,(s-svl+4)/14)),PAL.tail2,Math.min(1,(s-svl)/tl)*.6); if(Math.sin(th)<-.2) c=mixv(c,PAL.belly,Math.min(1,(-Math.sin(th)-.2)*2)); if(!sk&&Math.sin(th)>.6) c=mixv(c,PAL.dark,(Math.sin(th)-.6)*.5); return c; };
     const nrmAt=(s,th)=>{ const f=frame(s), w=hw(s)||1, h=hh(s)||1, a=Math.cos(th)/w, b=Math.sin(th)/h; return v3.n([f.nx*a,f.ny*a,b]); };
