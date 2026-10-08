@@ -211,7 +211,7 @@ class Person{
   stepLen(v){ return clamp(.22+.33*v/1.2,.2,.58)*this.sc*(this.kind==="jim"? 1 : .94); }
   pathAt(s,side,out){ const w=this.walk, u=clamp(s,0,w.len)/w.len, pp=w.curve.getPointAt(u,_e), tg=w.curve.getTangentAt(Math.min(.999,u),_f), o=(side===L_?1:-1)*(this.kind==="jim"? .095 : .07)*this.sc;
     out.set(pp.x+tg.z*o,0,pp.z-tg.x*o); return Math.atan2(tg.x,tg.z); }
-  *walkTo(pts,v){ const P=[new V3(this.pos.x,0,this.pos.z),...pts.map(p=>new V3(p[0],0,p[1]))]; const curve=new T.CatmullRomCurve3(P,false,"centripetal",.5);
+  *walkTo(pts,v){ pts=aroundStick([this.pos.x,this.pos.z],pts); const P=[new V3(this.pos.x,0,this.pos.z),...pts.map(p=>new V3(p[0],0,p[1]))]; const curve=new T.CatmullRomCurve3(P,false,"centripetal",.5);
     this.walk={curve,len:curve.getLength(),s:0,v:v||1.15,moving:true,phi:0,vNow:.05,vV:0,acc:0}; this.mode="walk"; this.hipGoal.set(0,.99,0);
     if(!this.feetInit){ this.root.position.copy(this.pos); this.root.rotation.set(0,this.yaw,0); this.root.updateMatrix(); for(const i of [L_,R_]){ const fl=this.footLocal[i]; this.feet[i].cur.set(fl.x,0,fl.z).applyMatrix4(this.root.matrix); this.feet[i].yaw=this.yaw; } this.feetInit=true; }
     for(const i of [L_,R_]){ const f=this.feet[i]; f.step=null; f.swing=null; }
@@ -435,6 +435,16 @@ function* tween(s,fn){ let e=0; for(;;){ const k=Math.min(1,e/s); fn(k,ease(k));
 const flags={};
 const fireTop=()=>cw(0,.42,0);
 const teepee=i=>{ const a=i/5*6.283+.4, base=new V3(Math.cos(a)*.21,.03,Math.sin(a)*.21), top=new V3(Math.cos(a)*.03,.36,Math.sin(a)*.03); return {mid:base.clone().add(top).multiplyScalar(.5),dir:top.clone().sub(base).normalize()}; };
+/* if a stick is lying on the lawn across the way, walk round its end rather than through it */
+function stickPoly(){ try{ const f=window.SceneryStickPts, g=f&&f(); if(!g) return null; return g.map(p=>{ const v=new V3(p.Xw*HC,0,-p.Dw); camp.worldToLocal(v); return [v.x,v.z]; }); }catch(e){ return null; } }
+function segX(a,b,c,d){ const r=[b[0]-a[0],b[1]-a[1]], s=[d[0]-c[0],d[1]-c[1]], den=r[0]*s[1]-r[1]*s[0]; if(Math.abs(den)<1e-9) return false; const t=((c[0]-a[0])*s[1]-(c[1]-a[1])*s[0])/den, u=((c[0]-a[0])*r[1]-(c[1]-a[1])*r[0])/den; return t>0&&t<1&&u>=0&&u<=1; }
+function aroundStick(from,pts){ const sp=stickPoly(); if(!sp||sp.length<2) return pts; const route=[from,...pts.map(p=>[p[0],p[1]])];
+  const crosses=(a,b)=>{ for(let k=0;k<sp.length-1;k++) if(segX(a,b,sp[k],sp[k+1])) return true; return false; };
+  const n=sp.length, ends=[[sp[0],sp[1]],[sp[n-1],sp[n-2]]].map(([e,q])=>{ const dx=e[0]-q[0], dz=e[1]-q[1], l=Math.hypot(dx,dz)||1; return [e[0]+dx/l*.5,e[1]+dz/l*.5]; });   /* half a metre past either end */
+  for(let it=0;it<4;it++){ let hit=-1; for(let i=0;i<route.length-1;i++) if(crosses(route[i],route[i+1])){ hit=i; break; } if(hit<0) break;
+    const a=route[hit], b=route[hit+1], cost=e=>Math.hypot(e[0]-a[0],e[1]-a[1])+Math.hypot(b[0]-e[0],b[1]-e[1])+(crosses(a,e)||crosses(e,b)? 50 : 0), d=cost(ends[0])<=cost(ends[1])? ends[0] : ends[1];
+    route.splice(hit+1,0,d); }
+  return route.slice(1); }
 function logQ(dir,q){ return (q||new T.Quaternion()).setFromUnitVectors(new V3(1,0,0),dir); }
 
 function* jimStory(){ const J=jim, K=[.12,-.66]; S.stage="walk";
