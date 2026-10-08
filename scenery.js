@@ -131,8 +131,8 @@ var natureSfx=(function(){
     const s=ctx.createBufferSource(); s.buffer=noiseBuf; const g=ctx.createGain(), v=R(.35,.5); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(v,at+.002); g.gain.exponentialRampToValueAtTime(.001,at+.05); s.connect(g); g.connect(bp); s.start(at,R(0,2.5),.07);
     tone(at,R(380,460),R(240,280),.05,.12,out,"triangle"); }
   /* eastern bluebirds: a soft, low, burbling tu-a-wee as the flock goes over */
-  function bluebird(){ if(!ctx||!live) return; let at=ctx.currentTime+.3; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=5000; lp.connect(master);
-    for(let k=0;k<3;k++){ const out=voice(lp,R(-.5,.5)), v=.06; tone(at,2100,2500,.16,v,out); tone(at+.18,2600,2200,.14,v*.9,out); tone(at+.34,2300,2900,.22,v*.8,out); at+=R(.9,1.6); } }
+  function bluebird(pan,up){ if(!ctx||!live) return; let at=ctx.currentTime+.3; const lp=ctx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=up? 9000 : 5000; lp.connect(up? near() : master);
+    for(let k=0;k<3;k++){ const out=voice(lp,up? (pan||0) : R(-.5,.5)), v=.06; tone(at,2100,2500,.16,v,out); tone(at+.18,2600,2200,.14,v*.9,out); tone(at+.34,2300,2900,.22,v*.8,out); at+=R(.9,1.6); } }
   /* a red-tailed hawk circling high: a hoarse, falling keee-arrr */
   let hawkT=null, coyT=null;
   function hawk(){
@@ -340,7 +340,8 @@ var natureSfx=(function(){
   GEST.forEach(ev=>document.addEventListener(ev,e=>{ if(skip(e)) return; if(ctx&&wanted()&&(ctx.state!=="running"||((!tag||tag.paused)&&tapEnd[e.type]))) { if(tapEnd[e.type]) unlock(); else ctx.resume().then(apply).catch(()=>{}); } },true));
   setTimeout(()=>{ arm(); if(wanted()&&init()){ if(ctx.state==='running') apply(); else ctx.resume().then(()=>{ if(ctx.state==='running') apply(); }).catch(()=>{}); } },0);
   /* one-shot songs for an animal that has been called: the same voices as the chorus, but right now and nearer */
-  function sing(kind,pan){ if(!ctx||!live) return; const out=voice(master,pan||0); let at=ctx.currentTime+.05;
+  let nearBus=null; const near=()=>{ if(!nearBus){ nearBus=ctx.createGain(); nearBus.gain.value=2.6; nearBus.connect(master); } return nearBus; };   /* a bird singing right in front of you: louder and fuller than the far chorus */
+  function sing(kind,pan,up){ if(!ctx||!live) return; const out=voice(up? near() : master,pan||0); let at=ctx.currentTime+.05;
     if(kind==="peeper"){ const f=R(2800,3100); for(let i=0;i<5;i++){ tone(at,f*.86,f,.12,.05,out); at+=R(.45,.7); } }
     else if(kind==="katydid"){ const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=R(2800,3300); bp.Q.value=5; bp.connect(out);
       for(let k=0;k<3;k++){ const n=k%2?2:3; for(let i=0;i<n;i++){ const sN=ctx.createBufferSource(); sN.buffer=noiseBuf; const g=ctx.createGain(); g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(.09,at+.01); g.gain.setValueAtTime(.09,at+.06); g.gain.exponentialRampToValueAtTime(.001,at+.11); sN.connect(g); g.connect(bp); sN.start(at,R(0,2.5),.13); at+=.16; } at+=.7; } }   /* katy-did, katy-didn't */
@@ -3934,7 +3935,6 @@ const ambient=(function(){
     if(!pbird) return; const b=pbird, F=H*.5, cx=W/2, cy=H*.52, br=b.br, C=b.C, sz0=(C.size||1); b.t+=dt;
     br.kv+=(-br.k*34-br.kv*2.6)*dt; br.k+=br.kv*dt;                                                                                 /* the bough springs, dips and settles */
     br.sa= b.phase==="gone"? Math.max(0,br.sa-dt*.7) : Math.min(1,br.sa+dt*.9); if(b.phase==="gone"&&br.sa<=0){ pbird=null; return; }
-    dofBlur(Math.max(1.5,H*.004)*br.sa);   /* when a songbird comes to the bough it's the one thing in focus: the field and hills soften behind it */
     const at=drawBranch(br,dark,false);
     const sp=sun(), sunL=(()=>{ const v=[(sp.x-cx)/F,(sp.y-cy)/F-.05,1], l=Math.hypot(...v); return v.map(c=>c/l); })(), Kw=.0074*sz0, z=b.z;
     const pS=at(b.uP), pS2=at(Math.min(1,b.uP+.02)), tang=Math.atan2(pS2[1]-pS[1],pS2[0]-pS[0]);
@@ -3963,7 +3963,7 @@ const ambient=(function(){
       if(b.phase==="perch"){ /* sitting: quick head turns, tail flicks, singing; now and then it hops round to face the other way */
         b.lookT-=dt; if(b.lookT<=0){ b.lookT=rnd(.4,1.5); b.lookTo=pick([-.7,-.4,-.15,0,.2,.45,.7]); } b.look+=((b.lookTo||0)-b.look)*Math.min(1,dt*16);
         if(Math.random()<dt*(C.kind==="cardinal"||C.kind==="blue"? .6 : .3)) b.flick=1; b.flick=Math.max(0,(b.flick||0)-dt*5); b.tailUp=Math.sin(b.flick*Math.PI)*.9;
-        b.singT-=dt; if(b.singT<=0){ b.singT=rnd(2.2,3.8); b.singing=1.4; try{ if(C.kind==="blue"&&natureSfx.bluebird) natureSfx.bluebird(b.side*.5); else natureSfx.sing&&natureSfx.sing(C.sk,b.side*.5); }catch(e){} }
+        b.singT-=dt; if(b.singT<=0){ b.singT=rnd(2.2,3.8); b.singing=1.4; try{ if(C.kind==="blue"&&natureSfx.bluebird) natureSfx.bluebird(b.side*.5,true); else natureSfx.sing&&natureSfx.sing(C.sk,b.side*.5,true); }catch(e){} }
         b.singing=Math.max(0,(b.singing||0)-dt); b.gape= b.singing>0? Math.abs(Math.sin(b.t*15))*.8 : 0; o.gape=b.gape; o.headUp=b.singing>0? .8 : 0;
         b.turnT-=dt; if(b.turnT<=0&&!b.hop){ b.turnT=rnd(6,10); b.hop=.001; } if(b.hop){ b.hop+=dt/.3; if(b.hop>=.5&&b.fcur!==b.face){ b.fcur=b.face; } if(b.hop>=1){ b.hop=0; br.kv+=.6; } }   /* a little hop in place, resettling its grip (it keeps facing in, toward the field) */
         if(b.hop){ const h=Math.sin(b.hop*Math.PI); P=v3.a(P,[0,-h*1.6*Kw,0]); o.fold=1-h*.25; o.legs=1; }
@@ -4867,26 +4867,27 @@ const ambient=(function(){
      Built from the photograph's own lawn, enlarged as nearer grass would be, with the crest catching the low light and its far end melting back into the field */
   function makeHill(L){ const c=L.hill||(L.hill=document.createElement("canvas")); const cw2=Math.ceil(W), ch2=Math.ceil(H); if(c.width!==cw2||c.height!==ch2){ c.width=cw2; c.height=ch2; } const x=c.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw2,ch2);
     const Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, S=(lx,ly)=>[L.x0+ca*lx*mx-sa*ly, L.y0+sa*lx*mx+ca*ly];
-    const crest=[]; for(let i=0;i<=60;i++){ const xl=lerp(-Ln*.2,Ln*1.32,i/60), xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc); if(xl>Ln){ const f=(xl-Ln)/(Ln*.32); ly+=f*f*H*.07; } crest.push(S(xl,ly)); }
+    const crest=[], over=Ln*.85; for(let i=0;i<=70;i++){ const xl=lerp(-Ln*.2,Ln+over,i/70), xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc)-Math.sin(Math.max(0,Math.min(1,xl/Ln))*Math.PI)*H*.012; if(xl>Ln){ const f=Math.min(1,(xl-Ln)/over); ly+=(1-Math.cos(f*Math.PI/2))*H*.3; } crest.push(S(xl,ly)); }   /* a rounded knoll: the stick along its top, the far shoulder rolling down out of the frame */
     const path=new Path2D(); crest.forEach((p2,i)=>i? path.lineTo(...p2) : path.moveTo(...p2)); const last=crest[crest.length-1], first=crest[0]; path.lineTo(last[0],H+40); path.lineTo(first[0]+(L.side<0? -W : W)*.1,H+40); path.lineTo(first[0]+(L.side<0? -W : W)*.1,first[1]); path.closePath();
-    if(photo){ const m=cover(), mid=S(Ln*.5,0), k=2.1; x.save(); x.translate(mid[0],H); x.scale(k,k); x.translate(-mid[0],-H); x.drawImage(photo,m.ox,m.oy,m.iw*m.s,m.ih*m.s); x.restore();   /* the same lawn, nearer */
+    if(photo){ const m=cover(), mid=S(Ln*.5,0), k=2.6; x.save(); x.translate(mid[0],H); x.scale(k,k); x.translate(-mid[0],-H); x.drawImage(photo,m.ox,m.oy,m.iw*m.s,m.ih*m.s); x.restore();   /* the same lawn, nearer */
       const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw2,ch2); x.globalAlpha=1; }
       if(nA>.005){ x.globalCompositeOperation="saturation"; x.fillStyle=`rgba(128,128,128,${(.72*nA).toFixed(3)})`; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="multiply"; x.fillStyle=`rgb(${Math.round(255-nA*143)},${Math.round(255-nA*127)},${Math.round(255-nA*85)})`; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; x.fillStyle=`rgba(4,6,16,${(.38*nA).toFixed(3)})`; x.fillRect(0,0,cw2,ch2); } }
     /* the face of the rise turned a little away from the sun behind it: darker toward us, the crest lit */
-    { const top=Math.min(...crest.map(p2=>p2[1])), g=x.createLinearGradient(0,top,0,H); g.addColorStop(0,"rgba(10,8,2,.12)"); g.addColorStop(.18,"rgba(10,8,2,.3)"); g.addColorStop(1,"rgba(6,4,2,.42)"); x.fillStyle=g; x.fillRect(0,0,cw2,ch2); }
+    { const top=Math.min(...crest.map(p2=>p2[1])), g=x.createLinearGradient(0,top,0,H); g.addColorStop(0,"rgba(10,8,2,.06)"); g.addColorStop(.25,"rgba(10,8,2,.2)"); g.addColorStop(1,"rgba(6,4,2,.38)"); x.fillStyle=g; x.fillRect(0,0,cw2,ch2); }
+    x.globalCompositeOperation="destination-in"; x.filter=`blur(${(H*.004).toFixed(1)}px)`; x.fillStyle="#000"; x.fill(path); x.filter="none"; x.globalCompositeOperation="source-over";
+    /* the far end eases back into the field */
+
     /* the near grass, blade by blade: the closer to us, the longer and broader each one, coloured from the lawn right where it grows, lit at the tip by the low sun behind */
     { const top=Math.min(...crest.map(p2=>p2[1])), x0b=Math.min(...crest.map(p2=>p2[0])), x1b=Math.max(...crest.map(p2=>p2[0])); let id=null; try{ id=x.getImageData(0,0,cw2,ch2).data; }catch(e){}
-      let sd=L.seed+5; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }, day=1-Math.min(1,nA*1.2), n=Math.round((x1b-x0b)*(H-top)/34);
+      let sd=L.seed+5; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }, day=1-Math.min(1,nA*1.2), n=Math.round((x1b-x0b)*(H-top)/26);
       const items=[]; for(let i=0;i<n;i++){ const bx=x0b+RN()*(x1b-x0b), by=top+Math.pow(RN(),.8)*(H-top+20); items.push([bx,by,RN(),RN(),RN()]); } items.sort((a,b)=>a[1]-b[1]);   /* back to front */
-      for(const [bx,by,r1,r2,r3] of items){ if(!x.isPointInPath(path,bx,by)) continue; const near=Math.max(0,Math.min(1,(by-top)/(H-top))), h=(6+near*near*70)*(.5+r1*.9), w=(.7+near*3.2)*(.6+r2*.6), lean=(r3-.5)*h*.7, cv=(r1-.5)*h*.35;
-        let c=[70,76,34]; if(id){ const ix=Math.max(0,Math.min(cw2-1,Math.round(bx))), iy=Math.max(0,Math.min(ch2-1,Math.round(by-h*.3))), q=(iy*cw2+ix)*4; c=[id[q],id[q+1],id[q+2]]; }
+      const crestAt=px=>{ for(let k=0;k<crest.length-1;k++){ const a2=crest[k], b2=crest[k+1]; if((px-a2[0])*(px-b2[0])<=0){ const u=(px-a2[0])/((b2[0]-a2[0])||1); return a2[1]+(b2[1]-a2[1])*u; } } return null; };   /* no blade stands much above the crest line in front of it */
+      for(const [bx,by,r1,r2,r3] of items){ if(!x.isPointInPath(path,bx,by-2)) continue; const near=Math.max(0,Math.min(1,(by-top)/(H-top))), hRaw=(6+Math.pow(near,1.6)*H*.11)*(.5+r1*.8), crY=crestAt(bx), h=crY==null? hRaw : Math.min(hRaw,by-crY+H*.022+r3*H*.02), w=(.8+near*H*.007)*(.6+r2*.6), lean=(r3-.5)*h*.7, cv=(r1-.5)*h*.35;
+        const gc0=L.gc||[110,110,60], pal=[mixv(gc0,[96,108,44],.4),mixv(gc0,[150,132,70],.5),mixv(gc0,[62,80,32],.5),mixv(gc0,[124,120,56],.3)]; let c=pal[Math.floor(r2*4)%4]; if(id){ const ix=Math.max(0,Math.min(cw2-1,Math.round(bx))), iy=Math.max(0,Math.min(ch2-1,Math.round(by-h*.3))), q=(iy*cw2+ix)*4; c=mixv(c,[id[q],id[q+1],id[q+2]],.35); } c=mulv(c,(.7+.35*(1-near))*(nA>.3? .45 : 1));   /* the lawn's own greens and straws; the nearest blades a little in their own shade */
         c=mulv(c,1.05+.25*r1); const dk=mulv(c,.45+.25*r2), lt=mixv(c,nA>.3? [120,140,180] : [255,220,150],(.3+.4*r3)*(nA>.3? .4 : day));
         const g=x.createLinearGradient(bx,by,bx+lean,by-h); g.addColorStop(0,rgb(dk)); g.addColorStop(.7,rgb(c)); g.addColorStop(1,rgb(lt)); x.fillStyle=g;
         x.beginPath(); x.moveTo(bx-w,by); x.quadraticCurveTo(bx+lean*.35+cv-w*.5,by-h*.55,bx+lean,by-h); x.quadraticCurveTo(bx+lean*.35+cv+w*.5,by-h*.55,bx+w,by); x.closePath(); x.fill(); } }
-    x.globalCompositeOperation="destination-in"; x.filter=`blur(${(H*.004).toFixed(1)}px)`; x.fillStyle="#000"; x.fill(path); x.filter="none"; x.globalCompositeOperation="source-over";
-    /* the far end eases back into the field */
-    { const e=S(Ln*1.32,0), b2=S(Ln*.8,0), g=x.createLinearGradient(b2[0],0,e[0],0); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; }
-    /* backlit grass tips along the crest */
+    /* backlit grass tips along the crest (drawn after the blades) */
     { const day=1-Math.min(1,nA*1.2); x.save(); x.filter="blur(1.2px)"; x.strokeStyle=nA>.3? `rgba(150,170,210,${(.18*nA).toFixed(2)})` : `rgba(255,214,150,${(.3*day).toFixed(2)})`; x.lineWidth=3; x.beginPath(); crest.slice(0,50).forEach((p2,i)=>i? x.lineTo(p2[0],p2[1]+1.5) : x.moveTo(p2[0],p2[1]+1.5)); x.stroke(); x.restore(); }
     /* and a ragged fringe of the nearer, taller grass standing up along the crest against the field behind */
     { let sd=L.seed+11; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }; const day=1-Math.min(1,nA*1.2); for(let i=0;i<46;i++){ const f=i/46, p2=crest[Math.min(crest.length-1,Math.floor(f*50)+(RN()<.5? 0 : 1))]; for(let j=0;j<5;j++){ const bx=p2[0]+(RN()-.5)*14, by=p2[1]+2+RN()*4, h=4+RN()*RN()*16, lean=(RN()-.5)*h*.6;
@@ -4918,6 +4919,11 @@ const ambient=(function(){
       const Dc=(gp.Dw+hwD+Db)/2, rr=(gp.Dw+hwD-Db)/2+hwD*.5; o.push({Xw:gp.Xw,Dw:Dc,r:Math.max(rr,stepX*.75)}); }
     return o; }
   PLUGS.push({obstacles:stickObs});
+  /* is anyone walking out to the fire standing in front of the stick (nearer us than it, where it is)? then it is drawn first, behind them; otherwise it is drawn over whoever walks behind it */
+  function stickBehindSomeone(){ const L=logC; if(!L) return false; let ppl=[]; try{ ppl=(window.Campfire&&Campfire.people)||[]; }catch(e){} if(!ppl.length) return false;
+    const N=16, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, pl=[]; for(let i=0;i<=N;i++){ const xl=i/N*Ln, ly=-L.sag(xl)+L.Rf(xl)*.5; pl.push([L.x0+ca*xl*mx-sa*ly, L.y0+sa*xl*mx+ca*ly]); }
+    for(const q of ppl){ for(let i=0;i<N;i++){ const a=pl[i], b=pl[i+1], lo=Math.min(a[0],b[0])-H*.05, hi=Math.max(a[0],b[0])+H*.05; if(q.x<lo||q.x>hi) continue; const u=Math.max(0,Math.min(1,(q.x-a[0])/((b[0]-a[0])||1e-6))), y=a[1]+(b[1]-a[1])*u; if(q.y>y) return true; } }
+    return false; }
   /* the stick's line on the ground, for anyone else walking the lawn (the two of them coming out to the fire) to plan a way round it */
   window.SceneryStickPts=()=>{ const L=logC; if(!L||L.a<=.05) return null; const N=12, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, out=[];
     for(let i=0;i<=N;i++){ const xl=i/N*Ln*1.04, ly=-L.sag(Math.min(Ln,xl)), sx=L.x0+ca*xl*mx-sa*ly, sy=L.y0+sa*xl*mx+ca*ly, gp=toGround(sx,sy); if(gp&&isFinite(gp.Xw)&&gp.Dw>0) out.push({Xw:gp.Xw,Dw:gp.Dw}); } return out.length>1? out : null; };
@@ -4945,7 +4951,6 @@ const ambient=(function(){
       gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
       gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
     /* shallow focus: with something this close in the lens, the field and hills beyond fall softly out of focus, more the farther they are */
-    { const crestY=L.y0-Math.abs(Math.sin(L.ang))*L.len-H*.06; dofBlur(Math.max(1.5,H*.0045)*L.a,crestY/H,crestY/H+.12); }
     { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; ctx.drawImage(L.hill,0,0,W,H); ctx.restore(); }   /* the rise of ground it lies on */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
@@ -8012,7 +8017,7 @@ const ambient=(function(){
       drawHenAll(dt,dark,L);
       if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||hawkG.state==="lift")) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L); tomQueue(dt,dark,L);
-      L.push({y:logC&&!(window.Campfire&&Campfire.on)? 1e9 : -1e9,fn:()=>drawLogCrawler(dt,dark)});   /* by the campfire the two of them walk out in front of it, so then it sits behind */   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
+      L.push({y:logC&&!stickBehindSomeone()? 1e9 : -1e9,fn:()=>drawLogCrawler(dt,dark)});   /* by the campfire the two of them walk out in front of it, so then it sits behind */   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
       steerClear([fox,skunk,cub,mom,coyote,coy2,bobcat,pheasW,dog,lab,racc,beaver,...["hog","possum","otter","porc"].map(k=>WAD[k].get()),...quails,...buns,...wcs,...sqs,...smalls,doe,doe&&doe.fawn]);
       for(const pl of PLUGS) if(pl.lawn) try{ pl.lawn(L,dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }

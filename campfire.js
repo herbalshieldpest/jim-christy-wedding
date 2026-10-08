@@ -438,17 +438,20 @@ const teepee=i=>{ const a=i/5*6.283+.4, base=new V3(Math.cos(a)*.21,.03,Math.sin
 /* if a stick is lying on the lawn across the way, walk round its end rather than through it */
 function stickPoly(){ try{ const f=window.SceneryStickPts, g=f&&f(); if(!g) return null; return g.map(p=>{ const v=new V3(p.Xw*HC,0,-p.Dw); camp.worldToLocal(v); return [v.x,v.z]; }); }catch(e){ return null; } }
 function segX(a,b,c,d){ const r=[b[0]-a[0],b[1]-a[1]], s=[d[0]-c[0],d[1]-c[1]], den=r[0]*s[1]-r[1]*s[0]; if(Math.abs(den)<1e-9) return false; const t=((c[0]-a[0])*s[1]-(c[1]-a[1])*s[0])/den, u=((c[0]-a[0])*r[1]-(c[1]-a[1])*r[0])/den; return t>0&&t<1&&u>=0&&u<=1; }
+/* a way onto (or off) the lawn from behind the stick: the edge-of-frame point is moved back until it lies beyond the stick, so they walk behind it */
+function zAtStick(sp,x){ let best=null; for(let k=0;k<sp.length-1;k++){ const a=sp[k], b=sp[k+1], lo=Math.min(a[0],b[0])-1, hi=Math.max(a[0],b[0])+1; if(x<lo||x>hi) continue; const u=Math.max(0,Math.min(1,(x-a[0])/((b[0]-a[0])||1e-6))), z=a[1]+(b[1]-a[1])*u; best=best==null? z : Math.min(best,z); } return best; }
+function edgeBehind(yf,pad){ const sp=stickPoly(); if(!sp) return offscreen(yf,pad); for(let y=yf;y>.5;y-=.015){ const p=offscreen(y,pad), zs0=zAtStick(sp,p[0]), zs=zs0!=null? zs0 : (Math.abs(p[0]-sp[0][0])<Math.abs(p[0]-sp[sp.length-1][0])? sp[0][1] : sp[sp.length-1][1]);   /* past the end at the frame's edge, carry the stick's line on */ if(p[1]<zs-1.4) return p; } return offscreen(yf,pad); }
 function aroundStick(from,pts){ const sp=stickPoly(); if(!sp||sp.length<2) return pts; const route=[from,...pts.map(p=>[p[0],p[1]])];
   const crosses=(a,b)=>{ for(let k=0;k<sp.length-1;k++) if(segX(a,b,sp[k],sp[k+1])) return true; return false; };
-  const n=sp.length, ends=[[sp[0],sp[1]],[sp[n-1],sp[n-2]]].map(([e,q])=>{ const dx=e[0]-q[0], dz=e[1]-q[1], l=Math.hypot(dx,dz)||1; return [e[0]+dx/l*.5,e[1]+dz/l*.5]; });   /* half a metre past either end */
+  const n=sp.length, ends=[[sp[0],sp[1]],[sp[n-1],sp[n-2]]].map(([e,q])=>{ const dx=e[0]-q[0], dz=e[1]-q[1], l=Math.hypot(dx,dz)||1; return [e[0]+dx/l*.8,e[1]+dz/l*.8-.55]; });   /* a little past either end, and a touch behind it */
   for(let it=0;it<4;it++){ let hit=-1; for(let i=0;i<route.length-1;i++) if(crosses(route[i],route[i+1])){ hit=i; break; } if(hit<0) break;
-    const a=route[hit], b=route[hit+1], cost=e=>Math.hypot(e[0]-a[0],e[1]-a[1])+Math.hypot(b[0]-e[0],b[1]-e[1])+(crosses(a,e)||crosses(e,b)? 50 : 0), d=cost(ends[0])<=cost(ends[1])? ends[0] : ends[1];
-    route.splice(hit+1,0,d); }
+    const d=Math.hypot(...ends[0])<=Math.hypot(...ends[1])? ends[0] : ends[1]; if(route.some(q=>q===d)) break;   /* always round the end nearer the fire, never the one out at the edge of the frame */
+    route.splice(hit+1,0,d); const fin=route[route.length-1], dd=Math.hypot(d[0]-fin[0],d[1]-fin[1]); for(let j=hit+2;j<route.length-1;){ if(Math.hypot(route[j][0]-fin[0],route[j][1]-fin[1])>dd) route.splice(j,1); else j++; } }   /* and drop any old waypoints that would now send them doubling back */
   return route.slice(1); }
 function logQ(dir,q){ return (q||new T.Quaternion()).setFromUnitVectors(new V3(1,0,0),dir); }
 
 function* jimStory(){ const J=jim, K=[.12,-.66]; S.stage="walk";
-  J.root.visible=true; J.feetInit=false; const st=offscreen(.99,70); J.place(st[0],st[1],-2.4); J.hipLocal.set(0,.995,0);
+  J.root.visible=true; J.feetInit=false; const st=edgeBehind(.99,70); J.place(st[0],st[1],-2.4); J.hipLocal.set(0,.995,0);
   for(const l of logs){ l.visible=true; l.userData.st="carry"; }
   /* both arms cradling the wood against his chest */
   J.setHand(L_,o=>J.local(.15,1.08,.3,o).add(_p.set(0,J.walk? .012*Math.cos(4*Math.PI*J.walk.phi) : 0,0)),10); J.setHand(R_,o=>J.local(-.15,1.06,.3,o).add(_p.set(0,J.walk? .012*Math.cos(4*Math.PI*J.walk.phi) : 0,0)),10); J.look=()=>fireTop();
@@ -509,7 +512,7 @@ function* sitDown(P,ch){ P.pos.copy(ch.position); P.yaw=P.yawGoal=ch.rotation.y;
 
 function* christyStory(){ const C=chr;
   yield* until(()=>flags.goChristy);
-  C.root.visible=true; C.feetInit=false; const st=offscreen(.96,70); C.place(st[0],st[1],-2.3); C.hipLocal.set(0,.995,0);
+  C.root.visible=true; C.feetInit=false; const st=edgeBehind(.96,70); C.place(st[0],st[1],-2.3); C.hipLocal.set(0,.995,0);
   guitar.visible=true; flags.gState="carryC"; flags.bagState="carry";
   C.setHand(R_,o=>C.local(-.215,.87,.03,o),8); C.look=()=>fireTop();
   yield* C.walkTo([[2.45,1.6],[1.75,.2],[1.42,-.66]],1.15);
@@ -785,7 +788,7 @@ function* leaveJim(){ const J=jim; if(!J.root.visible){ flags.jimGone=true; retu
   J.look=()=>chr.head.getWorldPosition(_a); yield* wait(.6);
   if(sat) yield* standUp(J,chairJ); else if(knelt) yield* rise(J);
   if(had){ J.setHand(R_,o=>J.local(-.215,.88,.03,o),6); yield* wait(.25); flags.gState="jimLeave"; yield* wait(.3); }
-  J.look=null; const off=offscreen(1.02,160); const pts=J.pos.x<1.2? [[1.35,-.35],[2.3,1.1],off] : [[2.3,1.1],off];
+  J.look=null; const off=edgeBehind(1.02,160); const pts=stickPoly()? [off] : J.pos.x<1.2? [[1.35,-.35],[2.3,1.1],off] : [[2.3,1.1],off];
   yield* J.walkTo(pts,1.05); J.root.visible=false; flags.jimGone=true; }
 function* leaveChr(){ const C=chr; if(!C.root.visible){ flags.chrGone=true; return; }
   const sat=C.mode==="sit"; freeUp(C); C.bendGoal={f:0,s:0,tw:0}; flags.sway=false; flags.pass=false;
@@ -793,7 +796,7 @@ function* leaveChr(){ const C=chr; if(!C.root.visible){ flags.chrGone=true; retu
   C.look=()=>jim.head.getWorldPosition(_a); yield* wait(1.0);
   if(sat){ yield* standUp(C,chairC);
     if(flags.bagState==="ground"){ C.look=()=>bag.localToWorld(_a.set(0,.2,0)); C.bendGoal.f=.45; C.bendGoal.tw=-.3; C.setHand(L_,o=>bag.localToWorld(o.set(0,.22,0)),5); yield* wait(.9); flags.bagState="carry"; C.bendGoal.f=0; C.bendGoal.tw=0; C.setHand(L_,null); yield* wait(.4); } }
-  C.look=null; const off=offscreen(.98,160); const pts=C.pos.x<1.2? [[.25,-.95],[1.55,-.35],[2.55,1.25],off] : [[2.55,1.25],off];
+  C.look=null; const off=edgeBehind(.98,160); const pts=stickPoly()? [[.25,-.95],off] : C.pos.x<1.2? [[.25,-.95],[1.55,-.35],[2.55,1.25],off] : [[2.55,1.25],off];
   yield* C.walkTo(pts,1.0); C.root.visible=false; flags.chrGone=true; }
 function begin(){ reset(); anchorKey=""; layout(); scripts.push(jimStory()); scripts.push(christyStory()); scripts.forEach(s=>s.next(0)); S.run=true; }
 SP.add({
@@ -895,6 +898,7 @@ function set(v,now){ v=!!v; if(v===S.on) return; S.on=v; if(v) songLoad();
   if(v){ load(); sndInit(); try{ ac&&ac.state!=="running"&&ac.resume(); }catch(e){} S.waitT=0; } }
 addEventListener("pointerdown",()=>{ if(S.on){ sndInit(); try{ ac&&ac.state!=="running"&&ac.resume(); }catch(e){} } },{passive:true}); addEventListener("keydown",()=>{ if(S.on){ sndInit(); try{ ac&&ac.state!=="running"&&ac.resume(); }catch(e){} } });
 window.Campfire={ set, toggle(){ set(!S.on); }, get on(){ return S.on; }, get leaving(){ return !S.on&&S.run; }, get leftAt(){ return leftAt; }, get walkedOff(){ return !S.on&&(!S.run||!!(flags.jimGone&&flags.chrGone)); },
-  get fire(){ return built? S.fire*S.alpha : 0; },   /* how brightly the fire is burning, for the scenery to light things by */
+  get fire(){ return built? S.fire*S.alpha : 0; },
+  get people(){ try{ if(!built) return []; return [jim,chr].filter(p=>p.root.visible).map(p=>{ const w=toScr(cw(p.pos.x,0,p.pos.z)); return {x:w.x,y:w.y}; }); }catch(e){ return []; } },   /* where their feet are on the screen */   /* how brightly the fire is burning, for the scenery to light things by */
   get firePt(){ try{ if(!built) return null; const w=toScr(cw(0,.15,0)); return {x:w.x,y:w.y}; }catch(e){ return null; } } };
 })();
