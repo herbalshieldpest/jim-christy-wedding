@@ -8062,6 +8062,13 @@ const critterMenu=(function(){
   bats:[ /* little brown bat, wings spread, fingers fanning the membrane */
    {m:1,p:"!32,25.4 33.6,24 !34.6,20.8 !35.8,24.6 37.8,26 42,25.2 47.6,22.8 !53.6,19.4 !60.6,22.8 57.4,24.8 !58.4,28.6 54.4,28 !53.4,32.8 49.4,31.4 !46.2,36.2 42.4,33.4 38.4,34.8 35.8,38.6 !32,41.4"},
    {h:1,m:1,p:"!38.6,27 !48,24.2 !48.2,24.8 !38.8,27.8"},{h:1,m:1,p:"!38.6,28.6 !47,30.8 !46.8,31.4 !38.4,29.4"}],
+  pturtle:[ /* eastern painted turtle basking on a stick: low smooth shell, neck stretched out, yellow-striped head */
+   {o:.5,p:"!3,51 22,49 !26,45 !28,46 25,49 46,47.5 !61,46.5 !61,49.5 46,50.5 !3,54"},
+   {o:.5,p:"!17,44 15.5,48.5 !19,49 21.5,44"},{o:.5,p:"!38,44 40,48 !43.5,48 42,43.5"},
+   {p:"!10,44 13,38 19,33.5 27,31.5 35,32 41,35 45.5,39 !47.5,41.5 51,39.5 55,36.5 !58,35 !61.5,35.5 62,37.5 59,39.5 54,42 50,44.5 !45,45.5 !10,45.5"},
+   {h:1,p:"!11.5,42 20,41.2 30,41 39,41.4 !45,42.5 !45,43.6 39,42.6 30,42.2 20,42.4 !11.5,43.4"},
+   {h:1,p:"!21,35 !22.2,34.6 23.5,40.5 !22.3,40.6"},{h:1,p:"!30,32.3 !31.3,32.3 31.5,40.4 !30.2,40.4"},{h:1,p:"!38.5,34 !39.7,34.6 37.8,40.6 !36.6,40.4"},
+   {h:1,p:"!49,41.6 53,38.6 !58,36.4 !58.3,37.2 53.5,39.6 !49.5,42.4"},{h:1,ci:[59.3,36.3,0.65]}],
   turtle:[ /* eastern box turtle, high domed shell */
    {o:.5,p:"!20,44 19,49 !21.5,50 24,48 24,44"},{o:.5,p:"!42,44 43,49 !45.5,50 47,48 46,44"},
    {p:"!8,44 12,32 20,24 30,21 40,22 48,27 53,34 55,40 !56,44 58,41 62,40 !63.5,42 61,45 56,46.5 52,47 49,52 !45.5,52 44,47 30,47 25,47 23,52 !19,52 17,46 12,46 !6,47 !8,46"},
@@ -8381,7 +8388,7 @@ const critterMenu=(function(){
   const LIST=[["Mammals",[["fox","fox","Red fox"],["grayfox","grayfox","Gray fox"],["coyote","coyote","Coyote"],["cub","bear","Black bears"],["bobcat","bobcat","Bobcat"],["raccoon","raccoon","Raccoon"],["skunk","skunk","Striped skunk"],["opossum","opossum","Opossum"],["groundhog","groundhog","Groundhog"],["beaver","beaver","Beaver"],
       ["otter","otter","River otter"],["porcupine","porcupine","Porcupine"],["flysquirrel","flysquirrel","Flying squirrel"],["squirrels","squirrel","Squirrels"],["cottontail","cottontail","Cottontails"],["buckLawn","buck","White-tailed buck"],["doe","doe","Doe & fawn"],["bats","bats","Little brown bats"],["romp","dogs","Willow & Tulip"],["utv","utv","Jim & Christy"]]],
     ["Butterflies & Moths",[["cmon","monarch","Monarch"],["bfly:tiger","tiger","Tiger swallowtail"],["bfly:spice","spice","Spicebush swallowtail"],["bfly:frit","frit","Great spangled fritillary"],["bfly:diana","diana","Diana fritillary"],["bfly:admiral","admiral","Red admiral"],["bfly:cloak","cloak","Mourning cloak"],["bfly:sulphur","sulphur","Clouded sulphur"],["moth","moth","Luna moth"],["bfly:rosy","rosy","Rosy maple moth"]]],
-    ["Small Wonders",[["turtle","turtle","Box turtle"],["pturtle","pturtle","Painted turtle"],["eft","eft","Red eft"],["peeper","peeper","Spring peeper"],["skink","skink","Five-lined skink"],["spider","spider","Garden spider"],["mantisfly","mantis","Praying mantis"],["katyfly","katydid","Katydid"],["fireflies","fireflies","Fireflies"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]],
+    ["Small Wonders",[["turtle","turtle","Box turtle"],["pturtle","pturtle","Painted turtle"],["eft","eft","Red eft"],["peeper","peeper","Spring peeper"],["skink","skink","Five-lined skink"],["spider","spider","Garden spider"],["mantisfly","mantis","Praying mantis"],["katyfly","katydid","Katydid"],["darner","darner","Green darner"],["bee","bee","Bumble bee"]]],
     ["Birds of Prey & Big Birds",[["eagle","eagle","Bald eagle"],["goldeneagle","goldeneagle","Golden eagle"],["hawkg","redtail","Red-tailed hawk"],["falcon","falcon","Peregrine falcon"],["owl","owl","Barred owl"],["heron","heron","Great blue heron"],["ravens","ravens","Common ravens"],
       ["vultures","vultures","Turkey vultures"],["geese","geese","Canada geese"],["turkeys","turkeys","Wild turkeys"],["hen","hen","Hen & poults"],["pheasfront","pheasant","Ring-necked pheasant"],["grouse","grouse","Ruffed grouse"],["quail","quail","Bobwhite quail"]]],
     ["Woods & Fields",[["woodcock","woodcock","Woodcocks"],["killdeer","killdeer","Killdeer"],["whippoorwill","whippoorwill","Whip-poor-will"],["pecker","pecker","Pileated woodpecker"],["hum","hum","Hummingbird"],["jays","jays","Blue jays"],["waxwing","waxwing","Cedar waxwings"]]],
