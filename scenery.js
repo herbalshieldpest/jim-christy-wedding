@@ -1002,31 +1002,39 @@ const ambient=(function(){ let heavy=false;
     x.save(); x.lineCap="round";
     { const dx=B.gx-B.sx, dy=B.gy-B.sy, L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;   /* the shaft itself, soft-edged, warm, brightest where it reaches the ground */
       x.globalCompositeOperation="screen"; const g=x.createLinearGradient(B.sx,B.sy,B.gx,B.gy); g.addColorStop(0,"rgba(255,226,170,0)"); g.addColorStop(.35,"rgba(255,222,160,.5)"); g.addColorStop(.75,"rgba(255,214,150,.75)"); g.addColorStop(1,"rgba(255,206,140,.35)"); x.fillStyle=g;
-      for(const [k,a] of [[1.25,.06],[.8,.1],[.45,.14],[.2,.16]]){ const w0=W*.012*k, w1=W*.1*k; x.globalAlpha=a*A; x.beginPath(); x.moveTo(B.sx+nx*w0,B.sy+ny*w0); x.lineTo(B.gx+nx*w1,B.gy+ny*w1); x.lineTo(B.gx-nx*w1,B.gy-ny*w1); x.lineTo(B.sx-nx*w0,B.sy-ny*w0); x.closePath(); x.fill(); } }
+      for(const [k,a] of [[1.3,.035],[1.05,.045],[.85,.055],[.67,.065],[.5,.07],[.36,.075],[.24,.075],[.13,.07]]){ const w0=W*.012*k, w1=W*.1*k; x.globalAlpha=a*A; x.beginPath(); x.moveTo(B.sx+nx*w0,B.sy+ny*w0); x.lineTo(B.gx+nx*w1,B.gy+ny*w1); x.lineTo(B.gx-nx*w1,B.gy-ny*w1); x.lineTo(B.sx-nx*w0,B.sy-ny*w0); x.closePath(); x.fill(); } }
     x.globalCompositeOperation="lighter";
     /* the meadow's own silk: strands strung between the stems all through the field, tiny far back and longer in front; they flash as the beam crosses them */
-    const key=W+"x"+H; if(gsKey!==key){ gsKey=key; gsG=[]; const n=MOBILE()? 160 : 420; for(let i=0;i<n;i++){ const d=Math.pow(Math.random(),.55), y=yAt(d)+(Math.random()-.5)*H*.01; gsG.push({x:Math.random()*W,y,l:(2+34*d*d)*sc*(.5+Math.random()),a:(Math.random()-.5)*.6,sag:(.3+Math.random())*d*3.5*sc,ph:Math.random()*6.283,d}); } }
+    const key=W+"x"+H; if(gsKey!==key){ gsKey=key; gsG=[]; const n=MOBILE()? 160 : 420; for(let i=0;i<n;i++){ const d=Math.pow(Math.random(),.55), y=yAt(d)+(Math.random()-.5)*H*.01; gsG.push({x:Math.random()*W,y,l:(2+34*d*d)*sc*(.5+Math.random()),a:(Math.random()-.5)*.6,sag:(.3+Math.random())*d*3.5*sc,ph:Math.random()*6.283,d,w:.3+Math.random()*1.1}); } }
     for(const g of gsG){ const lt=gsLight(B,g.x,g.y); if(lt<.04) continue; const tw=.55+.45*Math.sin(t*2.3+g.ph*3);   /* twinkling as the light angle changes */
-      x.globalAlpha=Math.min(1,lt*tw*A*(.45+.55*g.d)); x.strokeStyle=g.d<.3? "rgb(255,226,186)" : "rgb(255,242,218)"; x.lineWidth=Math.max(.35,(.25+g.d*.7)*sc); const ca=Math.cos(g.a)*g.l/2, sa=Math.sin(g.a)*g.l/2;
+      const wpx=(.2+g.d*.7)*sc*g.w; x.globalAlpha=Math.min(1,lt*tw*A*(.45+.55*g.d)*Math.min(1,wpx/.6)); x.strokeStyle=g.d<.3? "rgb(255,226,186)" : "rgb(255,242,218)"; x.lineWidth=Math.max(.6,wpx); const ca=Math.cos(g.a)*g.l/2, sa=Math.sin(g.a)*g.l/2;
       x.beginPath(); x.moveTo(g.x-ca,g.y-sa); x.quadraticCurveTo(g.x,g.y+g.sag,g.x+ca,g.y+sa); x.stroke(); }
     /* the threads in the air, at every depth: far ones small and slow above the back of the field, near ones long and close */
-    const cap=MOBILE()? 22 : 48; if(gsA>.5&&gsT.length<cap&&Math.random()<dt*(MOBILE()? 3 : 5)){ const d=Math.pow(Math.random(),.9), snag=d>.55&&Math.random()<.3;
-      const y=yAt(d)-(snag? 0 : Math.random()*H*(.03+.18*d));
-      gsT.push({x:snag? Math.random()*W : (Math.random()<.5? (dir>0? -W*.05 : W*1.05) : Math.random()*W),y,d,len:(14+300*Math.pow(d,1.5))*sc*(.6+Math.random()*.6),ph:Math.random()*6.283,life:0,max:snag? 999 : 14+Math.random()*12,snag,spider:Math.random()<.6,rise:.3+Math.random()*.7}); }
+    const cap=MOBILE()? 26 : 58; if(gsA>.5&&gsT.length<cap&&Math.random()<dt*(MOBILE()? 3.5 : 6)){ const high=Math.random()<.3, d=high? .25+Math.random()*.5 : Math.pow(Math.random(),.9), snag=!high&&d>.55&&Math.random()<.3;
+      /* some ride high: long strands up in the air above the treeline, seen only against the sky where the sun lights them */
+      const y=high? lerp(H*.06,fTop-H*.03,Math.pow(Math.random(),.8)) : yAt(d)-(snag? 0 : Math.random()*H*(.03+.18*d));
+      gsT.push({x:snag? Math.random()*W : (Math.random()<.5? (dir>0? -W*.05 : W*1.05) : Math.random()*W),y,d,high,len:(high? 120+320*Math.random() : 14+300*Math.pow(d,1.5))*sc*(.6+Math.random()*.6),ph:Math.random()*6.283,life:0,max:snag? 999 : 16+Math.random()*14,snag,spider:!high&&Math.random()<.6,rise:.3+Math.random()*.7,
+        fib:d>.35&&Math.random()<.6? 2+((Math.random()*2)|0) : 1,spr:(4+18*d)*sc*(.5+Math.random()),wph:Math.random()*20}); }   /* ballooning silk is often a few fibres, fanning apart toward the free end */
     gsT.sort((a,b)=>a.d-b.d);
     for(let i=gsT.length-1;i>=0;i--){ const q=gsT[i]; q.life+=dt; const out=q.x<-W*.35||q.x>W*1.35||q.y<-H*.2; if(q.life>q.max||out){ gsT.splice(i,1); continue; } }
     for(const q of gsT){
-      if(!q.snag){ q.x+=dir*(6+60*q.d*q.d)*sc*(.8+.4*Math.sin(t*.3+q.ph))*dt; q.y-=(1+16*q.d*q.d)*q.rise*sc*dt*(.6+.6*Math.sin(t*.5+q.ph)); }   /* carried off on the air, slowly climbing; the far ones barely seem to move */
-      const fade=Math.min(1,q.life/1.5,(q.max-q.life)/2,gsA*1.5), N=q.d<.3? 5 : q.d<.6? 8 : 12, pts=[], wav=(3+34*q.d)*sc;
+      if(!q.snag){ const sp2=q.high? .45 : 1; q.x+=dir*(6+60*q.d*q.d)*sp2*sc*(.8+.4*Math.sin(t*.3+q.ph))*dt; q.y-=(1+16*q.d*q.d)*q.rise*sp2*sc*dt*(.6+.6*Math.sin(t*.5+q.ph)); }   /* carried off on the air, slowly climbing; the far ones barely seem to move */
+      const fade=Math.min(1,q.life/1.5,(q.max-q.life)/2,gsA*1.5), N=q.high? 14 : q.d<.3? 5 : q.d<.6? 8 : 12, pts=[], wav=(3+34*q.d)*sc;
       for(let j=0;j<=N;j++){ const u=j/N, fl=q.snag? 1 : .6;   /* the silk streams out downwind from the spider, rippling, the free end lifting */
         pts.push([q.x+dir*u*q.len*(.9+.1*Math.cos(t*.7+q.ph)), q.y-u*q.len*(q.snag? .06+.05*Math.sin(t*.9+q.ph) : .18)+Math.sin(u*4.2-t*(1.4+q.d)+q.ph)*wav*u*fl+Math.sin(u*9-t*3.1+q.ph*2)*wav*.15*u]); }
-      const haze=1-.45*(1-q.d), warm=q.d<.35;   /* the far ones fainter and warmer through the haze */
-      let peak=0, pk=0;
-      for(let j=0;j<N;j++){ const a=pts[j], b=pts[j+1], ang=Math.atan2(b[1]-a[1],b[0]-a[0]), lt=gsLight(B,(a[0]+b[0])/2,(a[1]+b[1])/2);
-        const glint=lt*(.55+.45*Math.pow(Math.abs(Math.sin(ang*3+t*.8+q.ph)),3)), base=.025+.05*q.d;   /* barely there out of the light; blazing where the beam crosses it */
-        const v=A*fade*haze*(base+glint*(.6+.5*q.d)); if(v<.01) continue; if(glint>peak){ peak=glint; pk=j; }
-        x.globalAlpha=Math.min(1,v); x.strokeStyle=warm? "rgb(255,228,186)" : glint>.6? "rgb(255,250,238)" : "rgb(255,238,206)"; x.lineWidth=Math.max(.35,(.25+.8*q.d)*sc*(1+glint*.5));
-        x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); }
+      const haze=q.high? .8 : 1-.45*(1-q.d), warm=q.d<.35;   /* the far ones fainter and warmer through the haze */
+      let peak=0, pk=0; const nb=pts.map((p,j)=>{ const a=pts[Math.max(0,j-1)], b=pts[Math.min(N,j+1)], l=Math.hypot(b[0]-a[0],b[1]-a[1])||1; return [-(b[1]-a[1])/l,(b[0]-a[0])/l]; });
+      for(let f=0;f<q.fib;f++){ const fo=(f-(q.fib-1)/2)*q.spr, fw=f? .6 : 1;
+        for(let j=0;j<N;j++){ const u0=j/N, u1=(j+1)/N, o0=fo*Math.pow(u0,1.6), o1=fo*Math.pow(u1,1.6), a=[pts[j][0]+nb[j][0]*o0,pts[j][1]+nb[j][1]*o0], b=[pts[j+1][0]+nb[j+1][0]*o1,pts[j+1][1]+nb[j+1][1]*o1];
+          const um=(u0+u1)/2, ang=Math.atan2(b[1]-a[1],b[0]-a[0]), sunP=Math.max(0,1-Math.hypot((a[0]+b[0])/2-sp.x,(a[1]+b[1])/2-sp.y)/(W*.6));
+          const lt=Math.max(gsLight(B,(a[0]+b[0])/2,(a[1]+b[1])/2),q.high? Math.pow(sunP,1.5) : 0);   /* up high, the strands light up near the sun as well as in the beam */
+          /* a real strand is never even: it thins and thickens, bundles and splits, and catches the light in broken stretches */
+          const nz=.5+.5*Math.sin(um*7.3+q.wph+f*2.1)*Math.sin(um*3.1+q.wph*1.7+t*.4), nz2=.5+.5*Math.sin(um*19+q.wph*3+f), taper=Math.min(1,um*6)*(1-.55*um);
+          const glint=lt*(.45+.55*Math.pow(Math.abs(Math.sin(ang*3+t*.8+q.ph+f)),3))*(.25+.75*nz2), base=(q.high? .05 : .02+.045*q.d)*nz;
+          const v=A*fade*haze*fw*(base+glint*(.6+.5*q.d)*(.35+.65*nz)); if(v<.01) continue; if(glint>peak){ peak=glint; pk=j; }
+          const wpx=(.15+.9*q.d)*sc*(.3+1.1*nz)*taper*(1+glint*.6);   /* below a pixel wide it only gets fainter, the way a hair-fine line does */
+          x.globalAlpha=Math.min(1,v*Math.min(1,wpx/.6)); x.strokeStyle=warm? "rgb(255,228,186)" : glint>.6? "rgb(255,250,238)" : "rgb(255,238,206)"; x.lineWidth=Math.max(.6,wpx);
+          x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); } }
       if(peak>.7&&q.d>.25){ const bp=pts[pk], r=(1.5+7*q.d)*sc*peak; x.globalAlpha=A*fade*.55*peak; x.strokeStyle="rgb(255,248,230)"; x.lineWidth=Math.max(.35,.55*sc); x.beginPath(); x.moveTo(bp[0]-r,bp[1]); x.lineTo(bp[0]+r,bp[1]); x.moveTo(bp[0],bp[1]-r*.7); x.lineTo(bp[0],bp[1]+r*.7); x.stroke(); }   /* a tiny star of light where it flares */
       if(q.spider&&q.d>.45){ x.globalCompositeOperation="source-over"; x.globalAlpha=A*fade*.75; x.fillStyle="rgb(46,34,26)"; x.beginPath(); x.arc(pts[0][0],pts[0][1],Math.max(.6,(.4+1.4*q.d)*sc),0,6.283); x.fill(); x.globalCompositeOperation="lighter"; } }   /* the spiderling riding the end of it */
     x.restore(); }
