@@ -4834,7 +4834,7 @@ const ambient=(function(){
   function startLogCrawler(kind){ if(!LOGS_ON) return; if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.42,.5)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.021;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
     const L={kind,side,t:0,u:.22,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
-      ang:side<0? -rnd(.07,.11) : rnd(.07,.11), x0:side<0? -W*.05 : W*1.05, y0:H*(W<700? rnd(.8,.83) : rnd(.965,.985)), len, R0, seed:Math.floor(rnd(0,9999)),
+      ang:side<0? -rnd(.07,.11) : rnd(.07,.11), x0:side<0? -W*.05 : W*1.05, y0:H*(W<700? rnd(.8,.83) : rnd(.89,.91)), len, R0, seed:Math.floor(rnd(0,9999)),
       splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), twigs:[], knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
       blades:Array.from({length:520},()=>({u:Math.random()*1.06-.03,h:rnd(.12,.75),l:rnd(-.4,.4),c:Math.random(),w:rnd(.6,1.3),bend:rnd(-.3,.3)}))};
     /* a real limb is never a tube: it thickens at an old branch joint, wavers, and tapers to the break */
@@ -5008,7 +5008,7 @@ const ambient=(function(){
       gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
       gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
     /* shallow focus: with something this close in the lens, the field and hills beyond fall softly out of focus, more the farther they are */
-    if(false){ const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L);   /* (the rise under the stick is off: simpler) */ ctx.save(); ctx.globalAlpha=L.a; const hb=L.hillBox||[0,0,W,H], ks=L.hill.width/W; ctx.drawImage(L.hill,hb[0]*ks,hb[1]*ks,hb[2]*ks,hb[3]*ks,hb[0],hb[1],hb[2],hb[3]); ctx.restore(); }   /* the rise of ground it lies on */
+    { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L);   /* the rise of near grass the stick lies on */ ctx.save(); ctx.globalAlpha=L.a; const hb=L.hillBox||[0,0,W,H], ks=L.hill.width/W; ctx.drawImage(L.hill,hb[0]*ks,hb[1]*ks,hb[2]*ks,hb[3]*ks,hb[0],hb[1],hb[2],hb[3]); ctx.restore(); }   /* the rise of ground it lies on */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
        A soft occlusion right under the stick where no sky reaches, and a fainter shade falling toward us from the low sun behind */
