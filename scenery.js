@@ -4833,8 +4833,8 @@ const ambient=(function(){
   const LOGS_ON=window.SCENERY_LOGS_ON=true;   /* the stick and the animals that come out on it (skink, eft, painted turtle, slimy salamander) are switched off for now: flip to true to bring them back */
   function startLogCrawler(kind){ if(!LOGS_ON) return; if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.42,.5)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.021;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
-    const L={kind,side,t:0,u:.1,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
-      ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*(W<700? rnd(.8,.83) : rnd(.97,1.0)), len, R0, seed:Math.floor(rnd(0,9999)),
+    const L={kind,side,t:0,u:.22,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
+      ang:side<0? -rnd(.07,.11) : rnd(.07,.11), x0:side<0? -W*.05 : W*1.05, y0:H*(W<700? rnd(.8,.83) : rnd(.965,.985)), len, R0, seed:Math.floor(rnd(0,9999)),
       splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), twigs:[], knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
       blades:Array.from({length:520},()=>({u:Math.random()*1.06-.03,h:rnd(.12,.75),l:rnd(-.4,.4),c:Math.random(),w:rnd(.6,1.3),bend:rnd(-.3,.3)}))};
     /* a real limb is never a tube: it thickens at an old branch joint, wavers, and tapers to the break */
@@ -5034,8 +5034,8 @@ const ambient=(function(){
     { ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);
       const xl=L.u*Ln, r=R(xl), fo=nightK>.3? fireOn(L) : null; L.fireK=fo? fo.k : 0; const sunS2=fo? fo.dirX*L.dir*((L.side<0? 1 : -1)) : sunS;   /* at the campfire, the firelight takes the sun's part */
       ctx.translate(xl,-sag(xl)); ctx.scale(L.dir,1);   /* on the limb's axis; the animal sits on the round of it, seen from a little above */
-      if(L.kind==="turtle"){ const S=H*.001; drawTurtleLog(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
-      else { const S=H*.002*(L.kind==="eft"? 1.25 : 1); drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
+      if(L.kind==="turtle"){ const S=H*.0017; drawTurtleLog(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
+      else { const S=H*.0036*(L.kind==="eft"? 1.2 : 1); drawLogAnimal(   /* close to us: big enough to see every scale and spot */L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
       ctx.restore(); }
     /* the real grass laid back over the stick's foot */
     if(nA<.6){ ctx.save(); ctx.globalAlpha=L.a*(1-nA/.6); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.drawImage(gs,L.imgX,L.imgY,cw/k,chh/k); ctx.restore(); }   /* by night the blades are lost in the dark anyway; let them go rather than glow */
