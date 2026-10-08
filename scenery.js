@@ -4984,6 +4984,17 @@ const ambient=(function(){
       ctx.restore(); }
     /* the real grass laid back over the stick's foot */
     if(nA<.6){ ctx.save(); ctx.globalAlpha=L.a*(1-nA/.6); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.drawImage(gs,L.imgX,L.imgY,cw/k,chh/k); ctx.restore(); }   /* by night the blades are lost in the dark anyway; let them go rather than glow */
+    /* a few tall strands of grass right in front, nearer than everything: rising out of the bottom of the frame past the stick, swaying, a little soft, dark against the light with lit edges */
+    { if(!L.tall) L.tall=Array.from({length:9},(_,i)=>({u:.06+i/9*.95+rnd(-.04,.04),dx:rnd(-.03,.03)*W,lean:rnd(-.18,.12),hx:rnd(.03,.09),w:rnd(3,6)*(H/800),ph:rnd(0,6),seed:Math.random()<.45,bend:rnd(.1,.3),c:Math.random()}));
+      const ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, day=1-Math.min(1,nA*1.2), g=L.gc||[110,110,60];
+      ctx.save(); ctx.globalAlpha=L.a; ctx.filter="blur(.7px)";
+      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx=L.x0+ca*xl*mx-sa*ly+tg.dx, sy=L.y0+sa*xl*mx+ca*ly, topY=sy-H*tg.hx, by=H+8, bx=sx-tg.lean*(by-topY)*.6;
+        const sw=Math.sin(t*1.1+tg.ph)*H*.006+Math.sin(t*2.3+tg.ph*1.7)*H*.002, tx=sx+tg.lean*(by-topY)*.4+sw, mxp=(bx+tx)/2+(tg.bend*(tx-bx>0? 1 : -1))*H*.02, myp=(by+topY)/2;
+        const col=mulv(mixv(g,[54,62,26],.45+tg.c*.3),(.55+tg.c*.25)*(1-nA*.55)), w=tg.w;
+        ctx.fillStyle=rgb(col); ctx.beginPath(); ctx.moveTo(bx-w,by); ctx.quadraticCurveTo(mxp-w*.6,myp,tx,topY); ctx.quadraticCurveTo(mxp+w*.6,myp,bx+w,by); ctx.closePath(); ctx.fill();
+        if(day>.2){ ctx.strokeStyle=`rgba(255,212,140,${(.35*day).toFixed(2)})`; ctx.lineWidth=Math.max(.6,w*.3); ctx.beginPath(); ctx.moveTo(lerp(bx,mxp,.6)+w*.4,lerp(by,myp,.6)); ctx.quadraticCurveTo(mxp+w*.4,myp,tx,topY); ctx.stroke(); }   /* sunlit edge */
+        if(tg.seed){ ctx.save(); ctx.translate(tx,topY); ctx.rotate(Math.atan2(topY-myp,tx-mxp)+Math.PI/2); ctx.fillStyle=rgb(mulv(mixv(col,[170,140,80],.5),1.1)); for(let k=0;k<7;k++){ ctx.beginPath(); ctx.ellipse((k%2? 1 : -1)*w*.55,k*w*1.1-w*7,w*.45,w*1.1,(k%2? .4 : -.4),0,6.283); ctx.fill(); } ctx.restore(); }   /* a seed head on some */ }
+      ctx.restore(); }
     L.sx=L.x0+Math.cos(L.ang)*L.u*Ln*-L.side; L.sy=L.y0-H*.08; }
   /* an eastern painted turtle hauled out on the stick to bask: a low smooth olive-black shell with pale seams between the scutes and red bars round its rim,
      a black head striped yellow, legs striped red, straddling the stick with its claws hooked round it. Same frame as the lizards (mm, X forward, Y away, Z up) */
