@@ -4799,7 +4799,6 @@ const ambient=(function(){
     /* snapped side branches: short, broken off raggedly, rising from the far side at the old forks */
     L.stubs=nodes.slice(0,2+(Math.random()<.5? 1 : 0)).map((nd,i)=>{ const xs=nd.u*len, back=Math.random()<.3; return {xs,th:back? -rnd(2.1,2.5) : -rnd(.45,.95),len:R0*rnd(1.3,3.2),r0:rnd(.42,.58),seed:Math.floor(rnd(0,9999)),splint:Array.from({length:4},()=>({a:rnd(-.8,.8),w:rnd(.08,.2),h:rnd(.2,.8)}))}; });
     L.knots=L.knots.concat(nodes.map(nd=>({u:nd.u+rnd(-.01,.01),ph:rnd(-.4,.3),s:rnd(1,1.4)})));
-    if(side>0){ L.y0-=H*.045; L.ang*=1.15; }   /* on the right the lawn sits lower in the frame: lift the stick up onto it so it lies in full view like the left one */
     if(kind==="turtle"){ L.u=.3; L.life=rnd(40,55); L.state="pause"; L.dur=rnd(3,5); }   /* the turtle is already hauled out a little way along, basking */
     logC=L; }
   const sm01=z=>{ const t2=Math.max(0,Math.min(1,z*.5+.5)); return t2*t2*(3-2*t2); };
@@ -4986,16 +4985,19 @@ const ambient=(function(){
       ctx.restore(); }
     /* the real grass laid back over the stick's foot */
     if(nA<.6){ ctx.save(); ctx.globalAlpha=L.a*(1-nA/.6); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.drawImage(gs,L.imgX,L.imgY,cw/k,chh/k); ctx.restore(); }   /* by night the blades are lost in the dark anyway; let them go rather than glow */
-    /* a few tall strands of grass right in front, nearer than everything: rising out of the bottom of the frame past the stick, swaying, a little soft, dark against the light with lit edges */
-    { if(!L.tall) L.tall=Array.from({length:9},(_,i)=>({u:.06+i/9*.95+rnd(-.04,.04),dx:rnd(-.03,.03)*W,lean:rnd(-.18,.12),hx:rnd(.03,.09),w:rnd(3,6)*(H/800),ph:rnd(0,6),seed:Math.random()<.45,bend:rnd(.1,.3),c:Math.random()}));
-      const ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, day=1-Math.min(1,nA*1.2), g=L.gc||[110,110,60];
-      ctx.save(); ctx.globalAlpha=L.a;
-      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx=L.x0+ca*xl*mx-sa*ly+tg.dx, sy=L.y0+sa*xl*mx+ca*ly, topY=sy-H*tg.hx, by=H+8, bx=sx-tg.lean*(by-topY)*.6;
-        const sw=Math.sin(t*1.1+tg.ph)*H*.006+Math.sin(t*2.3+tg.ph*1.7)*H*.002, tx=sx+tg.lean*(by-topY)*.4+sw, mxp=(bx+tx)/2+(tg.bend*(tx-bx>0? 1 : -1))*H*.02, myp=(by+topY)/2;
-        const col=mulv(mixv(g,[54,62,26],.45+tg.c*.3),(.55+tg.c*.25)*(1-nA*.55)), w=tg.w;
-        ctx.fillStyle=rgb(col); ctx.beginPath(); ctx.moveTo(bx-w,by); ctx.quadraticCurveTo(mxp-w*.6,myp,tx,topY); ctx.quadraticCurveTo(mxp+w*.6,myp,bx+w,by); ctx.closePath(); ctx.fill();
-        if(day>.2){ ctx.strokeStyle=`rgba(255,212,140,${(.35*day).toFixed(2)})`; ctx.lineWidth=Math.max(.6,w*.3); ctx.beginPath(); ctx.moveTo(lerp(bx,mxp,.6)+w*.4,lerp(by,myp,.6)); ctx.quadraticCurveTo(mxp+w*.4,myp,tx,topY); ctx.stroke(); }   /* sunlit edge */
-        if(tg.seed){ ctx.save(); ctx.translate(tx,topY); ctx.rotate(Math.atan2(topY-myp,tx-mxp)+Math.PI/2); ctx.fillStyle=rgb(mulv(mixv(col,[170,140,80],.5),1.1)); for(let k=0;k<7;k++){ ctx.beginPath(); ctx.ellipse((k%2? 1 : -1)*w*.55,k*w*1.1-w*7,w*.45,w*1.1,(k%2? .4 : -.4),0,6.283); ctx.fill(); } ctx.restore(); }   /* a seed head on some */ }
+    /* tall grass right in front, nearer than everything: a few loose clumps of slender arching leaves of all heights, tips drooping over, a seed stem here and there; light to draw (no filters) */
+    { if(!L.tall){ const cl=[], nC=3+Math.floor(Math.random()*2); for(let c=0;c<nC;c++){ const u=.06+(c+Math.random()*.8)/nC*.92, n=3+Math.floor(Math.random()*3);
+          for(let k=0;k<n;k++) cl.push({u:u+rnd(-.015,.015),ang:rnd(-.35,.28)+(k-n/2)*.1,hx:rnd(.03,.13),droop:rnd(.1,.7),w:rnd(2.6,5)*(H/800),ph:rnd(0,6),seed:Math.random()<.25,c:Math.random(),dir:Math.random()<.5? -1 : 1}); }
+        L.tall=cl; }
+      const ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, day=1-Math.min(1,nA*1.2), g=L.gc||[110,110,60], NS=12;
+      ctx.save(); ctx.globalAlpha=L.a; ctx.lineCap="round";
+      for(const tg of L.tall){ const xl=tg.u*Ln, r=L.Rf(Math.min(Ln,xl)), ly=-L.sag(Math.min(Ln,xl))-r, sx0=L.x0+ca*xl*mx-sa*ly, sy0=L.y0+sa*xl*mx+ca*ly, by=H+8, len=(by-sy0)+H*tg.hx;
+        const a0=tg.ang+Math.sin(t*1.05+tg.ph)*.04+Math.sin(t*2.3+tg.ph*1.7)*.012, bx=sx0-Math.sin(a0)*(by-sy0), Lp=[], Rp=[]; let px=bx, py=by;
+        for(let i=0;i<=NS;i++){ const s2=i/NS, an=a0+tg.dir*tg.droop*s2*s2*2.2, w=tg.w*Math.pow(1-s2,.85); Lp.push([px-Math.cos(an)*w,py-Math.sin(an)*w]); Rp.push([px+Math.cos(an)*w,py+Math.sin(an)*w]); px+=Math.sin(an)*len/NS; py-=Math.cos(an)*len/NS; }
+        const col=mulv(mixv(g,[48,58,22],.45+tg.c*.3),(.45+tg.c*.3)*(1-nA*.55));
+        ctx.fillStyle=rgb(col); ctx.beginPath(); Lp.forEach((q,i)=>i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); for(let i=Rp.length-1;i>=0;i--) ctx.lineTo(Rp[i][0],Rp[i][1]); ctx.closePath(); ctx.fill();
+        if(day>.2){ ctx.strokeStyle=`rgba(255,214,146,${(.34*day).toFixed(2)})`; ctx.lineWidth=Math.max(.5,tg.w*.28); ctx.beginPath(); for(let i=4;i<Lp.length;i++) i>4? ctx.lineTo(Lp[i][0],Lp[i][1]) : ctx.moveTo(Lp[i][0],Lp[i][1]); ctx.stroke(); }   /* a lit edge */
+        if(tg.seed){ const tp=[px,py]; ctx.fillStyle=rgb(mulv(mixv(col,[180,150,90],.55),1.1)); for(let k=0;k<6;k++){ ctx.beginPath(); ctx.ellipse(tp[0]+(k%2? 1 : -1)*tg.w*.5,tp[1]+k*tg.w*.9,tg.w*.35,tg.w*.85,(k%2? .4 : -.4),0,6.283); ctx.fill(); } } }
       ctx.restore(); }
     L.sx=L.x0+Math.cos(L.ang)*L.u*Ln*-L.side; L.sy=L.y0-H*.08; }
   /* an eastern painted turtle hauled out on the stick to bask: a low smooth olive-black shell with pale seams between the scutes and red bars round its rim,
