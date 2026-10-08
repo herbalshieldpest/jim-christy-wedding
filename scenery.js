@@ -3549,14 +3549,15 @@ const ambient=(function(){
     x.restore();
     /* three slender gilt drops on fine silk cords, hung from the lower hem: a small bead, a tapering spindle of polished brass, and a little silk tassel below, swaying gently */
     const wts=[]; for(const [k,sw,cl] of [[.2,0,.36],[.5,1,.52],[.8,2,.36]]){ const i=Math.round((k+E)/(1+2*E)*N), P=pts[i], ht=Math.hypot(P.bot[0]-P.top[0],P.bot[1]-P.top[1]);
-      const th=-B.dir*.12+Math.sin(B.t*(2.6-cl*.8)+sw*1.9)*.14+Math.sin(B.t*3.9+sw)*.04, L=ht*cl, r=Math.max(1,ht*.05), ca=Math.cos(th), sa=Math.sin(th), ex=P.bot[0]+sa*L, ey=P.bot[1]+ca*L;
-      x.strokeStyle="rgba(214,190,140,.85)"; x.lineWidth=Math.max(.3,ht*.007); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+sa*L*.45,P.bot[1]+ca*L*.55,ex,ey); x.stroke();   /* the silk cord */
+      const th=-B.dir*.12+Math.sin(B.t*(2.6-cl*.8)+sw*1.9)*.14+Math.sin(B.t*3.9+sw)*.04, L=ht*cl, r=Math.max(2,ht*.1), ca=Math.cos(th), sa=Math.sin(th), ex=P.bot[0]+sa*L, ey=P.bot[1]+ca*L;
+      x.strokeStyle="rgba(150,118,70,.9)"; x.lineWidth=Math.max(.45,ht*.009); x.beginPath(); x.moveTo(P.bot[0],P.bot[1]-ht*.02); x.quadraticCurveTo(P.bot[0]+sa*L*.45,P.bot[1]+ca*L*.55,ex,ey); x.stroke();   /* the silk cord */
       x.save(); x.translate(ex,ey); x.rotate(-th);
-      const gold=(y0,y1)=>{ const g=x.createLinearGradient(-r,0,r,0); g.addColorStop(0,"#6e4c18"); g.addColorStop(.3,"#e9c77c"); g.addColorStop(.45,"#fff1c8"); g.addColorStop(.7,"#b88a3c"); g.addColorStop(1,"#5a3c12"); return g; };
-      x.fillStyle=gold(); x.beginPath(); x.arc(0,r*.45,r*.42,0,6.283); x.fill();   /* the bead */
-      x.beginPath(); x.moveTo(0,r*.9); x.bezierCurveTo(r*.7,r*1.3,r*.62,r*2.6,0,r*4.2); x.bezierCurveTo(-r*.62,r*2.6,-r*.7,r*1.3,0,r*.9); x.fillStyle=gold(); x.fill();   /* the spindle */
-      x.strokeStyle="rgba(255,244,214,.6)"; x.lineWidth=Math.max(.25,r*.08); x.beginPath(); x.moveTo(-r*.14,r*1.4); x.quadraticCurveTo(-r*.3,r*2.4,-r*.08,r*3.5); x.stroke();   /* a glint down its length */
-      x.strokeStyle="rgba(200,170,110,.75)"; x.lineWidth=Math.max(.2,r*.06); for(let j=-3;j<=3;j++){ const sx2=j*r*.09, sw2=Math.sin(B.t*3+sw+j)*r*.12; x.beginPath(); x.moveTo(sx2*.4,r*4.1); x.quadraticCurveTo(sx2+sw2*.5,r*5,sx2*1.5+sw2,r*5.9); x.stroke(); }   /* the tassel's fine threads */
+      const ls=Math.sign(sp.x-ex)||1, gold=()=>{ const g=x.createLinearGradient(-r*ls,0,r*ls,0); g.addColorStop(0,"#3a2408"); g.addColorStop(.22,"#8a5e1e"); g.addColorStop(.5,"#d9aa52"); g.addColorStop(.68,"#ffe6a6"); g.addColorStop(.78,"#fffaf0"); g.addColorStop(.9,"#e2b45c"); g.addColorStop(1,"#a8741e"); return g; };   /* polished brass: deep on the shadow side, a hot highlight toward the sun, warm reflected light at the rim */
+      x.fillStyle=gold(); x.beginPath(); x.arc(0,r*.45,r*.42,0,6.283); x.fill(); x.strokeStyle="rgba(40,24,6,.55)"; x.lineWidth=Math.max(.3,r*.07); x.stroke();   /* the bead */
+      x.beginPath(); x.moveTo(0,r*.9); x.bezierCurveTo(r*.7,r*1.3,r*.62,r*2.6,0,r*4.2); x.bezierCurveTo(-r*.62,r*2.6,-r*.7,r*1.3,0,r*.9); x.fillStyle=gold(); x.fill(); x.strokeStyle="rgba(40,24,6,.5)"; x.lineWidth=Math.max(.3,r*.07); x.stroke();   /* the spindle, edged so it reads against the sky */
+      x.strokeStyle="rgba(255,252,240,.9)"; x.lineWidth=Math.max(.35,r*.1); x.beginPath(); x.moveTo(ls*r*.2,r*1.4); x.quadraticCurveTo(ls*r*.34,r*2.4,ls*r*.1,r*3.5); x.stroke();   /* a glint down its length on the sunward side */
+      { const gx=ls*r*.16, gy=r*.32, gr2=x.createRadialGradient(gx,gy,0,gx,gy,r*.55); gr2.addColorStop(0,"rgba(255,255,250,1)"); gr2.addColorStop(.3,"rgba(255,240,200,.6)"); gr2.addColorStop(1,"rgba(255,220,150,0)"); x.fillStyle=gr2; x.beginPath(); x.arc(gx,gy,r*.55,0,6.283); x.fill(); const tw2=.6+.4*Math.sin(B.t*5+sw*2); x.globalAlpha=tw2; x.fillStyle="#fff"; x.beginPath(); x.arc(gx,gy,r*.12,0,6.283); x.fill(); x.globalAlpha=1; }   /* the sun glinting off the bead, flashing as it swings */
+      x.strokeStyle="rgba(176,132,62,.85)"; x.lineWidth=Math.max(.3,r*.07); for(let j=-3;j<=3;j++){ const sx2=j*r*.09, sw2=Math.sin(B.t*3+sw+j)*r*.12; x.beginPath(); x.moveTo(sx2*.4,r*4.1); x.quadraticCurveTo(sx2+sw2*.5,r*5,sx2*1.5+sw2,r*5.9); x.stroke(); }   /* the tassel's fine threads */
       x.restore(); wts.push([ex+sa*r*3,ey+ca*r*3,r*3]); }
     B.bp=birds.map(b=>proj(...b.P));
     for(const b of birds) blueBird3D(x,b.P,(()=>{ const l=Math.hypot(b.V[0],b.V[1]*.5,b.V[2])||1; return [b.V[0]/l,b.V[1]*.5/l,b.V[2]/l]; })(),b.flap,b.glide,proj,Kw,sunL,b.amp);
