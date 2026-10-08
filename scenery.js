@@ -4867,7 +4867,7 @@ const ambient=(function(){
      Built from the photograph's own lawn, enlarged as nearer grass would be, with the crest catching the low light and its far end melting back into the field */
   function makeHill(L){ const c=L.hill||(L.hill=document.createElement("canvas")); const cw2=Math.ceil(W), ch2=Math.ceil(H); if(c.width!==cw2||c.height!==ch2){ c.width=cw2; c.height=ch2; } const x=c.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw2,ch2);
     const Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, S=(lx,ly)=>[L.x0+ca*lx*mx-sa*ly, L.y0+sa*lx*mx+ca*ly];
-    const crest=[], over=Ln*.85; for(let i=0;i<=70;i++){ const xl=lerp(-Ln*.2,Ln+over,i/70), xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc)-Math.sin(Math.max(0,Math.min(1,xl/Ln))*Math.PI)*H*.012; if(xl>Ln){ const f=Math.min(1,(xl-Ln)/over); ly+=(1-Math.cos(f*Math.PI/2))*H*.3; } crest.push(S(xl,ly)); }   /* a rounded knoll: the stick along its top, the far shoulder rolling down out of the frame */
+    const crest=[]; for(let i=0;i<=60;i++){ const xl=lerp(-Ln*.2,Ln*1.32,i/60), xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc); if(xl>Ln){ const f=(xl-Ln)/(Ln*.32); ly+=f*f*H*.07; } crest.push(S(xl,ly)); }   /* a gentle rise: the stick along its top, the far end easing back down into the field */
     const path=new Path2D(); crest.forEach((p2,i)=>i? path.lineTo(...p2) : path.moveTo(...p2)); const last=crest[crest.length-1], first=crest[0]; path.lineTo(last[0],H+40); path.lineTo(first[0]+(L.side<0? -W : W)*.1,H+40); path.lineTo(first[0]+(L.side<0? -W : W)*.1,first[1]); path.closePath();
     if(photo){ const m=cover(), mid=S(Ln*.5,0), k=2.6; x.save(); x.translate(mid[0],H); x.scale(k,k); x.translate(-mid[0],-H); x.drawImage(photo,m.ox,m.oy,m.iw*m.s,m.ih*m.s); x.restore();   /* the same lawn, nearer */
       const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw2,ch2); x.globalAlpha=1; }
@@ -4887,6 +4887,8 @@ const ambient=(function(){
         c=mulv(c,1.05+.25*r1); const dk=mulv(c,.45+.25*r2), lt=mixv(c,nA>.3? [120,140,180] : [255,220,150],(.3+.4*r3)*(nA>.3? .4 : day));
         const g=x.createLinearGradient(bx,by,bx+lean,by-h); g.addColorStop(0,rgb(dk)); g.addColorStop(.7,rgb(c)); g.addColorStop(1,rgb(lt)); x.fillStyle=g;
         x.beginPath(); x.moveTo(bx-w,by); x.quadraticCurveTo(bx+lean*.35+cv-w*.5,by-h*.55,bx+lean,by-h); x.quadraticCurveTo(bx+lean*.35+cv+w*.5,by-h*.55,bx+w,by); x.closePath(); x.fill(); } }
+    /* the far end eases back into the field */
+    { const e=S(Ln*1.32,0), b2=S(Ln*.8,0), g=x.createLinearGradient(b2[0],0,e[0],0); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; }
     /* backlit grass tips along the crest (drawn after the blades) */
     { const day=1-Math.min(1,nA*1.2); x.save(); x.filter="blur(1.2px)"; x.strokeStyle=nA>.3? `rgba(150,170,210,${(.18*nA).toFixed(2)})` : `rgba(255,214,150,${(.3*day).toFixed(2)})`; x.lineWidth=3; x.beginPath(); crest.slice(0,50).forEach((p2,i)=>i? x.lineTo(p2[0],p2[1]+1.5) : x.moveTo(p2[0],p2[1]+1.5)); x.stroke(); x.restore(); }
     /* and a ragged fringe of the nearer, taller grass standing up along the crest against the field behind */
