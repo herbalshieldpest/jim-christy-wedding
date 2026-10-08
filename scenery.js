@@ -5105,8 +5105,8 @@ const ambient=(function(){
   setTimeout(()=>{ if(!barkMap&&window.SCENERY_LOGS_ON) barkMap=makeBarkMap(true); },9000);   /* (not while the stick is switched off) */   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
   const LOGS_ON=window.SCENERY_LOGS_ON=true;   /* the stick and the animals that come out on it (skink, eft, painted turtle, slimy salamander) are switched off for now: flip to true to bring them back */
   function startLogCrawler(kind,retry){ if(!LOGS_ON) return; const prevL=logC;
-    { const C0=logC; if(C0&&!C0.hold&&C0.a>.3&&C0.t<C0.life-2&&!GB[kind]){   /* the rise is already up: no new rise, no new camera move, just a hand-over */
-        if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish();
+    { const C0=logC; if(C0&&!C0.hold&&C0.a>.3&&C0.t<C0.life-2){   /* the rise is already up: no new rise, no new camera move, just a hand-over */
+        if(!GB[kind]){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); }
         C0.next=kind; C0.life=Math.max(C0.life,C0.t+40);
         if(C0.bird){ const g=C0.gb; g.hurry=true; if(GB[C0.bird].fly){ if(g.mode==="ground") g.leaveAt=0; } }   /* the bird takes itself off, and the stick comes in when it's gone */
         return; } } const gbird=!!GB[kind]; if(!gbird){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); } const fire=!!(window.Campfire&&Campfire.on), side=fire? 1 : (window.__forceSide||(Math.random()<.5? -1 : 1)), len=W*rnd(.42,.5)*Math.max(.9,Math.min(1.3,1100/W))*(fire? .62 : 1), R0=H*.021;   /* with the fire lit, the stick lies off to the right, well clear of the fire ring */
@@ -5326,9 +5326,10 @@ const ambient=(function(){
     }
     ctx.restore();
     /* the animal, in the limb's frame */
-    if(L.next&&!L.bird){ L.anA=Math.max(0,(L.anA??1)-dt*.9); if(L.anA<=0){ const k=L.next; L.next=null; L.kind=k; L.u=k==="turtle"? .3 : .22; L.state=k==="turtle"? "pause" : "go"; L.st=0; L.dur=rnd(2,3); L.ph=0; L.dir=1; } }   /* one animal slips away, the next comes out onto the same stick */
+    if(L.next&&!L.bird){ L.anA=Math.max(0,(L.anA??1)-dt*.9); if(L.anA<=0&&!GB[L.next]){ const k=L.next; L.next=null; L.kind=k; L.u=k==="turtle"? .3 : .22; L.state=k==="turtle"? "pause" : "go"; L.st=0; L.dur=rnd(2,3); L.ph=0; L.dir=1; } }   /* one animal slips away, the next comes out onto the same stick */
     else L.anA=Math.min(1,(L.anA??1)+dt*.9);
-    L.sa=Math.min(1,(L.sa??1)+dt*.8);
+    if(L.next&&GB[L.next]&&(L.anA??1)<=0){ L.sa=Math.max(0,(L.sa??1)-dt*.8); if(L.sa<=0){ toBird(L); L.sa=1; } }   /* the stick fades away, then a bird comes to the bare rise */
+    else L.sa=Math.min(1,(L.sa??1)+dt*.8);
     stepLogAnimal(L,dt);
     { ctx.save(); ctx.globalAlpha=L.a*(L.anA??1)*(L.sa??1); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);
       const xl=L.u*Ln, r=R(xl), fo=nightK>.3? fireOn(L) : null; L.fireK=fo? fo.k : 0; const sunS2=fo? fo.dirX*L.dir*((L.side<0? 1 : -1)) : sunS;   /* at the campfire, the firelight takes the sun's part */
@@ -5369,31 +5370,39 @@ const ambient=(function(){
   const rnd2=sd=>.16+((sd*9301+49297)%233280)/233280*.14;   /* where in the sky each bird comes from: fixed per visit */
   function gbCrestLy(L,xl){ const Ln=L.len, xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc); if(xl>Ln){ const f=(xl-Ln)/(Ln*.32); ly+=f*f*H*.07; } return ly; }
   function gbScreen(L,u,dy){ const Ln=L.len, xl=u*Ln, ly=gbCrestLy(L,xl)+(dy||0), ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1; return [L.x0+ca*xl*mx-sa*ly, L.y0+sa*xl*mx+ca*ly]; }
+  function handOver(L){ if(GB[L.next]) toBird(L); else toStick(L); }
+  function toBird(L){ const k=L.next, GS=GB[k]; L.next=null; L.bird=k; L.kind=k; L.u=GS.fly? rnd(.38,.55) : -.07; L.life=L.t+400; L.sa=1; L.anA=1;
+    L.gb={state:GS.fly? "stop" : "walk",st:0,dur:GS.fly? rnd(1.5,2.5) : rnd(3,5),ph:0,peck:0,peckT:rnd(.4,1.2),look:0,lookTo:0,lookT:1,bob:0,fade:1,nod:0,mode:GS.fly? "in" : "ground",ft:0,fph:0,landT:9,leaveAt:GS.stay? L.t+rnd(...GS.stay) : 1e9}; }   /* the next bird comes in onto the same rise */
   function toStick(L){ const k=L.next; L.next=null; L.bird=null; L.gb=null; L.kind=k; L.u=k==="turtle"? .3 : .22; L.state=k==="turtle"? "pause" : "go"; L.st=0; L.dur=k==="turtle"? rnd(3,5) : rnd(1.8,2.8); L.ph=0; L.dir=1; L.head=0; L.look=0; L.life=L.t+(k==="turtle"? rnd(40,55) : rnd(28,36)); L.sa=0; L.anA=0; L.img=null; L.key=null; }   /* the stick fades in where the bird was, and its animal with it */
   function stepGroundBird(L,dt){ const g=L.gb, S=GB[L.bird]; g.fph+=dt*(S.fhz||8)*6.283;
     if(g.mode==="in"){ if(g.ft===0){ try{ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx||W/2)/W*2-1,true); else if(S.twit) natureSfx.sing&&natureSfx.sing("woodcock",(L.sx||W/2)/W*2-1,true); }catch(e){} }
       g.ft+=dt; if(g.ft>=S.fdur){ g.mode="ground"; g.landT=0; g.st=0; } return; }
-    if(g.mode==="out"){ g.ft+=dt; if(g.ft>=1.9&&!g.gone){ g.gone=true; if(L.next) toStick(L); else L.life=Math.min(L.life,L.t); } return; }
+    if(g.mode==="out"){ g.ft+=dt; if(g.ft>=1.9&&!g.gone){ g.gone=true; if(L.next) handOver(L); else L.life=Math.min(L.life,L.t); } return; }
     if(g.hurry&&!S.fly&&g.state!=="walk"){ g.state="walk"; g.st=0; g.dur=99; }   /* a walker just keeps walking, briskly, off the end */
     g.landT+=dt; if(S.fly&&L.t>g.leaveAt&&g.peck<=0&&!(g.singing>0)){ g.mode="out"; g.ft=0; try{ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx||W/2)/W*2-1,true); else if(S.twit) natureSfx.sing&&natureSfx.sing("woodcock",(L.sx||W/2)/W*2-1,true); }catch(e){} return; }
     g.st+=dt;
     if(S.sit){ g.state="stop"; g.singT=(g.singT??1.5)-dt; if(g.singT<=0&&L.a>.6&&L.t<L.life-3){ g.singT=rnd(6,9); g.singing=4.6; try{ natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx/W*2-1)*.7,true); }catch(e){} }
       g.singing=Math.max(0,(g.singing||0)-dt); g.gape=g.singing>0? Math.max(0,Math.sin(g.singing*Math.PI*2.4))*.9 : 0;   /* whip-poor-WILL, five times over, the bill opening wide on every phrase */
       g.lookT-=dt; if(g.lookT<=0){ g.lookT=rnd(1.5,4); g.lookTo=pick([-.35,0,0,.3]); } g.look+=(g.lookTo-g.look)*Math.min(1,dt*4); return; }
-    if(g.state==="walk"){ const burst=(S.run? (g.st<.15? g.st/.15 : 1) : 1)*(S.walkIn&&L.u<.22? 2.2 : 1)*(g.hurry? 4 : 1); L.u+=dt*S.spd*burst; g.ph+=dt*S.hz*6.283*burst;
-      if(g.st>g.dur&&L.u<1.02&&!(S.walkIn&&L.u<.22)){ g.state="stop"; g.st=0; g.dur=S.run? rnd(1.2,2.6) : rnd(2,5); g.peckT=rnd(.3,1); const sk=PB[L.bird].sk; if(sk&&Math.random()<.45&&L.a>.5){ try{ natureSfx.sing&&natureSfx.sing(sk,(L.sx/W*2-1)*.7,true); }catch(e){} } } }
+    g.yaw=g.yaw??0; g.dz=g.dz??0; g.yawT=g.yawT??0;
+    if(g.state==="walk"){ const burst=(S.run? (g.st<.15? g.st/.15 : 1) : 1)*(S.walkIn&&L.u<.22? 2.2 : 1)*(g.hurry? 4 : 1);
+      g.wT=(g.wT??0)-dt; if(g.wT<=0){ g.wT=rnd(.8,2.2); g.yawT=g.hurry? 0 : rnd(-.55,.55); } const lim=H*.026; if(g.dz>lim*.8) g.yawT=-.4; if(g.dz<-lim*.35) g.yawT=.4;   /* a meandering line across the rise, nearer and farther, kept on the rise */
+      const ty=(g.turnAway&&g.st<.6)? g.yaw : g.yawT; g.yaw+=(ty-g.yaw)*Math.min(1,dt*(S.run? 6 : 2.8));
+      const sp=dt*S.spd*burst; L.u+=sp*Math.max(.25,Math.cos(g.yaw)); g.dz+=Math.sin(g.yaw)*sp*L.len*.55; g.ph+=dt*S.hz*6.283*burst;
+      if(g.st>g.dur&&L.u<1.02&&!(S.walkIn&&L.u<.22)){ g.state="stop"; g.st=0; g.dur=S.run? rnd(1.2,2.6) : rnd(2,5); g.peckT=rnd(.3,1); g.yawT=Math.random()<.45? pick([-1.15,-.8,.8,1.15]) : g.yaw*.5; const sk=PB[L.bird].sk; if(sk&&Math.random()<.45&&L.a>.5){ try{ natureSfx.sing&&natureSfx.sing(sk,(L.sx/W*2-1)*.7,true); }catch(e){} } } }
     else { g.peckT-=dt; if(g.peckT<=0&&g.peck<=0){ if(Math.random()<S.peck){ g.peck=.001; } g.peckT=rnd(.6,1.6); }
-      if(g.st>g.dur){ g.state="walk"; g.st=0; g.dur=S.run? rnd(.5,1.1) : rnd(1.5,3.5); } }
+      g.yaw+=(g.yawT-g.yaw)*Math.min(1,dt*2.2);   /* standing, it turns its body to look about, sometimes right round toward us or away */
+      if(g.st>g.dur){ g.state="walk"; g.st=0; g.dur=S.run? rnd(.5,1.1) : rnd(1.5,3.5); g.yawT=rnd(-.4,.4); } }
     if(g.peck>0){ g.peck+=dt/.55; if(g.peck>=1) g.peck=0; }
     g.lookT-=dt; if(g.lookT<=0){ g.lookT=rnd(.6,2); g.lookTo=g.state==="stop"&&Math.random()<.5? pick([-.6,-.35,.3,.55]) : 0; } g.look+=(g.lookTo-g.look)*Math.min(1,dt*8);
-    if(L.u>1.12){ if(L.next) toStick(L); else L.life=Math.min(L.life,L.t); } }   /* past the end of the rise it carries on down into the grass and is gone */
+    if(L.u>1.12){ if(L.next) handOver(L); else L.life=Math.min(L.life,L.t); } }   /* past the end of the rise it carries on down into the grass and is gone */
   function drawGroundBird(L,dt,dark){ const Ln=L.len, g=L.gb, S=GB[L.bird], C=Object.assign({kind:L.bird},PB[L.bird]), sz=C.size||1;
     if(!L.gc||(L.gcT=(L.gcT||0)-1)<=0){ L.gcT=30; const ip=toImg(L.x0-L.side*W*.3,L.y0-H*.04); L.gc=(ip&&ip[0]>=0&&ip[0]<=1&&ip[1]>=0&&ip[1]<=1&&sampleAt(ip[0],ip[1]))||[110,110,60]; }
     { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; const hb=L.hillBox||[0,0,W,H], ks=L.hill.width/W; ctx.drawImage(L.hill,hb[0]*ks,hb[1]*ks,hb[2]*ks,hb[3]*ks,hb[0],hb[1],hb[2],hb[3]); ctx.restore(); }
     stepGroundBird(L,dt);
-    const F=H*.5, cx=W/2, cy=H*.52, z=.34, Kw=.0074*sz*.7*(W<700? Math.max(.55,Math.min(1,W/H*1.35)) : 1),   /* on a tall narrow phone screen, scaled to the width so it isn't a giant */ gp=gbScreen(L,L.u,H*.006), gp2=gbScreen(L,L.u+.01,H*.006), dirX=Math.sign(gp2[0]-gp[0])||1;
+    const F=H*.5, cx=W/2, cy=H*.52, z=.34, Kw=.0074*sz*.7*(W<700? Math.max(.55,Math.min(1,W/H*1.35)) : 1)*(1+(g.dz||0)/H*2.2),   /* on a tall narrow phone screen, scaled to the width so it isn't a giant */ dzp=(g.dz||0), gp=gbScreen(L,L.u,H*.006+dzp), gp2=gbScreen(L,L.u+.01,H*.006+dzp), dirX=Math.sign(gp2[0]-gp[0])||1;
     const Wd=(sx,sy)=>[(sx-cx)*z/F,(sy-cy)*z/F,z], G=Wd(gp[0],gp[1]), up=[0,-1,0];
-    const hd=v3.n([dirX,(gp2[1]-gp[1])/Math.max(1,Math.abs(gp2[0]-gp[0]))*.4,-.18]), lat=v3.n(v3.x(hd,up));
+    const yw=(g.yaw||0)-.18, hd=v3.n([dirX*Math.cos(yw),(gp2[1]-gp[1])/Math.max(1,Math.abs(gp2[0]-gp[0]))*.4*Math.cos(yw),Math.sin(-yw)]), lat=v3.n(v3.x(hd,up));   /* its heading: along the rise, turned toward or away from us as it goes */
     const walking=g.state==="walk", pk=g.peck>0? Math.sin(g.peck*Math.PI) : 0, rock=S.rock? Math.sin(t*5.2)*(walking? 1 : .6) : 0;
     const pitch=S.pitch-pk*.5+(S.run&&!walking? Math.sin(t*9)*.05*Math.max(0,1-g.st) : 0), f=v3.n(v3.a(v3.s(hd,Math.cos(pitch)),v3.s(up,Math.sin(pitch))));
     const bob=walking? Math.abs(Math.sin(g.ph))*.18 : 0, hgt=(2.1+S.leg+.25-pk*.6-bob)*Kw, P=v3.a(v3.a(G,[0,-hgt,0]),v3.s(hd,rock*.9*Kw));
