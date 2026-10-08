@@ -991,30 +991,44 @@ const ambient=(function(){ let heavy=false;
      bead running along each one as it turns; a few snag on the grass and stream out from it, and the whole meadow sparkles with the strands strung
      between the stems, the sparkle shifting as the light moves over it ---- */
   const gsT=[]; let gsG=null, gsKey="";
+  /* the sunbeam: a shaft of low sun through a gap in the cloud, slowly swinging across the field. Wherever it falls, the silk lights up: a wave of
+     glinting threads following the beam, far out in the field and close in front alike */
+  function gsBeam(){ const sp=sun(), ts=skyEv&&skyEv.k==="gossamer"? t-skyEv.t0 : 0, dir=window.__gsDir||1, u=.5-.5*Math.cos(Math.max(0,ts-1.5)*Math.PI/12);   /* across and back, about every 24 seconds */
+    const gx=lerp(dir>0? -.05 : 1.05,dir>0? 1.05 : -.05,u)*W, gy=H*1.04; return {sx:sp.x,sy:Math.max(-H*.1,sp.y),gx,gy}; }
+  function gsLight(B,x,y){ const dx=B.gx-B.sx, dy=B.gy-B.sy, L=Math.hypot(dx,dy)||1, f=Math.max(0,Math.min(1.2,((x-B.sx)*dx+(y-B.sy)*dy)/(L*L))), px=B.sx+dx*f, py=B.sy+dy*f, d=Math.hypot(x-px,y-py), w=W*(.012+.085*f);
+    return Math.exp(-Math.pow(d/w,2)); }
   function drawGossamer(dt){ if(gsA<=.01){ gsT.length=0; return; } const sp=sun(), dir=window.__gsDir||1, sc=Math.max(.6,W/1400), A=gsA*(nA>.3? .2 : 1);
-    const fTop=IY(.565), x=ctx; x.save(); x.lineCap="round"; x.globalCompositeOperation="lighter";
-    /* the meadow's own sparkle: short strands between the stems, each flaring for a moment as the light angle comes round to it */
-    const key=W+"x"+H; if(gsKey!==key){ gsKey=key; gsG=[]; const n=MOBILE()? 90 : 230; for(let i=0;i<n;i++){ const d=Math.pow(Math.random(),.7), y=lerp(fTop,H*.98,d); gsG.push({x:Math.random()*W,y,l:(3+28*d*d)*sc*(.5+Math.random()),a:(Math.random()-.5)*.5,sag:(.5+Math.random())*d*3*sc,ph:Math.random()*6.283,d}); } }
-    for(const g of gsG){ const prox=1-Math.min(1,Math.abs(g.x-sp.x)/(W*.8)), c=Math.cos(g.x*.011+g.y*.006-t*.55+g.ph*.35), v=Math.pow(Math.max(0,c),22)*(.45+.55*prox); if(v<.03) continue;
-      x.globalAlpha=Math.min(1,v*A*(.5+.4*g.d)); x.strokeStyle="rgb(255,240,214)"; x.lineWidth=Math.max(.4,(.3+g.d*.6)*sc); const ca=Math.cos(g.a)*g.l/2, sa=Math.sin(g.a)*g.l/2;
+    const fTop=IY(.565), x=ctx, B=gsBeam(), yAt=d=>lerp(fTop,H*1.02,Math.pow(d,1.7));   /* depth into the field: 0 far back at the treeline, 1 right in front */
+    x.save(); x.lineCap="round";
+    { const dx=B.gx-B.sx, dy=B.gy-B.sy, L=Math.hypot(dx,dy)||1, nx=-dy/L, ny=dx/L;   /* the shaft itself, soft-edged, warm, brightest where it reaches the ground */
+      x.globalCompositeOperation="screen"; const g=x.createLinearGradient(B.sx,B.sy,B.gx,B.gy); g.addColorStop(0,"rgba(255,226,170,0)"); g.addColorStop(.35,"rgba(255,222,160,.5)"); g.addColorStop(.75,"rgba(255,214,150,.75)"); g.addColorStop(1,"rgba(255,206,140,.35)"); x.fillStyle=g;
+      for(const [k,a] of [[1.25,.06],[.8,.1],[.45,.14],[.2,.16]]){ const w0=W*.012*k, w1=W*.1*k; x.globalAlpha=a*A; x.beginPath(); x.moveTo(B.sx+nx*w0,B.sy+ny*w0); x.lineTo(B.gx+nx*w1,B.gy+ny*w1); x.lineTo(B.gx-nx*w1,B.gy-ny*w1); x.lineTo(B.sx-nx*w0,B.sy-ny*w0); x.closePath(); x.fill(); } }
+    x.globalCompositeOperation="lighter";
+    /* the meadow's own silk: strands strung between the stems all through the field, tiny far back and longer in front; they flash as the beam crosses them */
+    const key=W+"x"+H; if(gsKey!==key){ gsKey=key; gsG=[]; const n=MOBILE()? 160 : 420; for(let i=0;i<n;i++){ const d=Math.pow(Math.random(),.55), y=yAt(d)+(Math.random()-.5)*H*.01; gsG.push({x:Math.random()*W,y,l:(2+34*d*d)*sc*(.5+Math.random()),a:(Math.random()-.5)*.6,sag:(.3+Math.random())*d*3.5*sc,ph:Math.random()*6.283,d}); } }
+    for(const g of gsG){ const lt=gsLight(B,g.x,g.y); if(lt<.04) continue; const tw=.55+.45*Math.sin(t*2.3+g.ph*3);   /* twinkling as the light angle changes */
+      x.globalAlpha=Math.min(1,lt*tw*A*(.45+.55*g.d)); x.strokeStyle=g.d<.3? "rgb(255,226,186)" : "rgb(255,242,218)"; x.lineWidth=Math.max(.35,(.25+g.d*.7)*sc); const ca=Math.cos(g.a)*g.l/2, sa=Math.sin(g.a)*g.l/2;
       x.beginPath(); x.moveTo(g.x-ca,g.y-sa); x.quadraticCurveTo(g.x,g.y+g.sag,g.x+ca,g.y+sa); x.stroke(); }
-    /* the threads in the air */
-    const cap=MOBILE()? 12 : 26; if(gsA>.5&&gsT.length<cap&&Math.random()<dt*2.4){ const d=Math.pow(Math.random(),1.3), snag=d>.5&&Math.random()<.35;
-      const y=snag? lerp(IY(.62),H*.92,Math.random()) : lerp(fTop-H*.05,H*.9,Math.pow(Math.random(),.7));
-      gsT.push({x:snag? Math.random()*W : (Math.random()<.6? (dir>0? -W*.05 : W*1.05) : Math.random()*W),y,d,len:(40+260*Math.pow(d,1.4))*sc*(.6+Math.random()*.6),ph:Math.random()*6.283,life:0,max:snag? 999 : 12+Math.random()*12,snag,spider:Math.random()<.6,rise:.3+Math.random()*.7}); }
-    for(let i=gsT.length-1;i>=0;i--){ const q=gsT[i]; q.life+=dt; const out=q.x<-W*.3||q.x>W*1.3||q.y<-H*.2; if(q.life>q.max||out){ gsT.splice(i,1); continue; }
-      if(!q.snag){ q.x+=dir*(10+55*q.d)*sc*(.8+.4*Math.sin(t*.3+q.ph))*dt; q.y-=(3+16*q.d)*q.rise*sc*dt*(.6+.6*Math.sin(t*.5+q.ph)); }   /* carried off on the air, slowly climbing */
-      const fade=Math.min(1,q.life/1.5,(q.max-q.life)/2,gsA*1.5), N=12, pts=[], wav=(8+30*q.d)*sc;
+    /* the threads in the air, at every depth: far ones small and slow above the back of the field, near ones long and close */
+    const cap=MOBILE()? 22 : 48; if(gsA>.5&&gsT.length<cap&&Math.random()<dt*(MOBILE()? 3 : 5)){ const d=Math.pow(Math.random(),.9), snag=d>.55&&Math.random()<.3;
+      const y=yAt(d)-(snag? 0 : Math.random()*H*(.03+.18*d));
+      gsT.push({x:snag? Math.random()*W : (Math.random()<.5? (dir>0? -W*.05 : W*1.05) : Math.random()*W),y,d,len:(14+300*Math.pow(d,1.5))*sc*(.6+Math.random()*.6),ph:Math.random()*6.283,life:0,max:snag? 999 : 14+Math.random()*12,snag,spider:Math.random()<.6,rise:.3+Math.random()*.7}); }
+    gsT.sort((a,b)=>a.d-b.d);
+    for(let i=gsT.length-1;i>=0;i--){ const q=gsT[i]; q.life+=dt; const out=q.x<-W*.35||q.x>W*1.35||q.y<-H*.2; if(q.life>q.max||out){ gsT.splice(i,1); continue; } }
+    for(const q of gsT){
+      if(!q.snag){ q.x+=dir*(6+60*q.d*q.d)*sc*(.8+.4*Math.sin(t*.3+q.ph))*dt; q.y-=(1+16*q.d*q.d)*q.rise*sc*dt*(.6+.6*Math.sin(t*.5+q.ph)); }   /* carried off on the air, slowly climbing; the far ones barely seem to move */
+      const fade=Math.min(1,q.life/1.5,(q.max-q.life)/2,gsA*1.5), N=q.d<.3? 5 : q.d<.6? 8 : 12, pts=[], wav=(3+34*q.d)*sc;
       for(let j=0;j<=N;j++){ const u=j/N, fl=q.snag? 1 : .6;   /* the silk streams out downwind from the spider, rippling, the free end lifting */
         pts.push([q.x+dir*u*q.len*(.9+.1*Math.cos(t*.7+q.ph)), q.y-u*q.len*(q.snag? .06+.05*Math.sin(t*.9+q.ph) : .18)+Math.sin(u*4.2-t*(1.4+q.d)+q.ph)*wav*u*fl+Math.sin(u*9-t*3.1+q.ph*2)*wav*.15*u]); }
-      const bead=((t*.35+q.ph)%1.4)-.2, prox=1-Math.min(1,Math.abs(q.x+dir*q.len*.5-sp.x)/(W*.75));
-      for(let j=0;j<N;j++){ const a=pts[j], b=pts[j+1], ang=Math.atan2(b[1]-a[1],b[0]-a[0]), u=(j+.5)/N;
-        const sheen=.04+.22*prox+.6*Math.pow(Math.abs(Math.sin(ang*3+t*.6+q.ph)),6), hl=Math.exp(-Math.pow((u-bead)/.07,2));   /* only lit where it turns to the sun, and the bright bead running along it */
-        x.globalAlpha=Math.min(1,A*fade*(sheen*(.35+.5*q.d)+hl*.9)); x.strokeStyle=hl>.3? "rgb(255,250,236)" : "rgb(255,236,200)"; x.lineWidth=Math.max(.4,(.3+.7*q.d)*sc*(1+hl*.6));
+      const haze=1-.45*(1-q.d), warm=q.d<.35;   /* the far ones fainter and warmer through the haze */
+      let peak=0, pk=0;
+      for(let j=0;j<N;j++){ const a=pts[j], b=pts[j+1], ang=Math.atan2(b[1]-a[1],b[0]-a[0]), lt=gsLight(B,(a[0]+b[0])/2,(a[1]+b[1])/2);
+        const glint=lt*(.55+.45*Math.pow(Math.abs(Math.sin(ang*3+t*.8+q.ph)),3)), base=.025+.05*q.d;   /* barely there out of the light; blazing where the beam crosses it */
+        const v=A*fade*haze*(base+glint*(.6+.5*q.d)); if(v<.01) continue; if(glint>peak){ peak=glint; pk=j; }
+        x.globalAlpha=Math.min(1,v); x.strokeStyle=warm? "rgb(255,228,186)" : glint>.6? "rgb(255,250,238)" : "rgb(255,238,206)"; x.lineWidth=Math.max(.35,(.25+.8*q.d)*sc*(1+glint*.5));
         x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); }
-      const bj=Math.round(Math.max(0,Math.min(1,bead))*N), bp=pts[bj], bh=Math.exp(-Math.pow((bj/N-bead)/.07,2));
-      if(bh>.5&&q.d>.3){ const r=(2+6*q.d)*sc*bh; x.globalAlpha=A*fade*.5*bh; x.strokeStyle="rgb(255,248,230)"; x.lineWidth=Math.max(.4,.6*sc); x.beginPath(); x.moveTo(bp[0]-r,bp[1]); x.lineTo(bp[0]+r,bp[1]); x.moveTo(bp[0],bp[1]-r*.7); x.lineTo(bp[0],bp[1]+r*.7); x.stroke(); }   /* a tiny star of light where it flares */
-      if(q.spider&&q.d>.35){ x.globalCompositeOperation="source-over"; x.globalAlpha=A*fade*.8; x.fillStyle="rgb(46,34,26)"; x.beginPath(); x.arc(pts[0][0],pts[0][1],Math.max(.6,(.5+1.4*q.d)*sc),0,6.283); x.fill(); x.globalCompositeOperation="lighter"; } }   /* the spiderling riding the end of it */
+      if(peak>.7&&q.d>.25){ const bp=pts[pk], r=(1.5+7*q.d)*sc*peak; x.globalAlpha=A*fade*.55*peak; x.strokeStyle="rgb(255,248,230)"; x.lineWidth=Math.max(.35,.55*sc); x.beginPath(); x.moveTo(bp[0]-r,bp[1]); x.lineTo(bp[0]+r,bp[1]); x.moveTo(bp[0],bp[1]-r*.7); x.lineTo(bp[0],bp[1]+r*.7); x.stroke(); }   /* a tiny star of light where it flares */
+      if(q.spider&&q.d>.45){ x.globalCompositeOperation="source-over"; x.globalAlpha=A*fade*.75; x.fillStyle="rgb(46,34,26)"; x.beginPath(); x.arc(pts[0][0],pts[0][1],Math.max(.6,(.4+1.4*q.d)*sc),0,6.283); x.fill(); x.globalCompositeOperation="lighter"; } }   /* the spiderling riding the end of it */
     x.restore(); }
   /* ---- a sun shower: rain falling while the sun is still out, every drop lit gold, splashing on the lawn ---- */
   let ssDrops=null, ssSplash=[];
