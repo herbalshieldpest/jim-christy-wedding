@@ -384,7 +384,7 @@ const ambient=(function(){
   const ef2=document.createElement("canvas"), ef2X=ef2.getContext("2d");
   /* stepping back from the near rise, the way a camera dollying back sees it: the sky and the far hills hardly move, while the ground nearer us
      slides away toward the horizon, the nearer the more; the rise is then drawn over it at full size, the nearest thing of all. One pass, in strips down the frame */
-  function dollyBack(c){ const st=moundZ*.2; if(st<.002) return; const cvv=c.canvas, CW=cvv.width, CH=cvv.height, k=CH/H, N=MOBILE()? 18 : 30;
+  function dollyBack(c){ const st=moundZ*.2; if(st<.002) return; const cvv=c.canvas, CW=cvv.width, CH=cvv.height, k=CH/H, N=MOBILE()? 12 : 24;
     if(efC.width!==CW||efC.height!==CH){ efC.width=CW; efC.height=CH; } efX.setTransform(1,0,0,1,0,0); efX.clearRect(0,0,CW,CH); efX.drawImage(cvv,0,0);
     const hz=Math.max(0,Math.min(CH*.9,(gnd().vy-H*.03)*k)), f=y=>{ if(y<=hz) return y; const v=(y-hz)/(CH-hz), d=v*(1-st)+st*v*v*v; return hz+d*(CH-hz); };   /* above the horizon: still; below: compressed toward it most in the middle distance, the frame's bottom edge pinned */
     c.save(); c.setTransform(1,0,0,1,0,0); c.globalAlpha=1; c.globalCompositeOperation="source-over"; c.filter="none";
@@ -8430,7 +8430,7 @@ const ambient=(function(){
     const dt=Math.min(.07,(ts-(last||ts))/1000); last=ts; t+=dt; dtF=dt;
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
     camX=(Math.sin(t*.23)*9+Math.sin(t*.61+1)*4)*.9; camY=(Math.cos(t*.19+.5)*6+Math.sin(t*.47)*3)*.9; camZ=1+30/Math.min(W,H)+.035*(.5-.5*Math.cos(t*2*Math.PI/48));   /* and slowly breathes in and out, about once every 48 seconds */   /* the hand-held drift: the whole view sways together */
-    moundZ=0;   /* 0..1: how far the camera has drawn back for the near rise */
+    { const L=logC, sm=v=>{ v=Math.max(0,Math.min(1,v)); return v*v*(3-2*v); }; let k=0; if(L&&!L.hold){ k=sm(L.t/2.4); if(L.t>L.life) k*=1-sm((L.t-L.life)/1.6); } moundZ=k; }   /* one curve for both: the ground drawing back and the rise coming up, in step */   /* 0..1: how far the camera has drawn back for the near rise */
     if(SC.shown()) ctx.setTransform(camZ,0,0,camZ,(1-camZ)*W/2+camX,(1-camZ)*H/2+camY);
     const dark=document.documentElement.dataset.theme==="dark"||(document.documentElement.dataset.theme!=="light"&&darkQ.matches);
     const sp=sun(), R=Math.max(W,H)*.6, img=SC.shown();
@@ -8488,7 +8488,7 @@ const ambient=(function(){
       drawHenAll(dt,dark,L);
       if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||hawkG.state==="lift")) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L); tomQueue(dt,dark,L);
-      L.push({y:logC&&!stickBehindSomeone()? 1e9 : -1e9,fn:()=>{ const mr=moundRise(); if(mr){ const L0=logC, ax=L0? L0.x0-L0.side*L0.len*.5 : W/2; ctx.save(); ctx.translate(ax,H+mr.off); ctx.scale(mr.s,mr.s); ctx.translate(-ax,-H); drawLogCrawler(dt,dark); ctx.restore(); } else drawLogCrawler(dt,dark); }});   /* by the campfire the two of them walk out in front of it, so then it sits behind */   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
+      L.push({y:logC&&!stickBehindSomeone()? 1e9 : -1e9,fn:()=>{ dollyBack(ctx); const mr=moundRise(); if(mr){ const L0=logC, ax=L0? L0.x0-L0.side*L0.len*.5 : W/2; ctx.save(); ctx.translate(ax,H+mr.off); ctx.scale(mr.s,mr.s); ctx.translate(-ax,-H); drawLogCrawler(dt,dark); ctx.restore(); } else drawLogCrawler(dt,dark); }});   /* by the campfire the two of them walk out in front of it, so then it sits behind */   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
       steerClear([fox,skunk,cub,mom,coyote,coy2,bobcat,pheasW,dog,lab,racc,beaver,...["hog","possum","otter","porc"].map(k=>WAD[k].get()),...quails,...buns,...wcs,...sqs,...smalls,doe,doe&&doe.fawn]);
       for(const pl of PLUGS) if(pl.lawn) try{ pl.lawn(L,dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }
