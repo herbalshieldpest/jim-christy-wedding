@@ -363,7 +363,15 @@ var natureSfx=(function(){
   let rainSrc=null, rainG=null;
   function rain(v){ if(!ctx||!live){ return; } if(!rainG){ rainSrc=ctx.createBufferSource(); rainSrc.buffer=noiseBuf; rainSrc.loop=true; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=1400; const pk=ctx.createBiquadFilter(); pk.type="peaking"; pk.frequency.value=4200; pk.gain.value=6; pk.Q.value=.7; rainG=ctx.createGain(); rainG.gain.value=0; rainSrc.connect(hp); hp.connect(pk); pk.connect(rainG); rainG.connect(master); rainSrc.start(); }
     rainG.gain.setTargetAtTime(Math.max(0,v)*.16,ctx.currentTime,1.2); }   /* a soft steady hiss of drops on leaves and grass */
-  function puff(){ if(!ctx||!live||!breezeG) return; const now=ctx.currentTime; breezeG.gain.cancelScheduledValues(now); breezeG.gain.setTargetAtTime(.15,now,.9); breezeF.frequency.setTargetAtTime(1200,now,.9); breezeG.gain.setTargetAtTime(.03,now+4.5,1.6); breezeF.frequency.setTargetAtTime(420,now+4.5,1.6); }
+  let rustleG=null, rustleLfo=null;
+  function puff(pan){ if(!ctx||!live||!breezeG) return; const now=ctx.currentTime; clearTimeout(gustT);
+    breezeG.gain.cancelScheduledValues(now); breezeF.frequency.cancelScheduledValues(now);
+    breezeG.gain.setTargetAtTime(.3,now+.15,.55); breezeF.frequency.setTargetAtTime(1700,now+.15,.6);   /* the roar of it arriving */
+    breezeG.gain.setTargetAtTime(.2,now+3.2,1.2); breezeG.gain.setTargetAtTime(.26,now+6,1); breezeF.frequency.setTargetAtTime(1300,now+3.2,1.2);   /* a second shove */
+    breezeG.gain.setTargetAtTime(.02,now+9,2.6); breezeF.frequency.setTargetAtTime(420,now+9,2.6);   /* then it blows itself out */
+    if(!rustleG){ const src=ctx.createBufferSource(); src.buffer=noiseBuf; src.loop=true; const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=3200; bp.Q.value=.9; const am=ctx.createGain(); am.gain.value=.6; rustleLfo=ctx.createOscillator(); rustleLfo.frequency.value=9; const lg=ctx.createGain(); lg.gain.value=.4; rustleLfo.connect(lg); lg.connect(am.gain); rustleG=ctx.createGain(); rustleG.gain.value=0; src.connect(bp); bp.connect(am); am.connect(rustleG); rustleG.connect(voice(master,pan||0)); src.start(); rustleLfo.start(); }
+    rustleG.gain.cancelScheduledValues(now); rustleG.gain.setTargetAtTime(.22,now+.3,.6); rustleG.gain.setTargetAtTime(.12,now+3.4,1); rustleG.gain.setTargetAtTime(.18,now+6.2,.8); rustleG.gain.setTargetAtTime(0,now+9.2,2.2);   /* the goldenrod and the leaves thrashing in it */
+    gustT=setTimeout(gust,16000); }
   return { sing, spitDrum, rain, puff, get on(){ return on; }, get blocked(){ return !!(on&&(!ctx||ctx.state!=="running")); }, get playing(){ return !!(on&&live&&ctx&&ctx.state==="running"); }, set(v){ on=!!v; if(on){ if(init()){ unlock(); apply(); } else arm(); } else { apply(); try{ tag&&tag.pause(); }catch(e){} } }, refresh(){ if(ctx) apply(); else if(wanted()) arm(); }, flush, honk, hawk(){ if(ctx&&live){ clearTimeout(hawkT); hawk(); } }, yip(){ if(ctx&&live){ clearTimeout(coyT); coyotes(); } }, drum, thunder, peck, paw, scratch, gobble, whistle, raven, falcon, stoop, heron, utv, bobwhite, humSet, humChip, bluebird, jay, crow, eagle, eagleBeat, setDusk(d){ dusk=d; } };
 })();
 const ambient=(function(){
@@ -884,13 +892,19 @@ const ambient=(function(){
     const g=x.createRadialGradient(cx,cy-S*.12,0,cx,cy-S*.12,S*.3); g.addColorStop(0,"rgba(255,250,236,.35)"); g.addColorStop(1,"rgba(255,250,236,0)"); x.fillStyle=g; x.fillRect(0,0,S,S);
     x.fillStyle="rgb(120,82,44)"; x.beginPath(); x.ellipse(cx,cy+S*.06,S*.035,S*.06,0,0,6.283); x.fill(); x.fillStyle="rgba(190,150,96,.8)"; x.beginPath(); x.ellipse(cx-S*.01,cy+S*.04,S*.012,S*.03,0,0,6.283); x.fill();   /* the flat brown seed hanging under it */
     return c; }
-  function drawSeeds(dt,dark){ if(sdsA<=.01&&!seeds.length){ seedT=0; return; } if(!seedSpr) seedSpr=makeSeedSpr(); const sc=H/800, sp=sun(), hz=gnd().vy;
-    if(!seedT&&sdsA>.05){ seedT=t; try{ natureSfx.puff&&natureSfx.puff(); }catch(e){} }
+  let gustStreaks=[];
+  function drawGustAir(dt){ if(gustB<=.02&&!gustStreaks.length) return; const wd=(window.__seedDir||-1), hz=gnd().vy, sc=H/800;
+    if(gustB>.15&&gustStreaks.length<(MOBILE()? 18 : 36)&&Math.random()<dt*30*gustB){ const y=lerp(hz-H*.12,H*.98,Math.pow(Math.random(),.8)); gustStreaks.push({x:wd<0? W+rnd(0,80) : -rnd(0,80),y,len:rnd(80,260)*sc,sp:rnd(700,1300)*sc,ph:rnd(0,6),a:rnd(.04,.1),w:rnd(.6,1.6)}); }
+    ctx.save(); ctx.lineCap="round";
+    for(const q of gustStreaks){ q.x+=wd*q.sp*dt; const k=Math.max(.2,gustB); ctx.strokeStyle=`rgba(255,244,222,${(q.a*k).toFixed(3)})`; ctx.lineWidth=q.w*sc; ctx.beginPath(); const x0=q.x, x1=q.x-wd*q.len; ctx.moveTo(x0,q.y); ctx.bezierCurveTo(x0-wd*q.len*.33,q.y-6*sc*Math.sin(q.ph+t*4),x0-wd*q.len*.66,q.y+6*sc*Math.sin(q.ph+t*4),x1,q.y); ctx.stroke(); }   /* thin wisps of the air itself, catching the low sun as they race past */
+    ctx.restore(); gustStreaks=gustStreaks.filter(q=>q.x>-q.len-100&&q.x<W+q.len+100); }
+  function drawSeeds(dt,dark){ drawGustAir(dt); if(sdsA<=.01&&!seeds.length){ seedT=0; return; } if(!seedSpr) seedSpr=makeSeedSpr(); const sc=H/800, sp=sun(), hz=gnd().vy;
+    if(!seedT&&sdsA>.05){ seedT=t; try{ natureSfx.puff&&natureSfx.puff((window.__seedDir||-1)*-.4); }catch(e){} try{ for(const c of ["leaf","milk"]){ const F=FLUR[c]; F.on=true; F.t=0; F.dur=12; F.acc=0; F.rate=c==="leaf"? 3.2 : 2; } }catch(e){} }   /* the burst tears loose leaves and fluff from everything */
     const wind=(window.__seedDir||-1);
-    if(sdsA>.2&&seeds.length<(MOBILE()? 34 : 70)&&Math.random()<dt*(MOBILE()? 4 : 8)){ const fromField=Math.random()<.7, d=Math.pow(Math.random(),1.5), x0=fromField? W*rnd(.55,1.0) : W*rnd(0,.4), y0=lerp(hz+H*.04,H*.95,d)-rnd(0,H*.05);
+    if(sdsA>.2&&seeds.length<(MOBILE()? 40 : 80)&&Math.random()<dt*(MOBILE()? 4 : 8)*(.4+gustB*2.2)){ const fromField=Math.random()<.7, d=Math.pow(Math.random(),1.5), x0=fromField? W*rnd(.55,1.0) : W*rnd(0,.4), y0=lerp(hz+H*.04,H*.95,d)-rnd(0,H*.05);
       seeds.push({x:x0,y:y0,d,vx:wind*rnd(30,80)*(.4+d),vy:-rnd(20,60)*(.5+d),ph:rnd(0,6),rot:rnd(-.3,.3),life:0,max:rnd(14,24)}); }   /* lifting off the pods in the goldenrod */
     ctx.save(); const T0=ctx.getTransform();
-    for(const q of seeds){ q.life+=dt; const sz=(5+26*q.d)*sc, gust=1+.6*Math.sin(t*.7+q.ph*.3); q.vx+=(wind*(40+70*q.d)*gust-q.vx)*Math.min(1,dt*.6); q.vy+=((Math.sin(t*.9+q.ph)*14-8)*sc*(.5+q.d)-q.vy)*Math.min(1,dt*.8);
+    for(const q of seeds){ q.life+=dt; const sz=(5+26*q.d)*sc, gust=1+.6*Math.sin(t*.7+q.ph*.3); q.vx+=(wind*(40+70*q.d)*gust*(1+gustB*3)-q.vx)*Math.min(1,dt*(.6+gustB*1.5)); q.vy+=((Math.sin(t*.9+q.ph)*14-8)*sc*(.5+q.d)-q.vy)*Math.min(1,dt*.8);
       q.x+=q.vx*sc*dt; q.y+=q.vy*dt; const a=Math.min(1,q.life/1.2)*Math.min(1,(q.max-q.life)/2)*(.55+.45*q.d)*(dark? .7 : 1);
       if(q.x<-60||q.x>W+60||q.life>q.max) { q.dead=true; continue; }
       const back=Math.exp(-Math.pow((q.x-sp.x)/(W*.3),2))*Math.exp(-Math.pow((q.y-sp.y)/(H*.45),2)), tilt=q.rot+Math.sin(t*1.3+q.ph)*.25+q.vx*.002;
@@ -908,6 +922,21 @@ const ambient=(function(){
     x.filter="blur(1px)"; x.fillStyle="rgba(255,255,250,.7)"; x.beginPath(); x.arc(cx-.12*r,cy+.62*r,r*.035,0,6.283); x.fill(); x.strokeStyle="rgba(255,255,250,.18)"; x.lineWidth=2; for(let i=0;i<9;i++){ const a=i/9*6.283+.3; x.beginPath(); x.moveTo(cx-.12*r,cy+.62*r); x.lineTo(cx-.12*r+Math.cos(a)*r*.5,cy+.62*r+Math.sin(a)*r*.5); x.stroke(); }   /* Tycho and its rays */
     x.filter="none"; for(let i=0;i<160;i++){ const a=Math.random()*6.283, d=Math.sqrt(Math.random())*r*.95; x.fillStyle=`rgba(${Math.random()<.5? "70,66,62" : "255,255,250"},${(.05+Math.random()*.08).toFixed(2)})`; x.beginPath(); x.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,.6+Math.random()*2.2,0,6.283); x.fill(); }   /* the speckle of craters */
     x.restore(); return c; }
+  /* thin wisps of high cloud drifting across in front of the rising moon: dark grey-blue against the night, their edges silvered where the moon is behind them */
+  let mrWisps=null; const mwsC=document.createElement("canvas"), mwsX=mwsC.getContext("2d");
+  function makeWisp(w,h,seed){ const c=document.createElement("canvas"), pad=24; c.width=w+pad*2; c.height=h+pad*2; const x=c.getContext("2d"); let s2=seed; const RN=()=>{ s2=(s2*1664525+1013904223)>>>0; return s2/4294967296; };
+    const raw=document.createElement("canvas"); raw.width=c.width; raw.height=c.height; const r=raw.getContext("2d");
+    for(let i=0;i<140;i++){ const u=RN(), cx=pad+u*w, taper=Math.sin(Math.PI*Math.min(1,Math.max(0,u)))**.7, cy=pad+h*.5+Math.sin(u*7+seed)*h*.18+(RN()-.5)*h*.35*taper, rx=(14+RN()*40)*(.5+taper), ry=(2+RN()*6)*taper+1;
+      r.fillStyle=`rgba(255,255,255,${(.1+RN()*.16)*taper})`; r.beginPath(); r.ellipse(cx,cy,rx,ry,(RN()-.5)*.25,0,6.283); r.fill(); }   /* streaky, stretched out along the wind, thinning at the ends */
+    x.filter="blur(4px)"; x.drawImage(raw,0,0); x.filter="none"; x.globalAlpha=.6; x.drawImage(raw,0,0); return c; }
+  function drawMoonWisps(a,px,py,R){ const sc=Math.min(W,H)/800;
+    if(!mrWisps){ mrWisps=[0,1,2,3].map(i=>({c:makeWisp(Math.round(rnd(380,620)),Math.round(rnd(40,70)),i*977+13),y:[.015,.06,.11,.17][i]+rnd(-.01,.01),x0:i*.27+rnd(0,.1),sp:rnd(4,7),k:rnd(.7,1.05)})); }
+    for(const q of mrWisps){ const ry=ridgeY(SKYL.far,.83), cy=ry-H*q.y-H*.04, cw=q.c.width*sc*q.k, ch=q.c.height*sc*q.k, span=W*.75, cx=W*.83+(((q.x0*span+t*q.sp*sc)%span)+span)%span-span*.5;   /* drifting slowly past, always some of them near the moon */
+      if(cx+cw/2<0||cx-cw/2>W) continue;
+      const S2w=Math.ceil(cw), S2h=Math.ceil(ch); if(mwsC.width<S2w||mwsC.height<S2h){ mwsC.width=Math.max(mwsC.width,S2w); mwsC.height=Math.max(mwsC.height,S2h); }
+      const x=mwsX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,mwsC.width,mwsC.height); x.drawImage(q.c,0,0,cw,ch);
+      x.globalCompositeOperation="source-in"; const lx=px-(cx-cw/2), ly=py-(cy-ch/2), gl=x.createRadialGradient(lx,ly,R*.2,lx,ly,R*3.2); gl.addColorStop(0,"rgba(255,246,226,1)"); gl.addColorStop(.35,"rgba(214,206,196,.9)"); gl.addColorStop(1,"rgba(46,52,74,.85)"); x.fillStyle=gl; x.fillRect(0,0,S2w,S2h);   /* lit from behind where the moon is, dark elsewhere */
+      ctx.globalAlpha=a*.85; ctx.drawImage(mwsC,0,0,S2w,S2h,cx-cw/2,cy-ch/2,cw,ch); } ctx.globalAlpha=1; }
   function drawMoonrise(a){ if(a<=.01) return; if(!fullMoon) fullMoon=makeFullMoon(); const MI=fullMoon; const e=mrP*mrP*(3-2*mrP)*.75+mrP*.25, fx=.83, ry=ridgeY(SKYL.far,fx), R0=Math.min(W,H)*.062, R=R0*(1.22-.22*e), px=IX(fx), py=ry+R*1.02-e*H*.3, sq=1-.1*(1-e);
     const S=Math.ceil(R*2+4); if(mrC.width!==S){ mrC.width=mrC.height=S; } const x=mrX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S,S);
     x.save(); x.translate(S/2,S/2); x.rotate(-.5); x.drawImage(MI,-R,-R,R*2,R*2); x.restore();
@@ -918,6 +947,7 @@ const ambient=(function(){
     ctx.save(); ridgePath(ctx,SKYL.far,1.5); ctx.clip();   /* it comes up from behind the ridge */
     { const gr=ctx.createRadialGradient(px,py,R*.8,px,py,R*(5+3*(1-e))); gr.addColorStop(0,`rgba(255,${Math.round(170+70*e)},${Math.round(100+120*e)},${(a*(.22+.1*(1-e))).toFixed(3)})`); gr.addColorStop(1,"rgba(255,200,150,0)"); ctx.fillStyle=gr; ctx.fillRect(px-R*8,py-R*8,R*16,R*16); }   /* the glow in the air round it */
     ctx.globalAlpha=a*(.8+.2*e); ctx.translate(px,py); ctx.scale(1,sq); ctx.drawImage(mrC,-S/2,-S/2); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*(.15+.3*e); ctx.drawImage(mrC,-S/2,-S/2); ctx.restore();   /* burning bright once it's clear of the haze */
+    ctx.save(); ridgePath(ctx,SKYL.far,1.5); ctx.clip(); drawMoonWisps(a,px,py,R*sq); ctx.restore();   /* and the high cloud drifting across in front of it */
     { const g=ctx.createLinearGradient(0,ry,0,H); g.addColorStop(0,`rgba(170,180,210,${(.1*a*e).toFixed(3)})`); g.addColorStop(1,`rgba(150,160,190,${(.05*a*e).toFixed(3)})`); ctx.save(); ctx.globalCompositeOperation="screen"; ctx.fillStyle=g; ctx.fillRect(0,ry-4,W,H-ry+4); ctx.restore(); }   /* and the field below silvering as it climbs */
   }
   function ridgePath(c,arr,dy){ const m=cover(), N=arr.length-1, w=m.iw*m.s, h=m.ih*m.s; c.beginPath(); c.moveTo(m.ox-4,-H*2); for(let i=0;i<=N;i++) c.lineTo(m.ox+i/N*w,m.oy+arr[i]*h+(dy||0)); c.lineTo(m.ox+w+4,-H*2); c.closePath(); }
@@ -926,7 +956,7 @@ const ambient=(function(){
   const approach=(v,g,k)=>v<g? Math.min(g,v+k) : Math.max(g,v-k);
   /* ---- the sky's events: a passing storm, a rainbow in the shower, a meteor shower, a comet, the Milky Way. Only ever one at a time: a new one takes the
      sky over from whatever was there. The last three bring the night on with them ---- */
-  const NIGHT_EV=["milkyway","shower","comet","aurora","night","moonrise"]; let ssA=0, sdsA=0, mrA=0, mrP=0, csA=0, sbA=0, sdA=0, balloon=null, clouds=null;
+  const NIGHT_EV=["milkyway","shower","comet","aurora","night","moonrise"]; let ssA=0, sdsA=0, gustB=0, mrA=0, mrP=0, csA=0, sbA=0, sdA=0, balloon=null, clouds=null;
   let skyEv=null, auA=0, nA=0, mwA=0, shA=0, coA=0, comet=null;
   function skyStart(k,forced){
     if(rb&&k!=="rainbow") rb.dur=Math.min(rb.dur,rb.t+4);
@@ -972,7 +1002,7 @@ const ambient=(function(){
     if(pendingDay&&!nightHold&&nA<.15){ const k=pendingDay; pendingDay=null; setTimeout(()=>{ try{ ambient.spawn(k); }catch(e){} },0); }
     stepTimeline(dt,on);
     if(skyEv&&t>skyEv.t1) skyEv=null;
-    const k=skyEv&&skyEv.k; nA=approach(nA,skyEv&&NIGHT_EV.includes(k)? 1 : 0,dt/(dawnSlow>0&&!(skyEv&&NIGHT_EV.includes(k))? dawnSlow : 3.5)); if(dawnSlow>0&&nA<=0&&duskV<=.01) dawnSlow=0; csA=approach(csA,k==="shadows"? 1 : 0,dt/6); sdA=approach(sdA,k==="sundogs"? 1 : 0,dt/5); if(k==="balloon"&&!balloon) balloon=newBalloon(); if(balloon){ balloon.t+=dt; if(balloon.t>balloon.dur) balloon=null; } sbA=approach(sbA,k==="sunburst"? 1 : 0,dt/(k==="sunburst"? 4 : 6)); auA=approach(auA,k==="aurora"? 1 : 0,dt/5); mwA=approach(mwA,k==="milkyway"? 1 : 0,dt/5); shA=approach(shA,k==="shower"? 1 : 0,dt/3); coA=approach(coA,k==="comet"? 1 : 0,dt/5); ssA=approach(ssA,k==="sunshower"&&t<skyEv.t1-9? 1 : 0,dt/(k==="sunshower"? 3 : 7)); sdsA=approach(sdsA,k==="seeds"&&t<skyEv.t1-6? 1 : 0,dt/3); mrA=approach(mrA,k==="moonrise"? 1 : 0,dt/(k==="moonrise"? 2 : 6)); if(k==="moonrise") mrP=Math.min(1,Math.max(0,t-skyEv.t0-2)/48); else if(mrA<=0) mrP=0;
+    const k=skyEv&&skyEv.k; nA=approach(nA,skyEv&&NIGHT_EV.includes(k)? 1 : 0,dt/(dawnSlow>0&&!(skyEv&&NIGHT_EV.includes(k))? dawnSlow : 3.5)); if(dawnSlow>0&&nA<=0&&duskV<=.01) dawnSlow=0; csA=approach(csA,k==="shadows"? 1 : 0,dt/6); sdA=approach(sdA,k==="sundogs"? 1 : 0,dt/5); if(k==="balloon"&&!balloon) balloon=newBalloon(); if(balloon){ balloon.t+=dt; if(balloon.t>balloon.dur) balloon=null; } sbA=approach(sbA,k==="sunburst"? 1 : 0,dt/(k==="sunburst"? 4 : 6)); auA=approach(auA,k==="aurora"? 1 : 0,dt/5); mwA=approach(mwA,k==="milkyway"? 1 : 0,dt/5); shA=approach(shA,k==="shower"? 1 : 0,dt/3); coA=approach(coA,k==="comet"? 1 : 0,dt/5); ssA=approach(ssA,k==="sunshower"&&t<skyEv.t1-9? 1 : 0,dt/(k==="sunshower"? 3 : 7)); sdsA=approach(sdsA,k==="seeds"&&t<skyEv.t1-6? 1 : 0,dt/3); { const tb=k==="seeds"? t-skyEv.t0 : 99, sm2=(a,b,v)=>{ const q=Math.max(0,Math.min(1,(v-a)/(b-a))); return q*q*(3-2*q); }; const g1=sm2(0,1.3,tb)*(1-sm2(3.5,8,tb)*.55), g2=sm2(5.5,6.8,tb)*(1-sm2(8.5,15,tb)), goal=tb<40? Math.max(g1*(1-sm2(8,16,tb)),g2*.95) : 0; gustB+=(goal-gustB)*Math.min(1,dt*3); }   /* the burst: it hits, eases, shoves again, then blows itself out */ mrA=approach(mrA,k==="moonrise"? 1 : 0,dt/(k==="moonrise"? 2 : 6)); if(k==="moonrise") mrP=Math.min(1,Math.max(0,t-skyEv.t0-2)/48); else if(mrA<=0) mrP=0;
     try{ natureSfx.rain&&natureSfx.rain(ssA); }catch(e){}
     if(k==="sunshower"&&!skyEv.rbDone&&t>skyEv.t1-16){ skyEv.rbDone=true; if(!rb) startRainbow(true); }   /* as it passes, the bow comes out in the last of it */
     if(coA<=0&&k!=="comet") comet=null;
@@ -1269,7 +1299,7 @@ const ambient=(function(){
     if(leftTile){ const F=leftTile, rows=3, cols=8, cw=Math.ceil(F.w/cols); ctx.drawImage(F.c,F.x,F.y);
       for(let yy=0; yy<F.h; yy+=rows){ const lean=Math.pow(1-yy/F.h,1.7);
         for(let c=0;c<cols;c++){ const ph=t*1.05+1.1-c*.3, gust=.55*Math.sin(ph)+.3*Math.sin(ph*2.3+1)+.15*Math.sin(ph*5.1+2), base=.6+.4*Math.sin(t*.23);
-          const dx=((gust*base+.35)*2.6+Math.sin(t*2.4+c*1.9+yy*.06)*.45)*lean;
+          const wd=(window.__seedDir||-1), dx=((gust*base+.35)*2.6*(1+gustB*1.6)+Math.sin(t*2.4+c*1.9+yy*.06)*.45*(1+gustB*3)+gustB*wd*(7+4*Math.sin(t*3.1-c*.55*wd)))*lean;
           ctx.drawImage(F.c,c*cw,yy,cw,rows,F.x+c*cw+dx,F.y+yy,cw,rows); } } }
     /* the tall field on the right sways in gusts, a wave rolling through from left to right */
     if(fieldTile){ const F=fieldTile, rows=3, cols=9, cw=Math.ceil(F.w/cols); ctx.drawImage(F.c,F.x,F.y);
@@ -1277,7 +1307,7 @@ const ambient=(function(){
         const hgt=1-yy/F.h, lean=Math.pow(hgt,1.7);
         for(let c=0;c<cols;c++){
           const ph=t*1.05-c*.32, gust=.55*Math.sin(ph)+.3*Math.sin(ph*2.3+1)+.15*Math.sin(ph*5.1+2), base=.6+.4*Math.sin(t*.23);
-          const dx=((gust*base+.35)*6+Math.sin(t*2.6+c*1.7+yy*.05)*.9)*lean;
+          const wd=(window.__seedDir||-1), dx=((gust*base+.35)*6*(1+gustB*1.4)+Math.sin(t*2.6+c*1.7+yy*.05)*.9*(1+gustB*3.5)+gustB*wd*(15+8*Math.sin(t*3.3-c*.6*wd)+5*Math.sin(t*7.1+c*1.3+yy*.08)))*lean;   /* in the burst it bends right over with the wind, thrashing, the wave racing through */
           ctx.drawImage(F.c,c*cw,yy,cw,rows,F.x+c*cw+dx,F.y+yy,cw,rows);
         }
       }
