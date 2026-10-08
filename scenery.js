@@ -719,10 +719,10 @@ const ambient=(function(){
   function rabbitStep(bun,dt,k){
     if(!bun.init){ bun.x=W*(.18+.3*bun.i+rnd(-.06,.12)); bun.y=H*bun.dy; bun.init=true; }
     bun.t-=dt; bun.ear=Math.max(0,bun.ear-dt*3); bun.chew+=dt;
-    const lo=W*.06, hi=W*.94, step=()=>rnd(12,24)*k;
+    const lo=W*.06, hi=W*.94, step=()=>rnd(12,24)*k*(bun.flee? 2.8 : 1);
     if(bun.state==="hop"){
-      bun.hop+=dt/.38; bun.x=bun.hx+(bun.tx-bun.hx)*Math.min(1,bun.hop);
-      if(bun.hop>=1){ bun.hops--; if(bun.hops>0){ bun.hx=bun.x; bun.tx=Math.max(lo,Math.min(hi,bun.x+bun.face*step())); bun.hop=0; } else { bun.state=Math.random()<.6?"eat":"look"; bun.t=bun.state==="eat"?rnd(2.5,7):rnd(1,2.4); } }
+      bun.hop+=dt/(bun.flee? .3 : .38); bun.x=bun.hx+(bun.tx-bun.hx)*Math.min(1,bun.hop);
+      if(bun.hop>=1){ bun.hops--; if(bun.hops>0){ bun.hx=bun.x; bun.tx=Math.max(lo,Math.min(hi,bun.x+bun.face*step())); bun.hop=0; } else { bun.flee=false; bun.state=Math.random()<.6?"eat":"look"; bun.t=bun.state==="eat"?rnd(2.5,7):rnd(1,2.4); } }
       return;
     }
     if(bun.state==="look" && Math.random()<dt*.9) bun.ear=1;
@@ -4973,7 +4973,7 @@ const ambient=(function(){
     L.stubs=nodes.slice(0,2+(Math.random()<.5? 1 : 0)).map((nd,i)=>{ const xs=nd.u*len, back=Math.random()<.3; return {xs,th:back? -rnd(2.1,2.5) : -rnd(.45,.95),len:R0*rnd(1.3,3.2),r0:rnd(.42,.58),seed:Math.floor(rnd(0,9999)),splint:Array.from({length:4},()=>({a:rnd(-.8,.8),w:rnd(.08,.2),h:rnd(.2,.8)}))}; });
     L.knots=L.knots.concat(nodes.map(nd=>({u:nd.u+rnd(-.01,.01),ph:rnd(-.4,.3),s:rnd(1,1.4)})));
     if(kind==="turtle"){ L.u=.3; L.life=rnd(40,55); L.state="pause"; L.dur=rnd(3,5); }
-    if(gbird){ L.bird=kind; L.u=GB[kind].sit? rnd(.45,.65) : rnd(.28,.4); L.life=GB[kind].sit? rnd(32,40) : 400; L.gb={state:"walk",st:0,dur:rnd(1.2,3),ph:0,peck:0,peckT:rnd(.4,1.2),look:0,lookTo:0,lookT:1,bob:0,fade:1,nod:0}; }   /* a ground bird walks the rise where the stick would lie, no stick */   /* the turtle is already hauled out a little way along, basking */
+    if(gbird){ const GS=GB[kind]; L.bird=kind; L.u=GS.fly? rnd(.38,.55) : -.07; L.life=400; L.gb={state:GB[kind].fly? "stop" : "walk",st:0,dur:GB[kind].fly? rnd(1.5,2.5) : rnd(3,5),ph:0,peck:0,peckT:rnd(.4,1.2),look:0,lookTo:0,lookT:1,bob:0,fade:1,nod:0,mode:GB[kind].fly? "in" : "ground",ft:0,fph:0,landT:9,leaveAt:GB[kind].stay? rnd(...GB[kind].stay) : 1e9}; }   /* a ground bird walks the rise where the stick would lie, no stick */   /* the turtle is already hauled out a little way along, basking */
     /* nothing may be standing where the rise will come up: try the other side; if that's taken too, they're sent off and the rise waits till they're clear */
     if(!retry){ const occ=hillOcc(L); if(occ.length){ if(!fire){ const s0=window.__forceSide; window.__forceSide=-side; startLogCrawler(kind,true); window.__forceSide=s0; if(logC&&logC!==prevL&&!hillOcc(logC).length) return; } clearHill(L,occ); L.hold=true; L.holdT=0; } }
     else { const occ=hillOcc(L); if(occ.length){ clearHill(L,occ); L.hold=true; L.holdT=0; } }
@@ -4985,7 +4985,7 @@ const ambient=(function(){
     for(const q of sqs) if(q.Xw!=null) add(q,toScreen(q.Xw,q.Dw)); for(const w of wcs) if(w.Xw!=null) add(w,toScreen(w.Xw,w.Dw)); for(const bn of buns) if(bn.init&&bn.x!=null) add(bn,{x:bn.x,y:bn.y});
     return out; }
   /* send them up the lawn, clear of it, at their own pace */
-  function clearHill(L,occ){ for(const o of occ){ if(o.x!=null&&o.Xw==null){ o.state="hop"; o.hops=4+Math.floor(Math.random()*3); o.hx=o.x; o.face=o.x<W/2? 1 : -1; o.tx=Math.max(W*.04,Math.min(W*.96,o.x+o.face*rnd(40,70))); o.hop=0; continue; }
+  function clearHill(L,occ){ for(const o of occ){ if(o.x!=null&&o.Xw==null){ if(o.flee) continue; o.flee=true; o.state="hop"; o.face=L.side>0? -1 : 1; const far=gbScreen(L,1.3,0)[0], dist=Math.abs(far-o.x)+40; o.hops=Math.min(14,Math.ceil(dist/(50*Math.max(.7,Math.min(1.4,H/900))))+1); o.hx=o.x; o.tx=Math.max(W*.06,Math.min(W*.94,o.x+o.face*50)); o.hop=0; continue; }   /* the rabbits bound away along the lawn, clear of where it comes up */
       const s2=toScreen(o.Xw,o.Dw); let ty=s2.y; for(let k=0;k<30&&hillPt(L,s2.x,ty);k++) ty-=H*.02; const p2=toGround(s2.x,ty-H*.05); if(!p2||!isFinite(p2.Xw)) continue;
       o.tX=p2.Xw; o.tD=p2.Dw; if(o===dog||o===lab){ o.state="run"; o.romp=0; o.chase=false; o.toViewer=false; } else if(o===doe||o===(doe&&doe.fawn)){ if(doe){ doe.leaving=true; doe.state="walk"; } } else if(sqs.includes(o)){ o.leaving=true; o.state="run"; o.yawT=null; o.lastD=1e9; } else if(wcs.includes(o)){ o.leaving=true; o.state="run"; } else if(o!==turtle){ o.state="leave"; o.ang=null; o.head=0; } } }   /* the dogs trot up out of the way; anything wild simply moves off */
   const sm01=z=>{ const t2=Math.max(0,Math.min(1,z*.5+.5)); return t2*t2*(3-2*t2); };
@@ -5125,7 +5125,7 @@ const ambient=(function(){
   window.SceneryStickPts=()=>{ const L=logC; if(!L||L.a<=.05) return null; const N=12, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, out=[];
     for(let i=0;i<=N;i++){ const xl=i/N*Ln*1.04, ly=-L.sag(Math.min(Ln,xl)), sx=L.x0+ca*xl*mx-sa*ly, sy=L.y0+sa*xl*mx+ca*ly, gp=toGround(sx,sy); if(gp&&isFinite(gp.Xw)&&gp.Dw>0) out.push({Xw:gp.Xw,Dw:gp.Dw}); } return out.length>1? out : null; };
   function drawLogCrawler(dt,dark){ nextLogAuto-=(lull>0? 0 : dt); if(!logC&&nextLogAuto<=0){ if(stageBusy()||nA>.3||(barkMap&&!barkMap.done)) nextLogAuto=rnd(15,30); else { startLogCrawler(Math.random()<.4? pick(["killdeer","woodcock","bobwhite","grouse","pheasant"]) : pick(["skink","skink","eft","eft","turtle","slimy"])); nextLogAuto=rnd(260,480); } }   /* now and then a skink or an eft comes out on its own, onto a stick in the grass */
-    if(!logC) return; const L=logC; if(L.hold){ L.holdT+=dt; if(L.holdT<4&&hillOcc(L).length){ if(Math.floor(L.holdT*2)!==Math.floor((L.holdT-dt)*2)) clearHill(L,hillOcc(L)); return; } L.hold=false; }
+    if(!logC) return; const L=logC; if(L.hold){ L.holdT+=dt; if(L.holdT<5&&hillOcc(L).length){ if(Math.floor(L.holdT*2)!==Math.floor((L.holdT-dt)*2)) clearHill(L,hillOcc(L)); return; } L.hold=false; }
     L.t+=dt; if(window.Campfire&&Campfire.on&&L.side<0&&L.life>L.t) L.life=L.t;   /* a stick on the left would lie in the fire ring: it fades away; one on the right stays, and the two of them walk round it */
     const fadeOut=L.t>L.life; L.a= fadeOut? Math.max(0,L.a-dt*.6) : Math.min(1,L.a+dt*.7); if(fadeOut&&L.a<=0){ logC=null; return; }
     if(L.bird){ drawGroundBird(L,dt,dark); return; }
@@ -5202,21 +5202,27 @@ const ambient=(function(){
   /* ---- the ground birds on the near rise: a killdeer running and stopping dead, a woodcock rocking along, a bobwhite, a ruffed grouse, a cock pheasant,
      walking across the little hill right in front of us in the same full 3D as the songbirds, feet stepping in the grass, pecking, looking about ---- */
   const GB={
-    killdeer:{leg:6.4,pitch:.14,hz:6.5,spd:.12,run:1,peck:.25},
-    woodcock:{leg:2.0,pitch:.04,hz:1.7,spd:.02,rock:1,peck:.5},
-    bobwhite:{leg:2.6,pitch:.06,hz:5.2,spd:.06,peck:.7,bobH:1},
-    grouse:{leg:2.9,pitch:.1,hz:2.4,spd:.035,peck:.5,bobH:1},
-    pheasant:{leg:4.4,pitch:.12,hz:2.6,spd:.045,peck:.45,bobH:1},
-    wpw:{leg:.5,pitch:.02,hz:0,spd:0,peck:0,sit:1}};   /* the whip-poor-will just settles low on the rise, flat to the ground, and sings */
+    killdeer:{leg:6.4,pitch:.14,hz:6.5,spd:.12,run:1,peck:.25,fly:1,fdur:1.9,fhz:8.5,stay:[22,30],callIn:1},   /* flies in calling, runs and stops, flies off calling */
+    woodcock:{leg:2.0,pitch:.04,hz:1.7,spd:.02,rock:1,peck:.5,fly:1,fdur:2.2,fhz:11,stay:[26,34],twit:1},   /* drops in on whistling wings, rocks along probing, whirs off */
+    bobwhite:{leg:2.6,pitch:.06,hz:5.2,spd:.06,peck:.7,bobH:1,walkIn:1},   /* quail walk out of the cover; they fly only when flushed */
+    grouse:{leg:2.9,pitch:.1,hz:2.4,spd:.035,peck:.5,bobH:1,walkIn:1},   /* a grouse walks; it bursts into flight only when startled */
+    pheasant:{leg:4.4,pitch:.12,hz:2.6,spd:.045,peck:.45,bobH:1,walkIn:1},   /* a cock pheasant would rather run than fly: he strides out of the grass */
+    wpw:{leg:.5,pitch:.02,hz:0,spd:0,peck:0,sit:1,fly:1,fdur:2.8,fhz:4.2,glider:1,stay:[30,38]}};   /* floats in like a big moth, settles flat on the ground, sings, and floats away */   /* the whip-poor-will just settles low on the rise, flat to the ground, and sings */
   const gbCv=document.createElement("canvas"), gbCx=gbCv.getContext("2d");
+  const rnd2=sd=>.16+((sd*9301+49297)%233280)/233280*.14;   /* where in the sky each bird comes from: fixed per visit */
   function gbCrestLy(L,xl){ const Ln=L.len, xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc); if(xl>Ln){ const f=(xl-Ln)/(Ln*.32); ly+=f*f*H*.07; } return ly; }
   function gbScreen(L,u,dy){ const Ln=L.len, xl=u*Ln, ly=gbCrestLy(L,xl)+(dy||0), ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1; return [L.x0+ca*xl*mx-sa*ly, L.y0+sa*xl*mx+ca*ly]; }
-  function stepGroundBird(L,dt){ const g=L.gb, S=GB[L.bird]; g.st+=dt;
+  function stepGroundBird(L,dt){ const g=L.gb, S=GB[L.bird]; g.fph+=dt*(S.fhz||8)*6.283;
+    if(g.mode==="in"){ if(g.ft===0){ try{ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx||W/2)/W*2-1,true); else if(S.twit) natureSfx.sing&&natureSfx.sing("woodcock",(L.sx||W/2)/W*2-1,true); }catch(e){} }
+      g.ft+=dt; if(g.ft>=S.fdur){ g.mode="ground"; g.landT=0; g.st=0; } return; }
+    if(g.mode==="out"){ g.ft+=dt; if(g.ft>=1.9&&!g.gone){ g.gone=true; L.life=Math.min(L.life,L.t); } return; }
+    g.landT+=dt; if(S.fly&&L.t>g.leaveAt&&g.peck<=0&&!(g.singing>0)){ g.mode="out"; g.ft=0; try{ if(S.callIn) natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx||W/2)/W*2-1,true); else if(S.twit) natureSfx.sing&&natureSfx.sing("woodcock",(L.sx||W/2)/W*2-1,true); }catch(e){} return; }
+    g.st+=dt;
     if(S.sit){ g.state="stop"; g.singT=(g.singT??1.5)-dt; if(g.singT<=0&&L.a>.6&&L.t<L.life-3){ g.singT=rnd(6,9); g.singing=4.6; try{ natureSfx.sing&&natureSfx.sing(PB[L.bird].sk,(L.sx/W*2-1)*.7,true); }catch(e){} }
       g.singing=Math.max(0,(g.singing||0)-dt); g.gape=g.singing>0? Math.max(0,Math.sin(g.singing*Math.PI*2.4))*.9 : 0;   /* whip-poor-WILL, five times over, the bill opening wide on every phrase */
       g.lookT-=dt; if(g.lookT<=0){ g.lookT=rnd(1.5,4); g.lookTo=pick([-.35,0,0,.3]); } g.look+=(g.lookTo-g.look)*Math.min(1,dt*4); return; }
-    if(g.state==="walk"){ const burst=S.run? (g.st<.15? g.st/.15 : 1) : 1; L.u+=dt*S.spd*burst; g.ph+=dt*S.hz*6.283*burst;
-      if(g.st>g.dur&&L.u<1.02){ g.state="stop"; g.st=0; g.dur=S.run? rnd(1.2,2.6) : rnd(2,5); g.peckT=rnd(.3,1); const sk=PB[L.bird].sk; if(sk&&Math.random()<.45&&L.a>.5){ try{ natureSfx.sing&&natureSfx.sing(sk,(L.sx/W*2-1)*.7,true); }catch(e){} } } }
+    if(g.state==="walk"){ const burst=(S.run? (g.st<.15? g.st/.15 : 1) : 1)*(S.walkIn&&L.u<.22? 2.2 : 1); L.u+=dt*S.spd*burst; g.ph+=dt*S.hz*6.283*burst;
+      if(g.st>g.dur&&L.u<1.02&&!(S.walkIn&&L.u<.22)){ g.state="stop"; g.st=0; g.dur=S.run? rnd(1.2,2.6) : rnd(2,5); g.peckT=rnd(.3,1); const sk=PB[L.bird].sk; if(sk&&Math.random()<.45&&L.a>.5){ try{ natureSfx.sing&&natureSfx.sing(sk,(L.sx/W*2-1)*.7,true); }catch(e){} } } }
     else { g.peckT-=dt; if(g.peckT<=0&&g.peck<=0){ if(Math.random()<S.peck){ g.peck=.001; } g.peckT=rnd(.6,1.6); }
       if(g.st>g.dur){ g.state="walk"; g.st=0; g.dur=S.run? rnd(.5,1.1) : rnd(1.5,3.5); } }
     if(g.peck>0){ g.peck+=dt/.55; if(g.peck>=1) g.peck=0; }
@@ -5233,22 +5239,33 @@ const ambient=(function(){
     const pitch=S.pitch-pk*.5+(S.run&&!walking? Math.sin(t*9)*.05*Math.max(0,1-g.st) : 0), f=v3.n(v3.a(v3.s(hd,Math.cos(pitch)),v3.s(up,Math.sin(pitch))));
     const bob=walking? Math.abs(Math.sin(g.ph))*.18 : 0, hgt=(2.1+S.leg+.25-pk*.6-bob)*Kw, P=v3.a(v3.a(G,[0,-hgt,0]),v3.s(hd,rock*.9*Kw));
     const stride=S.leg*.32+.9, lift=.35+S.leg*.1, feet=[0,1].map(i=>{ const sd=i? 1 : -1, ph=g.ph+i*Math.PI, fw=walking? Math.cos(ph)*stride*.5 : (i? .4 : -.4), up2=walking? Math.max(0,Math.sin(ph))*lift : 0; return v3.a(v3.a(v3.a(G,v3.s(lat,sd*.75*Kw)),v3.s(hd,(fw-.4)*Kw)),[0,-up2*Kw,0]); });
-    const r0=v3.n(v3.x(f,up)), uu=v3.x(r0,f), B={f,u:uu,r:r0};
+    let PB_=P, fB=f, oF={fold:1,legs:1,amp:1,flap:0,glide:false,tail:0}, airK=0;
+    if(g.mode==="in"||g.mode==="out"){ const zf=.95, far=[(Math.max(W*.08,Math.min(W*.92,gp[0]+(g.mode==="in"? -1 : 1)*dirX*W*.42))-cx)*zf/F,(H*rnd2(L.seed)-cy)*zf/F,zf], Pg=P;
+      const u0=g.mode==="in"? Math.min(1,g.ft/S.fdur) : Math.min(1,g.ft/1.9), e=g.mode==="in"? (1-Math.pow(1-u0,1.6))*.6+u0*.4 : u0*u0*(3-2*u0)*.7+u0*.3;
+      const A0=g.mode==="in"? far : Pg, A1=g.mode==="in"? Pg : far, ctl=g.mode==="in"? v3.a(v3.l(far,Pg,.72),[0,-.035,0]) : v3.a(v3.l(Pg,far,.25),[0,-.02,0]);
+      const at=w=>{ const m=1-w; return [m*m*A0[0]+2*m*w*ctl[0]+w*w*A1[0], m*m*A0[1]+2*m*w*ctl[1]+w*w*A1[1], m*m*A0[2]+2*m*w*ctl[2]+w*w*A1[2]]; };
+      PB_=at(e); const vel=v3.m(at(Math.min(1,e+.01)),at(Math.max(0,e-.01))); let fv=v3.n([vel[0],vel[1]*.6,vel[2]]); if(Math.abs(fv[0])<.2) fv=v3.n([dirX*.6,fv[1],fv[2]]);
+      if(g.mode==="in"){ const fl=Math.max(0,(u0-.78)/.22); fB=v3.n(v3.a(v3.s(fv,1-fl*.6),v3.s(up,fl*.9))); oF={fold:0,legs:Math.max(0,(u0-.7)/.3),amp:1+fl*.3,flap:g.fph,glide:S.glider&&Math.sin(g.ft*2.3)>.35&&u0<.75,tail:.3+fl*.7}; }   /* braking at the end: body up, wings beating, tail fanned, legs reaching down */
+      else { fB=v3.n(v3.a(fv,v3.s(up,.25*(1-u0)))); oF={fold:Math.max(0,1-g.ft/.12),legs:Math.max(0,1-g.ft/.35),amp:1.1,flap:g.fph,glide:S.glider&&Math.sin(g.ft*2.3)>.4&&g.ft>.6,tail:.3}; }
+      airK=1; }
+    else if(g.landT<.6){ const k=g.landT/.6; oF={fold:Math.min(1,k*1.4),legs:1,amp:Math.max(0,1-k*2),flap:g.fph,glide:false,tail:Math.max(0,.6-k)}; }   /* settling: wings folding away */
+    const r0=v3.n(v3.x(fB,up)), uu=v3.x(r0,fB), B={f:fB,u:uu,r:r0};
     const sp=sun(), sunL=(()=>{ const v=[(sp.x-cx)/F,(sp.y-cy)/F-.05,1], l=Math.hypot(...v); return v.map(c=>c/l); })();
     /* its soft shadow on the grass */
-    { const rx=10*Kw*F/z, ry=rx*.2, sh=ctx.createRadialGradient(gp[0],gp[1]+ry*.3,0,gp[0],gp[1]+ry*.3,rx); sh.addColorStop(0,`rgba(14,10,4,${(.3*(1-nA*.6)*L.a).toFixed(3)})`); sh.addColorStop(1,"rgba(14,10,4,0)"); ctx.save(); ctx.translate(gp[0],gp[1]+ry*.3); ctx.scale(1,ry/rx); ctx.translate(-gp[0],-(gp[1]+ry*.3)); ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(gp[0],gp[1]+ry*.3,rx,0,6.283); ctx.fill(); ctx.restore(); }
-    const bw=Math.ceil(H*.95), bh=Math.ceil(H*.5), ox=Math.round(gp[0]-bw/2), oy=Math.round(gp[1]-bh*.72);
+    { const hAbove=Math.max(0,(P[1]-PB_[1])/Kw), shK=Math.max(0,1-hAbove/40), rx=10*Kw*F/z*(1+hAbove/60), ry=rx*.2, sh=ctx.createRadialGradient(gp[0],gp[1]+ry*.3,0,gp[0],gp[1]+ry*.3,rx); sh.addColorStop(0,`rgba(14,10,4,${(.3*(1-nA*.6)*L.a*shK).toFixed(3)})`); sh.addColorStop(1,"rgba(14,10,4,0)"); ctx.save(); ctx.translate(gp[0],gp[1]+ry*.3); ctx.scale(1,ry/rx); ctx.translate(-gp[0],-(gp[1]+ry*.3)); ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(gp[0],gp[1]+ry*.3,rx,0,6.283); ctx.fill(); ctx.restore(); }
+    const bsx=cx+PB_[0]*F/PB_[2], bsy=cy+PB_[1]*F/PB_[2], bw=Math.ceil(H*.95), bh=Math.ceil(H*.5), ox=Math.round((airK? bsx : gp[0])-bw/2), oy=Math.round((airK? bsy+(P[1]-PB_[1]>0? 0 : 0) : gp[1])-bh*.72);
     if(gbCv.width!==bw||gbCv.height!==bh){ gbCv.width=bw; gbCv.height=bh; } const x=gbCx; x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,bw,bh);
     const proj=(X,Y2,Z2)=>[cx+X*F/Z2-ox,cy+Y2*F/Z2-oy];
-    const o={F,fold:1,legs:1,feet,brad:Kw*.08,look:g.look,nod:(S.bobH&&walking? Math.sin(g.ph*2)*.12 : 0)-pk*1.15,gape:g.gape||0,headUp:g.singing>0? .45 : 0,breath:t*1.9,tail:0,tailUp:L.bird==="pheasant"? .3 : L.bird==="grouse"? .2 : 0,crouch:0};
-    bird3D(x,P,B,o,proj,Kw,sunL,C);
+    const o={F,fold:oF.fold,legs:oF.legs,amp:oF.amp,flap:oF.flap,glide:oF.glide,feet:airK&&!(g.mode==="in"&&g.ft/S.fdur>.86)? null : feet,brad:Kw*.08,look:g.look,nod:(S.bobH&&walking? Math.sin(g.ph*2)*.12 : 0)-pk*1.15,gape:g.gape||0,headUp:g.singing>0? .45 : 0,breath:t*1.9,tail:oF.tail,tailUp:L.bird==="pheasant"? .3 : L.bird==="grouse"? .2 : 0,crouch:0};
+    if(g.gone){ drawTallGrass(L); return; }
+    bird3D(x,PB_,B,o,proj,Kw,sunL,C);
     perchPost(x,bw,bh,z,dark,gp[0]-ox,gp[1]-oy-H*.03,L.gb);
     { const top=gp[1]-oy-(S.leg+9)*Kw*F/z, bot=gp[1]-oy, day=1-Math.min(1,nA*1.3), gc=L.gc||[110,110,60], g2=x.createLinearGradient(0,top,0,bot); g2.addColorStop(0,`rgba(255,226,180,${(.08*day).toFixed(3)})`); g2.addColorStop(.45,"rgba(0,0,0,0)"); g2.addColorStop(.72,`rgba(${gc[0]|0},${gc[1]|0},${gc[2]|0},${(.12*day).toFixed(3)})`); g2.addColorStop(.86,"rgba(18,14,6,.22)"); g2.addColorStop(1,"rgba(14,10,4,.3)");
       x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=g2; x.fillRect(0,0,bw,bh); x.restore(); }   /* sky light on the back, the lawn's bounce and the shade beneath it */
     if(nA>.05){ x.save(); x.globalCompositeOperation="source-atop"; x.fillStyle=`rgba(6,8,18,${((S.sit? .3 : .5)*nA).toFixed(3)})`; x.fillRect(0,0,bw,bh); x.restore(); }   /* down on the dark lawn at night it is only a shape in the moonlight */
     { if(!grainC){ grainC=document.createElement("canvas"); grainC.width=grainC.height=160; const g2=grainC.getContext("2d"), id=g2.createImageData(160,160); for(let i=0;i<id.data.length;i+=4){ const v=Math.random()*255; id.data[i]=id.data[i+1]=id.data[i+2]=v; id.data[i+3]=255; } g2.putImageData(id,0,0); }
       x.save(); x.globalCompositeOperation="source-atop"; x.globalAlpha=.07; x.fillStyle=x.createPattern(grainC,"repeat"); x.fillRect(0,0,bw,bh); x.restore(); }
-    ctx.save(); ctx.globalAlpha=L.a; if(!MOBILE()) ctx.filter="blur(.35px) contrast(1.14) saturate(1.08)"; ctx.drawImage(gbCv,ox,oy); ctx.filter="none"; ctx.restore();   /* the photo's own slight softness */
+    ctx.save(); ctx.globalAlpha=g.mode==="in"? Math.min(1,g.ft/.35) : g.mode==="out"? Math.min(1,(1.9-g.ft)/.4) : L.a; if(!MOBILE()) ctx.filter="blur(.35px) contrast(1.14) saturate(1.08)"; ctx.drawImage(gbCv,ox,oy); ctx.filter="none"; ctx.restore();   /* the photo's own slight softness */
     /* the grass it walks in, standing up in front of its feet: blades fixed to the ground, only the ones near the bird drawn */
     if(!L.fb){ let sd=L.seed+19; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }; L.fb=Array.from({length:Math.round(Ln*.7)},()=>({u:RN()*1.3-.08,dy:Math.pow(RN(),.7)*H*.03,h:H*(.005+Math.pow(RN(),2)*.026),w:.6+RN()*1.1,lean:(RN()-.5)*.9,c:RN(),ph:RN()*6})); L.fb.sort((a,b)=>a.dy-b.dy); }
     { const day=1-Math.min(1,nA*1.2), gc=L.gc||[110,110,60], span=H*.32; ctx.save(); ctx.globalAlpha=L.a;
@@ -5258,7 +5275,7 @@ const ambient=(function(){
         ctx.beginPath(); ctx.moveTo(q[0]-b.w,q[1]); ctx.quadraticCurveTo(q[0]+ln*.3,q[1]-h*.55,q[0]+ln,q[1]-h); ctx.quadraticCurveTo(q[0]+ln*.3+b.w*.4,q[1]-h*.55,q[0]+b.w,q[1]); ctx.closePath(); ctx.fill(); }
       ctx.restore(); }
     drawTallGrass(L);
-    L.sx=gp[0]; L.sy=gp[1]-(S.leg+5)*Kw*F/z; }
+    L.sx=airK? bsx : gp[0]; L.sy=airK? bsy : gp[1]-(S.leg+5)*Kw*F/z; }
   /* an eastern painted turtle hauled out on the stick to bask: a low smooth olive-black shell with pale seams between the scutes and red bars round its rim,
      a black head striped yellow, legs striped red, straddling the stick with its claws hooked round it. Same frame as the lizards (mm, X forward, Y away, Z up) */
   function drawTurtleLog(L,S,dark,lt,nightK,sunSide,Rm,el){ const x=ctx, se=Math.sin(el), ce=Math.cos(el), q=L.ph, mv=L.state==="go", bask=L.state!=="go"? Math.min(1,L.st/1.2) : 0;
