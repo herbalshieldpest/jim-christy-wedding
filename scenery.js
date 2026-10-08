@@ -4898,8 +4898,8 @@ const ambient=(function(){
     const nS=SECT.length;
     /* light: the sun's side and from above, a cool sky fill; the eye toward us */
     const Ls=v3.n([sunSide*.55,.15,.82]), V=[0,-ce,se];
-    const lit=dark? .55 : 1, K=lt*lit*(1-nightK*.72);
-    const PAL= sk? {base:[44,38,32],stripe:[206,190,140],tail:[66,98,170],tail2:[44,66,124],belly:[176,170,150]} : {base:[206,90,38],dark:[150,58,24],spot:[200,40,26],ring:[34,16,8],belly:[232,160,70]};
+    const lit=dark? .55 : 1, K=lt*lit*(1-nightK*.72)*(sk? 1 : 1.3);   /* the eft's orange is vivid, almost glowing, even in the low light */
+    const PAL= sk? {base:[44,38,32],stripe:[206,190,140],tail:[66,98,170],tail2:[44,66,124],belly:[176,170,150]} : {base:[255,104,14],dark:[236,78,8],spot:[214,26,18],ring:[30,12,6],belly:[255,150,40]};
     const colAt=(s,th)=>{ let c=PAL.base; if(sk&&s>svl-4) c=mixv(mixv(PAL.base,PAL.tail,Math.min(1,(s-svl+4)/14)),PAL.tail2,Math.min(1,(s-svl)/tl)*.6); if(Math.sin(th)<-.2) c=mixv(c,PAL.belly,Math.min(1,(-Math.sin(th)-.2)*2)); if(!sk&&Math.sin(th)>.6) c=mixv(c,PAL.dark,(Math.sin(th)-.6)*.5); return c; };
     const nrmAt=(s,th)=>{ const f=frame(s), w=hw(s)||1, h=hh(s)||1, a=Math.cos(th)/w, b=Math.sin(th)/h; return v3.n([f.nx*a,f.ny*a,b]); };
     const shadeC=(c,n,s)=>{ const d=Math.max(0,v3.d(n,Ls)), amb=.34+.18*Math.max(0,n[2]), k=(amb+.78*d)*K; let o=mulv(c,k); o=[o[0]+10*(1-d)*(dark? .6:1)*.5,o[1]+12*(1-d)*.5,o[2]+22*(1-d)*.5];   /* shadows go cool toward the sky */
