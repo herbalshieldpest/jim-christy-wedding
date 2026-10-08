@@ -7285,7 +7285,7 @@ const ambient=(function(){
     for(const b of soarers){ const c=w2s(b.X,b.Y,b.Z); tag(c.x,c.y,b.kind==="heron"?40:28,b.kind==="heron"?"Great blue heron":b.kind==="falcon"?"Peregrine falcon":b.kind==="raven"?"Common raven":b.kind==="vult"?"Turkey vulture":b.kind==="hawk"?"Red-tailed hawk":"Barred owl"); }
   }
   document.addEventListener("click",e=>{
-    if(SC.identify===false||!on) return; collectTags();
+    if(SC.identify===false||!on||SC.paused()) return; collectTags();   /* no name labels while a host has the animation paused */
     if(e.target.closest&&e.target.closest("a,button,input,textarea,select,label,summary,[role=button],[role=dialog],[contenteditable],.card,.panel,.lightbox,[data-no-scenery]")) return;
     const qx=(e.clientX-(1-camZ)*W/2-camX)/camZ, qy=(e.clientY-(1-camZ)*H/2-camY)/camZ; let best=null, bd=1e9; for(const [x,y,r,n,mn] of tags){ const d=Math.hypot(qx-x,qy-y), zone=mn? r+40 : r*1.5+Math.max(56,Math.min(W,H)*.06), sc=mn? d*1.3+12 : d; if(d<zone&&sc<bd){ bd=sc; best=[x,y,n]; } }   /* the animals win over a leaf or petal drifting nearby */
     if(!best) return; tagEl.textContent=best[2]; tagEl.style.transform="none"; tagEl.style.left="0px"; tagEl.style.top="0px";
@@ -8541,7 +8541,7 @@ const ambient=(function(){
     drawWoodcock=function(w,dt,dark){ return !w.kind||w.kind==="woodcock"||allowed("wcs")? wc.call(this,w,dt,dark) : dayCall(()=>wc.call(this,w,dt,dark)); };
     drawRaptors=function(dt,dark){ if(nA>.6&&!allowed("raptors")) soarers=soarers.filter(b=>b.kind==="owl"); return rp.call(this,dt,dark); }; }
   const running=()=>on && !document.hidden && !SC.paused();
-  function start(){ cv.hidden=!on||SC.paused(); if(running() && !raf){ last=0; raf=requestAnimationFrame(frame); } }
+  function start(){ cv.hidden=!on||SC.paused(); try{ if(cv.hidden) tagEl.style.opacity="0"; }catch(e){} if(running() && !raf){ last=0; raf=requestAnimationFrame(frame); } }
   size(); seed();
   window.addEventListener("resize",()=>{ size(); seed(); buns.forEach(b=>b.init=false); });
   document.addEventListener("visibilitychange",start);
