@@ -3898,12 +3898,12 @@ const ambient=(function(){
     { const SPC=BRSP[br.sp]; br.leaves=Array.from({length:SPC.n},(_,i)=>({u:.1+i*(.84/SPC.n)+rnd(-.02,.02),up:Math.random()<.55?-1:1,a:rnd(.35,1.25),l:rnd(.75,1.15)*SPC.size,tw:rnd(-.35,.35),c:pick(SPC.cols),hole:Math.random()<.18,curl:rnd(-.25,.25)}));
       br.extras=SPC.extras.map(([u,kind])=>({u:u+rnd(-.03,.03),kind,ph:rnd(0,6),l:rnd(.85,1.15),side:Math.random()<.5? -1 : 1})); }
     br.at=u=>[lerp(ex,tipx,u), lerp(ey,tipy,u)-Math.sin(u*Math.PI)*br.bend];
-    const uP=rnd(.8,.88), C=Object.assign({kind},PB[kind]);   /* out toward the tip, well in from the edge of the frame */
+    const uP=rnd(.8,.88), C=Object.assign({kind},PB[kind]); br.uP=uP;   /* leaves, flowers and fruit keep clear of where the bird will sit */   /* out toward the tip, well in from the edge of the frame */
     const s0=[side<0? W*rnd(.5,.66) : W*rnd(.34,.5),H*rnd(.02,.14)], z0=3;   /* in out of the sky over the field, toward the branch */
     pbird={fcur:side,kind,C,t:0,phase:"in",dur:rnd(3.2,3.8),z0,s0,z,br,uP,side,face:-side,look:0,lookT:.6,tail:0,tailUp:0,gape:0,singT:rnd(1.4,2.6),stay:rnd(12,18),flap:rnd(0,6),ph:rnd(0,6),fold:0,turnT:rnd(5,9)}; }
   /* the four kinds of bough a songbird might come to: an apple with its fruit, a lilac in lavender bloom, a maple turning red with its keys, an oak with acorns */
   const BRSP={
-    apple:{n:18,size:.95,bark:[96,84,70],cols:[[86,124,46],[104,138,52],[122,140,58],[96,130,48],[148,146,62]],extras:[[.3,"apple"],[.52,"apple"],[.56,"apple"],[.74,"apple"],[.9,"apple"]],name:"Apple"},
+    apple:{n:18,size:.95,bark:[96,84,70],cols:[[86,124,46],[104,138,52],[122,140,58],[96,130,48],[148,146,62]],extras:[[.14,"apple"],[.22,"apple"],[.3,"apple"],[.38,"apple"],[.46,"apple"],[.52,"apple"],[.62,"apple"],[.7,"apple"],[.95,"apple"]],name:"Apple"},
     lilac:{n:16,size:1.05,bark:[110,104,96],cols:[[70,108,46],[86,120,52],[64,98,40],[92,124,58]],extras:[[.24,"bloom"],[.47,"bloom"],[.69,"bloom"],[.92,"bloom"]],name:"Lilac"},
     maple:{n:15,size:1.35,bark:[104,98,92],cols:[[196,52,30],[214,96,34],[226,150,44],[172,40,28],[188,118,40],[204,70,32]],extras:[[.36,"keys"],[.63,"keys"],[.86,"keys"]],name:"Maple"},
     oak:{n:17,size:1.3,bark:[78,64,52],cols:[[120,104,50],[148,104,52],[122,82,44],[100,98,46],[166,128,62],[134,90,44]],extras:[[.33,"acorn"],[.58,"acorn"],[.8,"acorn"]],name:"Oak"}};
@@ -3938,7 +3938,8 @@ const ambient=(function(){
       ctx.restore(); }
     /* the leaves, true to the tree: each its own shape, lit from the side the sun is on, veins, a few nibbled; some in front of the bough, some behind */
     const spc=br.sp||"oak", lp=leafPath(spc);
-    const extra=(e)=>{ const a=at(e.u), w=wd(e.u), s=H*.03*e.l;
+    const clear=u=>br.uP!=null&&Math.abs(u-br.uP)<.16;
+    const extra=(e)=>{ if(clear(e.u)) return; const a=at(e.u), w=wd(e.u), s=H*.03*e.l*(e.kind==="apple"? 1.3 : 1);
       if(e.kind==="apple"){ const hx=a[0]+e.side*s*.1, hy=a[1]+w*.4+s*.55+Math.sin(t*1.3+e.ph)*s*.03; ctx.strokeStyle=rgb(mulv([92,70,44],lt)); ctx.lineWidth=Math.max(.6,s*.05); ctx.beginPath(); ctx.moveTo(a[0],a[1]+w*.3); ctx.quadraticCurveTo(a[0]+e.side*s*.12,a[1]+s*.3,hx,hy-s*.42); ctx.stroke();
         const g=ctx.createRadialGradient(hx-sdx*s*.16,hy-s*.16,s*.04,hx,hy,s*.5); g.addColorStop(0,rgb(mulv([255,190,130],lt))); g.addColorStop(.25,rgb(mulv([214,46,34],lt))); g.addColorStop(.75,rgb(mulv([150,24,22],lt))); g.addColorStop(1,rgb(mulv([90,16,16],lt))); ctx.fillStyle=g;
         ctx.beginPath(); ctx.moveTo(hx,hy-s*.36); ctx.bezierCurveTo(hx+s*.52,hy-s*.56,hx+s*.6,hy+s*.3,hx+s*.08,hy+s*.42); ctx.bezierCurveTo(hx,hy+s*.46,hx,hy+s*.46,hx-s*.08,hy+s*.42); ctx.bezierCurveTo(hx-s*.6,hy+s*.3,hx-s*.52,hy-s*.56,hx,hy-s*.36); ctx.fill();   /* a round apple, dimpled at the stalk */
@@ -3961,7 +3962,7 @@ const ambient=(function(){
           ctx.strokeStyle=rgb(mulv([92,72,50],lt)); ctx.lineWidth=Math.max(.5,s*.035); ctx.beginPath(); ctx.moveTo(ax,ay-s*.18); ctx.lineTo(a[0],a[1]+w*.3); ctx.stroke(); } } };
     if(front) for(const e of br.extras||[]) if(e.kind!=="bloom") extra(e);
     if(!front) for(const e of br.extras||[]) if(e.kind==="bloom") extra(e);
-    for(const lf of br.leaves){ if((lf.up>0)!==!!front) continue; const a=at(lf.u), sz=H*.034*lf.l*(1-lf.u*.35);
+    for(const lf of br.leaves){ if((lf.up>0)!==!!front||clear(lf.u)) continue; const a=at(lf.u), sz=H*.034*lf.l*(1-lf.u*.35);
       ctx.save(); ctx.translate(a[0],a[1]); ctx.rotate(lf.up*lf.a+(br.side<0? 0 : Math.PI)+Math.sin(t*1.4+lf.u*11)*.07+br.k*.6+lf.tw);
       ctx.strokeStyle=rgb(mulv([90,70,50],lt)); ctx.lineWidth=Math.max(.6,sz*.04); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(sz*(spc==="maple"? .5 : .22),0); ctx.stroke();   /* the stem, long on the maple */
       ctx.translate(sz*(spc==="maple"? .5 : .22),0); ctx.scale(sz,sz*(1+lf.curl*.4)*(spc==="maple"? 1.1 : 1));
