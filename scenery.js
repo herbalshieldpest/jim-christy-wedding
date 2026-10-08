@@ -3505,7 +3505,7 @@ const ambient=(function(){
       const glyphs=[]; { let xx=(texW-wid())/2+fs*sp2/2; for(const ch of text.toLowerCase()){ const dig=/[0-9]/.test(ch); tx.font=dig? digFont : capsFont; const m=tx.measureText(ch), ww=m.width*(dig? dk : 1);
           glyphs.push({ch,x:xx,dig,y:mid+(capH+xH)/4}); xx+=ww+fs*sp2; } tx.font=capsFont; }
       const put=(col,dy)=>{ tx.fillStyle=col; for(const g of glyphs){ if(!g.dig) tx.fillText(g.ch,g.x,g.y+dy); else { tx.save(); tx.font=digFont; tx.translate(g.x,g.y+dy); tx.scale(dk,dk); tx.fillText(g.ch,0,0); tx.restore(); } } };   /* figures sit on the line with the capitals, everything centred top to bottom */
-      put("rgba(255,255,255,.55)",Math.max(.6,fs*.03)); put("#6a1f14",0); tx.globalAlpha=.25; put("#2a0a04",-Math.max(.4,fs*.015)); tx.globalAlpha=1; }   /* the lettering, pressed into the silk */
+      put("rgba(255,255,255,.5)",Math.max(.6,fs*.03)); put("#4a160c",0); tx.globalAlpha=.4; put("#200703",-Math.max(.4,fs*.015)); tx.globalAlpha=1; }   /* the lettering, pressed into the silk */
     { const th=Math.max(1.2,hgt*F/z*.05); x.fillStyle="#a8916c"; x.beginPath(); for(let i=0;i<=N;i++) i? x.lineTo(pts[i].bot[0],pts[i].bot[1]+th) : x.moveTo(pts[i].bot[0],pts[i].bot[1]+th); for(let i=N;i>=0;i--) x.lineTo(pts[i].bot[0],pts[i].bot[1]-.5); x.closePath(); x.fill(); }   /* the cloth has a thickness: its rolled lower hem */
     /* a copy of the lettering shrunk once, in high-quality halving steps, to about the size it shows on screen: thin lines and letter edges stay smooth instead of shimmering */
     let tex=btex, tS=1; { let L=0; for(let i=1;i<=N;i++) L+=Math.hypot(pts[i].top[0]-pts[i-1].top[0],pts[i].top[1]-pts[i-1].top[1]); const want=Math.max(128,Math.ceil(L/.85*bR*1.25/32)*32);
