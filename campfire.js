@@ -884,5 +884,7 @@ function set(v,now){ v=!!v; if(v===S.on) return; S.on=v; if(v) songLoad();
   else SP.holdNight(false);
   if(v){ load(); sndInit(); try{ ac&&ac.state!=="running"&&ac.resume(); }catch(e){} S.waitT=0; } }
 addEventListener("pointerdown",()=>{ if(S.on){ sndInit(); try{ ac&&ac.state!=="running"&&ac.resume(); }catch(e){} } },{passive:true}); addEventListener("keydown",()=>{ if(S.on){ sndInit(); try{ ac&&ac.state!=="running"&&ac.resume(); }catch(e){} } });
-window.Campfire={ set, toggle(){ set(!S.on); }, get on(){ return S.on; }, get leaving(){ return !S.on&&S.run; }, get leftAt(){ return leftAt; }, get walkedOff(){ return !S.on&&(!S.run||!!(flags.jimGone&&flags.chrGone)); } };
+window.Campfire={ set, toggle(){ set(!S.on); }, get on(){ return S.on; }, get leaving(){ return !S.on&&S.run; }, get leftAt(){ return leftAt; }, get walkedOff(){ return !S.on&&(!S.run||!!(flags.jimGone&&flags.chrGone)); },
+  get fire(){ return built? S.fire*S.alpha : 0; },   /* how brightly the fire is burning, for the scenery to light things by */
+  get firePt(){ try{ if(!built) return null; const w=toScr(cw(0,.15,0)); return {x:w.x,y:w.y}; }catch(e){ return null; } } };
 })();

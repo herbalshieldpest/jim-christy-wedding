@@ -1166,7 +1166,7 @@ const ambient=(function(){
       const top=IY(.38); ctx.save(); ctx.translate(0,Math.max(2,H*.004)); farBelow(ctx); ctx.translate(0,-Math.max(2,H*.004)); ctx.clip(); ctx.globalAlpha=.5*nA; if("filter" in ctx) ctx.filter="blur(.6px)"; ctx.drawImage(fmC,0,top,W,fmC.height); ctx.drawImage(fmC,0,top+fmC.height,W,fmC.height); ctx.filter="none"; ctx.restore(); }
     ctx.globalCompositeOperation="screen"; farBelow(ctx); ctx.clip();
     for(let i=0;i<n;i++){ const fx=(i+.5)/n, y0=ridgeY(SKYL.far,fx), yn=ridgeY(SKYL.near,fx), k=Math.max(0,Math.min(1,(yn-y0-H*.004)/(H*.03))); if(k<=0) continue; const y1=yn+2, g=ctx.createLinearGradient(0,y0,0,y1), f=fold(fx);
-      g.addColorStop(0,`rgba(84,106,156,${(.24*nA*k*f).toFixed(3)})`); g.addColorStop(.22,`rgba(66,86,132,${(.08*nA*k*f).toFixed(3)})`); g.addColorStop(.55,"rgba(60,80,126,0)"); ctx.fillStyle=g; const l=Math.round(x0+i*sw), r=Math.round(x0+(i+1)*sw); ctx.fillRect(l,y0-3,r-l,y1-y0+3); }   /* edge to edge, no overlaps, so no seams */
+      g.addColorStop(0,`rgba(84,106,156,${(.24*nA*nA*nA*k*f).toFixed(3)})`); g.addColorStop(.22,`rgba(66,86,132,${(.08*nA*nA*nA*k*f).toFixed(3)})`);   /* the crest's haze only comes in once it's truly dark, so no pale line flashes along the ridge as night comes and goes */ g.addColorStop(.55,"rgba(60,80,126,0)"); ctx.fillStyle=g; const l=Math.round(x0+i*sw), r=Math.round(x0+(i+1)*sw); ctx.fillRect(l,y0-3,r-l,y1-y0+3); }   /* edge to edge, no overlaps, so no seams */
     ctx.restore();
     ctx.restore(); drawNightGlow();
     /* the sky: drawn off to the side and cut along the far ridge with a soft edge, so the ridgeline reads as a silhouette rather than a cut-out */
@@ -1178,7 +1178,7 @@ const ambient=(function(){
         for(let i=0;i<W*hz/(MOBILE()? 1500 : 1100);i++){ const r=Math.random()<.05? rnd(.8,1.25) : rnd(.3,.7); y.fillStyle=`rgba(${pick(["236,240,255","255,244,226","226,234,255"])},${rnd(.35,.95).toFixed(2)})`; y.beginPath(); y.arc(Math.random()*sfC.width,Math.random()*sfC.height,r,0,6.283); y.fill(); } }
       x.save(); if(moonAt){ x.beginPath(); x.rect(0,0,nsC.width,nsC.height); x.arc(moonAt[0],moonAt[1],moonAt[2]*1.03,0,6.283); x.clip("evenodd"); }   /* the moon's disc hides the stars behind it, though its dark side is just more night sky */
       x.globalCompositeOperation="lighter"; x.globalAlpha=.8+.06*Math.sin(t*.9); x.drawImage(sfC,0,0); x.restore(); x.globalAlpha=1; }
-    x.globalCompositeOperation="destination-in"; x.filter="blur(1.2px)"; x.fillStyle="#000"; ridgePath(x,SKYL.far,Math.max(2,H*.003)); x.fill(); x.filter="none";
+    x.globalCompositeOperation="destination-in"; x.filter=`blur(${(1.2+(1-nA)*Math.max(3,H*.008)).toFixed(1)}px)`; x.fillStyle="#000"; ridgePath(x,SKYL.far,Math.max(2,H*.003)); x.fill(); x.filter="none";   /* the cut along the ridge softens as the night thins, so the line melts away rather than hangs there */
     x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=nA; ctx.drawImage(nsC,0,0); ctx.restore(); }
   function drawScene(dark){
@@ -4857,17 +4857,47 @@ const ambient=(function(){
     x.putImageData(id,0,0);
     /* graded into the photograph: the page's own colour cast over the limb */
     const tn=tint(); if(tn.a>0){ x.globalCompositeOperation="source-atop"; x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw,chh); x.globalAlpha=1; x.globalCompositeOperation="source-over"; } }
-  function limbLight(L,dark){ const sp=sun(), nightK=Math.min(1,nA*1.2), midX=L.x0+Math.cos(L.ang)*L.len*.5*-L.side, sunS=Math.sign(sp.x-midX)||1, lx=(L.side<0? 1 : -1)*sunS*Math.min(1,Math.abs(sp.x-midX)/(W*.5)+.25);
+  /* the campfire as a light: how bright, and which way it lies from the stick along the stick's own length */
+  function fireOn(L){ try{ const C=window.Campfire; if(!C||!C.fire) return null; const f=C.fire; if(f<.03) return null; const p=C.firePt||{x:W*.36,y:H*.86}, midX=L.x0+Math.cos(L.ang)*L.len*.5*-L.side, midY=L.y0-Math.abs(Math.sin(L.ang))*L.len*.5;
+      const dx=p.x-midX, dist=Math.hypot(dx,(p.y-midY)*2)/W; return {k:Math.min(1,f)*Math.max(.35,1-dist*.9),dirX:(L.side<0? 1 : -1)*Math.sign(dx||1)}; }catch(e){ return null; } }
+  /* a gentle rise of lawn right in front of us, the stick lying along its crest: the near ground is closer, so its grass is bigger and the animals on the stick sit at a believable scale.
+     Built from the photograph's own lawn, enlarged as nearer grass would be, with the crest catching the low light and its far end melting back into the field */
+  function makeHill(L){ const c=L.hill||(L.hill=document.createElement("canvas")); const cw2=Math.ceil(W), ch2=Math.ceil(H); if(c.width!==cw2||c.height!==ch2){ c.width=cw2; c.height=ch2; } const x=c.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,cw2,ch2);
+    const Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, S=(lx,ly)=>[L.x0+ca*lx*mx-sa*ly, L.y0+sa*lx*mx+ca*ly];
+    const crest=[]; for(let i=0;i<=60;i++){ const xl=lerp(-Ln*.2,Ln*1.32,i/60), xc=Math.max(0,Math.min(Ln,xl)); let ly=L.Rf(xc)*.8-L.sag(xc); if(xl>Ln){ const f=(xl-Ln)/(Ln*.32); ly+=f*f*H*.07; } crest.push(S(xl,ly)); }
+    const path=new Path2D(); crest.forEach((p2,i)=>i? path.lineTo(...p2) : path.moveTo(...p2)); const last=crest[crest.length-1], first=crest[0]; path.lineTo(last[0],H+40); path.lineTo(first[0]+(L.side<0? -W : W)*.1,H+40); path.lineTo(first[0]+(L.side<0? -W : W)*.1,first[1]); path.closePath();
+    if(photo){ const m=cover(), mid=S(Ln*.5,0), k=2.1; x.save(); x.translate(mid[0],H); x.scale(k,k); x.translate(-mid[0],-H); x.drawImage(photo,m.ox,m.oy,m.iw*m.s,m.ih*m.s); x.restore();   /* the same lawn, nearer */
+      const tn=tint(); if(tn.a>0){ x.globalAlpha=tn.a; x.fillStyle=tn.c; x.fillRect(0,0,cw2,ch2); x.globalAlpha=1; }
+      if(nA>.005){ x.globalCompositeOperation="saturation"; x.fillStyle=`rgba(128,128,128,${(.72*nA).toFixed(3)})`; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="multiply"; x.fillStyle=`rgb(${Math.round(255-nA*143)},${Math.round(255-nA*127)},${Math.round(255-nA*85)})`; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; x.fillStyle=`rgba(4,6,16,${(.38*nA).toFixed(3)})`; x.fillRect(0,0,cw2,ch2); } }
+    /* the face of the rise turned a little away from the sun behind it: darker toward us, the crest lit */
+    { const top=Math.min(...crest.map(p2=>p2[1])), g=x.createLinearGradient(0,top,0,H); g.addColorStop(0,"rgba(10,8,2,.12)"); g.addColorStop(.18,"rgba(10,8,2,.3)"); g.addColorStop(1,"rgba(6,4,2,.42)"); x.fillStyle=g; x.fillRect(0,0,cw2,ch2); }
+    x.globalCompositeOperation="destination-in"; x.filter=`blur(${(H*.004).toFixed(1)}px)`; x.fillStyle="#000"; x.fill(path); x.filter="none"; x.globalCompositeOperation="source-over";
+    /* the far end eases back into the field */
+    { const e=S(Ln*1.32,0), b2=S(Ln*.8,0), g=x.createLinearGradient(b2[0],0,e[0],0); g.addColorStop(0,"rgba(0,0,0,1)"); g.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,cw2,ch2); x.globalCompositeOperation="source-over"; }
+    /* backlit grass tips along the crest */
+    { const day=1-Math.min(1,nA*1.2); x.save(); x.filter="blur(1.2px)"; x.strokeStyle=nA>.3? `rgba(150,170,210,${(.18*nA).toFixed(2)})` : `rgba(255,214,150,${(.3*day).toFixed(2)})`; x.lineWidth=3; x.beginPath(); crest.slice(0,50).forEach((p2,i)=>i? x.lineTo(p2[0],p2[1]+1.5) : x.moveTo(p2[0],p2[1]+1.5)); x.stroke(); x.restore(); }
+    /* and a ragged fringe of the nearer, taller grass standing up along the crest against the field behind */
+    { let sd=L.seed+11; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; }; const day=1-Math.min(1,nA*1.2); for(let i=0;i<46;i++){ const f=i/46, p2=crest[Math.min(crest.length-1,Math.floor(f*50)+(RN()<.5? 0 : 1))]; for(let j=0;j<5;j++){ const bx=p2[0]+(RN()-.5)*14, by=p2[1]+2+RN()*4, h=4+RN()*RN()*16, lean=(RN()-.5)*h*.6;
+        x.strokeStyle=nA>.3? `rgba(40,46,58,.8)` : `rgba(${Math.round(70+RN()*60)},${Math.round(70+RN()*50)},${Math.round(30+RN()*20)},.85)`; x.lineWidth=.8+RN(); x.beginPath(); x.moveTo(bx,by); x.quadraticCurveTo(bx+lean*.3,by-h*.6,bx+lean,by-h); x.stroke();
+        if(day>.3&&RN()<.5){ x.strokeStyle=`rgba(255,210,140,${(.45*day).toFixed(2)})`; x.lineWidth=.7; x.beginPath(); x.moveTo(bx+lean*.6,by-h*.6); x.lineTo(bx+lean,by-h); x.stroke(); } } } }
+    L.hillKey=[Math.round(nA*20),Math.round(tint().a*20)].join(","); }
+  function limbLight(L,dark){ let L3f; const sp=sun(), nightK=Math.min(1,nA*1.2), midX=L.x0+Math.cos(L.ang)*L.len*.5*-L.side, sunS=Math.sign(sp.x-midX)||1, lx=(L.side<0? 1 : -1)*sunS*Math.min(1,Math.abs(sp.x-midX)/(W*.5)+.25);
     const elev=Math.max(.12,Math.min(.85,(H*.62-sp.y)/H+.15)), g=L.gc||[110,110,60], day=(1-nightK)*(dark? .45 : 1);
     /* the low sun is behind the field: it lights the top and far side, rims the near edge; the near face is in the sky's cool shade */
     const sunC=[2.3*day,1.6*day,.95*day], skyC=[lerp(.2,.04,nightK)*(dark? .6 : 1),lerp(.23,.05,nightK)*(dark? .6 : 1),lerp(.3,.1,nightK)*(dark? .6 : 1)], bnc=[Math.pow(g[0]/255,2.2)*1.1*day+.01,Math.pow(g[1]/255,2.2)*1.1*day+.012,Math.pow(g[2]/255,2.2)*.9*day+.012];
+    const fo=fireOn(L); if(fo&&nightK>.3){ const fk=Math.round(fo.k*12)/12; L3f=[fo.dirX*.82,-.25,.42]; sunC[0]=2.8*fk; sunC[1]=1.35*fk; sunC[2]=.5*fk; skyC[0]=.035; skyC[1]=.05; skyC[2]=.11; bnc[0]=.05*fk; bnc[1]=.025*fk; bnc[2]=.01*fk;   /* by the fire: lit warm along the side toward it, cool moonlit blue on the rest */
+      return {L:L3f,sunC,skyC,bnc,dir:"fire"+L3f.join(","),key:["fire",fk,fo.dirX,Math.round(nightK*25)].join(",")}; }
+    if(nightK>.3){ const mo=moonAt? moonAt[0] : W*.15, mx2=(L.side<0? 1 : -1)*Math.sign(mo-midX||1), mk=Math.round(nightK*10)/10; const Lm=[mx2*.5,.55,.65]; sunC[0]=.8*mk; sunC[1]=.95*mk; sunC[2]=1.3*mk; skyC[0]=.05; skyC[1]=.065; skyC[2]=.11;   /* moonlight from behind and above: a cool sheen along the top and a bright rim, so the stick still reads against the dark grass */
+      return {L:Lm,sunC,skyC,bnc,dir:"moon"+Lm.join(","),key:["moon",mx2,mk,dark?1:0].join(",")}; }
     const L3=[Math.round(lx*10)/10*.55,.7,Math.round(elev*10)/10]; return {L:L3,sunC,skyC,bnc,dir:L3.join(","),key:[Math.round(lx*10),Math.round(elev*20),Math.round(nightK*25),dark?1:0,Math.round(tint().a*20)].join(",")}; }
   let nextLogAuto=rnd(90,180);
   /* anything walking on the lawn keeps off the stick: the stick is handed to the lawn's own steering as a chain of keep-out circles on the ground,
      the same way the campfire is, so walkers route round it smoothly instead of being shoved about */
   function stickObs(){ const L=logC; if(!L||L.a<=.05) return []; const N=18, Ln=L.len, ca=Math.cos(L.ang), sa=Math.sin(L.ang), mx=L.side>0? -1 : 1, G=gnd(), o=[];
     for(let i=0;i<=N;i++){ const xl=i/N*Ln, r=L.Rf(xl), ly=-L.sag(xl)+r*.3, sx=L.x0+ca*xl*mx-sa*ly, sy=L.y0+sa*xl*mx+ca*ly, g=Math.max(4,sy-G.vy), gp=toGround(sx,sy); if(!gp||!isFinite(gp.Xw)) continue;
-      const hwD=(r*1.3+8)*GF/(g*g), stepX=Ln/N*Math.abs(ca)/g*XM; o.push({Xw:gp.Xw,Dw:gp.Dw,r:Math.max(hwD,stepX*.75)}); }
+      const hwD=(r*1.3+8)*GF/(g*g), stepX=Ln/N*Math.abs(ca)/g*XM, gb=toGround(sx,H+20), Db=gb&&isFinite(gb.Dw)? Math.min(gp.Dw,gb.Dw) : gp.Dw;
+      /* each circle reaches from just behind the stick right down to the bottom of the frame: the rise in front of it is off limits too, so nothing can pass between us and the stick */
+      const Dc=(gp.Dw+hwD+Db)/2, rr=(gp.Dw+hwD-Db)/2+hwD*.5; o.push({Xw:gp.Xw,Dw:Dc,r:Math.max(rr,stepX*.75)}); }
     return o; }
   PLUGS.push({obstacles:stickObs});
   function drawLogCrawler(dt,dark){ nextLogAuto-=(lull>0? 0 : dt); if(!logC&&nextLogAuto<=0){ if(stageBusy()||nA>.3||(barkMap&&!barkMap.done)) nextLogAuto=rnd(15,30); else { startLogCrawler(pick(["skink","skink","eft","eft","turtle","slimy"])); nextLogAuto=rnd(160,320); } }   /* now and then a skink or an eft comes out on its own, onto a stick in the grass */
@@ -4893,6 +4923,7 @@ const ambient=(function(){
       if(nA>.005){ gx.globalCompositeOperation="saturation"; gx.fillStyle=`rgba(128,128,128,${(.72*nA).toFixed(3)})`; gx.fillRect(0,0,cw,chh); gx.globalCompositeOperation="multiply"; gx.fillStyle=`rgb(${Math.round(255-nA*143)},${Math.round(255-nA*127)},${Math.round(255-nA*85)})`; gx.fillRect(0,0,cw,chh); gx.fillStyle=`rgba(4,6,16,${(.3*nA).toFixed(3)})`; gx.globalCompositeOperation="source-atop"; gx.fillRect(0,0,cw,chh); }   /* graded for night just as the lawn is */
       gx.setTransform(1,0,0,1,0,0); gx.globalCompositeOperation="multiply"; gx.fillStyle="rgb(170,166,150)"; gx.fillRect(0,0,cw,chh);   /* the blades down here stand in the stick's own shade, not the open sun beyond it */
       gx.globalCompositeOperation="destination-in"; gx.drawImage(L.mask,0,0); gx.globalCompositeOperation="source-over"; }
+    { const hk=[Math.round(nA*20),Math.round(tint().a*20)].join(","); if(!L.hill||L.hillKey!==hk) makeHill(L); ctx.save(); ctx.globalAlpha=L.a; ctx.drawImage(L.hill,0,0,W,H); ctx.restore(); }   /* the rise of ground it lies on */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);   /* now x runs along the limb from the frame's edge inward */
     /* its shadow: not paint laid over the lawn but the lawn itself darkened, so every blade of the photo's grass still shows through it.
        A soft occlusion right under the stick where no sky reaches, and a fainter shade falling toward us from the low sun behind */
@@ -4916,10 +4947,10 @@ const ambient=(function(){
     /* the animal, in the limb's frame */
     stepLogAnimal(L,dt);
     { ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);
-      const xl=L.u*Ln, r=R(xl);
+      const xl=L.u*Ln, r=R(xl), fo=nightK>.3? fireOn(L) : null; L.fireK=fo? fo.k : 0; const sunS2=fo? fo.dirX*L.dir*((L.side<0? 1 : -1)) : sunS;   /* at the campfire, the firelight takes the sun's part */
       ctx.translate(xl,-sag(xl)); ctx.scale(L.dir,1);   /* on the limb's axis; the animal sits on the round of it, seen from a little above */
-      if(L.kind==="turtle"){ const S=H*.00115; drawTurtleLog(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS*L.dir,r/S,.5); }
-      else { const S=H*.0023*(L.kind==="eft"? 1.3 : 1); drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS*L.dir,r/S,.5); }
+      if(L.kind==="turtle"){ const S=H*.00115; drawTurtleLog(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
+      else { const S=H*.0023*(L.kind==="eft"? 1.3 : 1); drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS2*L.dir,r/S,.5); }
       ctx.restore(); }
     /* the real grass laid back over the stick's foot */
     if(nA<.6){ ctx.save(); ctx.globalAlpha=L.a*(1-nA/.6); ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.drawImage(gs,L.imgX,L.imgY,cw/k,chh/k); ctx.restore(); }   /* by night the blades are lost in the dark anyway; let them go rather than glow */
@@ -4927,9 +4958,9 @@ const ambient=(function(){
   /* an eastern painted turtle hauled out on the stick to bask: a low smooth olive-black shell with pale seams between the scutes and red bars round its rim,
      a black head striped yellow, legs striped red, straddling the stick with its claws hooked round it. Same frame as the lizards (mm, X forward, Y away, Z up) */
   function drawTurtleLog(L,S,dark,lt,nightK,sunSide,Rm,el){ const x=ctx, se=Math.sin(el), ce=Math.cos(el), q=L.ph, mv=L.state==="go", bask=L.state!=="go"? Math.min(1,L.st/1.2) : 0;
-    const P=(X,Y,Z)=>[X,-Y*se-Z*ce], surf=Y=>Math.sqrt(Math.max(0,Rm*Rm-Y*Y)), V=[0,-ce,se], Ls=v3.n([sunSide*.55,.2,.8]), K=lt*(dark? .55 : 1)*(1-nightK*.7);
+    const P=(X,Y,Z)=>[X,-Y*se-Z*ce], surf=Y=>Math.sqrt(Math.max(0,Rm*Rm-Y*Y)), V=[0,-ce,se], fk=L.fireK||0, Ls=fk>0? v3.n([sunSide*.85,-.25,.45]) : v3.n([sunSide*.55,.2,.8]), K=lt*(dark? .55 : 1)*(1-nightK*.7)+fk*.55;
     const A=56, Bw=43, C=29, z0=Rm+7+(mv? Math.abs(Math.sin(q))*1.2 : 0), sway=mv? Math.sin(q)*2.5 : 0;
-    const shade=(c,n,spec)=>{ const d=Math.max(0,v3.d(n,Ls)), k=(.3+.18*Math.max(0,n[2])+.75*d)*K; let o=[c[0]*k+2,c[1]*k+3,c[2]*k+5]; if(spec){ const hv=v3.n(v3.a(Ls,V)), sp=Math.pow(Math.max(0,v3.d(n,hv)),30)*spec*(dark? .3 : 1); o=mixv(o,[255,248,230],sp); } return o; };
+    const shade=(c,n,spec)=>{ const d=Math.max(0,v3.d(n,Ls)), k=(.3+.18*Math.max(0,n[2])+.75*d)*K; let o=[c[0]*k+2,c[1]*k+3,c[2]*k+5]; if(spec){ const hv=v3.n(v3.a(Ls,V)), sp=Math.pow(Math.max(0,v3.d(n,hv)),30)*spec*(dark&&!fk? .3 : 1); o=mixv(o,fk? [255,190,120] : [255,248,230],sp); } if(fk>0) o=[o[0]*(1+.3*fk),o[1]*(1-.02*fk),o[2]*(1-.35*fk)]; return o; };
     const zS=(X,Y)=>{ const e=1-(X/A)**2-(Y/Bw)**2; return e<=0? null : z0+C*Math.pow(e,.62); };
     const nS=(X,Y)=>{ const e=Math.max(.02,1-(X/A)**2-(Y/Bw)**2), g=C*.62*Math.pow(e,-.38); return v3.n([2*X/(A*A)*g,2*Y/(Bw*Bw)*g,1]); };
     x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
@@ -4939,7 +4970,7 @@ const ambient=(function(){
     const legs=[[38,1,0],[38,-1,Math.PI],[-36,1,Math.PI],[-36,-1,0]];
     const leg=([lx,sd,ph])=>{ const front=lx>0, cyc=mv? Math.sin(q+ph) : 0, reach=cyc*8, lift=mv? Math.max(0,Math.cos(q+ph))*3 : 0;
       const hip=[lx*.92+sway*.2,sd*Bw*.62,z0-2], fy=sd*Rm*.82, foot=[lx+reach+(front? 6 : -6)+(bask&&!front? -10*bask : 0),fy,surf(fy)+lift], knee=[(hip[0]+foot[0])/2+(front? 4 : -4),sd*(Bw*.7+(bask? 6*bask : 0)),z0-1];
-      const H1=P(...hip), K1=P(...knee), F1=P(...foot), nn=v3.n([0,sd,.3]), base=shade([46,48,34],nn), str=shade([200,70,40],nn);
+      const H1=P(...hip), K1=P(...knee), F1=P(...foot), nn=v3.n([0,sd,.3]), base=shade([46,48,34],nn), str=shade([255,64,24],nn).map(c=>Math.min(255,c*1.3));
       x.strokeStyle=rgb(base); x.lineWidth=11; x.beginPath(); x.moveTo(...H1); x.quadraticCurveTo(...K1,...F1); x.stroke();
       x.strokeStyle=rgb(str,.85); x.lineWidth=1.6; x.beginPath(); x.moveTo(H1[0],H1[1]-2); x.quadraticCurveTo(K1[0],K1[1]-2.5,F1[0],F1[1]-1.5); x.stroke();
       x.strokeStyle=rgb(shade([210,190,90],nn),.6); x.lineWidth=1.1; x.beginPath(); x.moveTo(H1[0],H1[1]+2.5); x.quadraticCurveTo(K1[0],K1[1]+2,F1[0],F1[1]+1.5); x.stroke();
@@ -4951,7 +4982,7 @@ const ambient=(function(){
     const hx=A-4+(mv? 10 : 16+8*bask), hz=z0+4+bask*9, hy=sway*.6+(L.look||0)*10;
     { const n0=P(A*.7,hy*.4,z0+2), hc=P(hx,hy,hz), nk=v3.n([0,-.3,.9]);
       x.strokeStyle=rgb(shade([38,40,30],nk)); x.lineWidth=17; x.beginPath(); x.moveTo(...n0); x.lineTo(...hc); x.stroke();
-      for(const [o2,col,w] of [[-5.5,[236,200,64],1.5],[-3.5,[206,64,34],1.2],[-1.5,[236,200,64],1.3],[1,[206,64,34],1.1],[3.2,[236,200,64],1.4],[5.4,[236,200,64],1.1]]){ x.strokeStyle=rgb(shade(col,nk),.92); x.lineWidth=w; const a=P(A*.68,hy*.4+o2*.6,z0+2+o2), b=P(hx-6,hy+o2*.8,hz+o2*.9); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); }   /* the neck striped yellow and red */
+      for(const [o2,col,w] of [[-5.5,[236,200,64],1.5],[-3.5,[255,60,24],1.3],[-1.5,[236,200,64],1.3],[1,[255,60,24],1.2],[3.2,[236,200,64],1.4],[5.4,[236,200,64],1.1]]){ x.strokeStyle=rgb(shade(col,nk),.92); x.lineWidth=w; const a=P(A*.68,hy*.4+o2*.6,z0+2+o2), b=P(hx-6,hy+o2*.8,hz+o2*.9); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); }   /* the neck striped yellow and red */
       const hd=new Path2D(); { const pts=[]; for(let i=0;i<=24;i++){ const a=i/24*6.283; pts.push(P(hx+Math.cos(a)*17,hy+Math.sin(a)*9.5,hz+Math.sin(a)*4.5+(Math.cos(a)>.6? -2.5 : 0))); } pts.forEach((p,i)=>i? hd.lineTo(...p) : hd.moveTo(...p)); hd.closePath(); }
       x.fillStyle=rgb(shade([22,24,18],v3.n([.2,-.4,.9]),.25)); x.fill(hd); x.save(); x.clip(hd);
       { const hn=v3.n([.2,-.4,.9]), Y2=rgb(shade([240,206,70],hn),.95); x.strokeStyle=Y2; x.lineWidth=1.3; for(const o2 of [-7.5,-3.8,3.8]){ const a=P(hx-16,hy+o2,hz+2), b=P(hx+8,hy+o2*.45,hz+2.5); x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); }   /* thin yellow lines back over the crown */
@@ -4983,8 +5014,8 @@ const ambient=(function(){
     x.strokeStyle=rgb(shade([22,24,16],[0,0,1]),.55); x.lineWidth=.55; for(const sm2 of seams) seam(sm2);
     /* the red bars and crescents painted on every marginal, and the red showing at the shell's edge */
     for(let i=0;i<24;i++){ const a0=i/24*6.283+.05, a1=(i+1)/24*6.283-.05, am=(a0+a1)/2, poly=[]; for(const [aa,rr2] of [[am-.035,.885],[am+.035,.885],[am+.055,.99],[am-.055,.99]]){ const p2=onS(Math.cos(aa)*A*rr2,Math.sin(aa)*Bw*rr2); if(p2) poly.push(p2); } if(poly.length<4) continue;
-      const nn=v3.n([Math.cos(am)/A,Math.sin(am)/Bw,.012]); if(v3.d(nn,V)<-.15) continue; x.fillStyle=rgb(shade([200,52,26],v3.n([nn[0],nn[1],.6]),.3),.8); x.beginPath(); poly.forEach((p2,k2)=>k2? x.lineTo(...P(...p2)) : x.moveTo(...P(...p2))); x.closePath(); x.fill(); }
-    { x.strokeStyle=rgb(shade([206,64,30],[0,-.7,-.2]),.85); x.lineWidth=1.6; x.beginPath(); let on=false; for(let i=0;i<=60;i++){ const a=i/60*6.283, Y=Math.sin(a)*Bw*.995; if(Y>Bw*.15){ on=false; continue; } const p2=P(Math.cos(a)*A*.995,Y,z0-1); on? x.lineTo(...p2) : x.moveTo(...p2); on=true; } x.stroke(); }
+      const nn=v3.n([Math.cos(am)/A,Math.sin(am)/Bw,.012]); if(v3.d(nn,V)<-.15) continue; x.fillStyle=rgb(shade([255,58,20],v3.n([nn[0],nn[1],.6]),.3).map(c=>Math.min(255,c*1.35)),.95); x.beginPath(); poly.forEach((p2,k2)=>k2? x.lineTo(...P(...p2)) : x.moveTo(...P(...p2))); x.closePath(); x.fill(); }
+    { x.strokeStyle=rgb(shade([255,64,22],[0,-.7,-.2]).map(c=>Math.min(255,c*1.35)),.95); x.lineWidth=1.8; x.beginPath(); let on=false; for(let i=0;i<=60;i++){ const a=i/60*6.283, Y=Math.sin(a)*Bw*.995; if(Y>Bw*.15){ on=false; continue; } const p2=P(Math.cos(a)*A*.995,Y,z0-1); on? x.lineTo(...p2) : x.moveTo(...p2); on=true; } x.stroke(); }
     /* wet sheen and the rim of light toward the sun */
     { const g=x.createRadialGradient(...P(-sunSide*10,-8,z0+C),0,...P(-sunSide*10,-8,z0+C),A*.6); g.addColorStop(0,`rgba(255,246,226,${(.12*(1-nightK)).toFixed(2)})`); g.addColorStop(1,"rgba(255,246,226,0)"); x.fillStyle=g; x.beginPath(); for(let i=0;i<=40;i++){ const a=i/40*6.283, p=onS(Math.cos(a)*A*.99,Math.sin(a)*Bw*.99)||[0,0,z0]; x.lineTo(...P(p[0],p[1],p[2])); } x.fill(); }
     for(const l of legs) if(!farLeg(l)) leg(l);
@@ -5001,7 +5032,7 @@ const ambient=(function(){
   /* the eft or the skink in true 3D, lying on the round top of the limb: a lofted body that swings in a travelling wave across the bark,
      shaded band by band from its own surface normals, its markings laid on that surface, legs reaching down to plant their toes on the curve of the limb.
      Frame: X along the limb (head toward +X), Y across it (+ away from the viewer), Z up from the limb's axis; units are millimetres; el is how far we look down on it */
-  function drawLogAnimal(L,S,dark,lt,nightK,sunSide,Rm,el){ const sl=L.kind==="slimy", sk=L.kind==="skink", q=L.ph, mv=L.state==="go", x=ctx, se=Math.sin(el), ce=Math.cos(el);
+  function drawLogAnimal(L,S,dark,lt,nightK,sunSide,Rm,el){ const fk=L.fireK||0, sl=L.kind==="slimy", sk=L.kind==="skink", q=L.ph, mv=L.state==="go", x=ctx, se=Math.sin(el), ce=Math.cos(el);
     const svl=sk? 62 : sl? 58 : 40, tl=sk? 70 : sl? 62 : 36, Ltot=svl+tl, amp=(mv? 1 : .3)*(sk? 4.2 : 3.4), hd=L.head||0, lk=L.look||0;
     const lat=s=>Math.sin(q-s/Ltot*Math.PI*2.1)*amp*Math.min(1,s/14)*(s>svl? 1+(s-svl)/tl*.7 : 1)+(s<14? lk*(1-s/14)*7 : 0);
     const sx=s=>svl*.55-s, surf=Y=>Math.sqrt(Math.max(0,Rm*Rm-Y*Y));
@@ -5018,14 +5049,15 @@ const ambient=(function(){
     const SECT=[]; for(let i=0;i<=34;i++){ const s=Math.pow(i/34,1.15)*Ltot; SECT.push([s,hw(s),hh(s),zc(s)]); }
     const nS=SECT.length;
     /* light: the sun's side and from above, a cool sky fill; the eye toward us */
-    const Ls=v3.n([sunSide*.55,.15,.82]), V=[0,-ce,se];
-    const lit=dark? .55 : 1, K=lt*lit*(1-nightK*(sl? .45 : .72))*(sk? 1 : sl? 1.15 : 1.3);   /* the eft's orange is vivid, almost glowing, even in the low light */
+    const Ls=fk>0? v3.n([sunSide*.85,-.25,.45]) : v3.n([sunSide*.55,.15,.82]), V=[0,-ce,se];
+    const lit=dark? .55 : 1, K=(lt*lit*(1-nightK*(sl? .45 : .72))+fk*.55)*(sk? 1 : sl? 1.15 : 1.3);   /* the eft's orange is vivid, almost glowing, even in the low light */
     const PAL= sl? {base:[20,20,24],dark:[14,14,18],belly:[52,52,58]} : sk? {base:[44,38,32],stripe:[206,190,140],tail:[66,98,170],tail2:[44,66,124],belly:[176,170,150]} : {base:[255,96,0],dark:[250,80,0],spot:[255,16,8],ring:[24,8,4],belly:[255,150,30]};
     const colAt=(s,th)=>{ let c=PAL.base; if(sk&&s>svl-4) c=mixv(mixv(PAL.base,PAL.tail,Math.min(1,(s-svl+4)/14)),PAL.tail2,Math.min(1,(s-svl)/tl)*.6); if(Math.sin(th)<-.2) c=mixv(c,PAL.belly,Math.min(1,(-Math.sin(th)-.2)*2)); if(!sk&&Math.sin(th)>.6) c=mixv(c,PAL.dark,(Math.sin(th)-.6)*.5); return c; };
     const nrmAt=(s,th)=>{ const f=frame(s), w=hw(s)||1, h=hh(s)||1, a=Math.cos(th)/w, b=Math.sin(th)/h; return v3.n([f.nx*a,f.ny*a,b]); };
     const shadeC=(c,n,s)=>{ const d=Math.max(0,v3.d(n,Ls)), amb=.34+.18*Math.max(0,n[2]), k=(amb+.78*d)*K; let o=mulv(c,k); o=[o[0]+10*(1-d)*(dark? .6:1)*.5,o[1]+12*(1-d)*.5,o[2]+22*(1-d)*.5];   /* shadows go cool toward the sky */
       if(sk||sl){ const hv=v3.n(v3.a(Ls,V)), sp=Math.pow(Math.max(0,v3.d(n,hv)),sl? 22 : 36)*(dark? .25 : .9)*(sl? .8 : 1); o=mixv(o,[255,250,236],sp); }   /* polished scales, or the salamander's wet, slimy gloss */   /* the skink's polished scales catch the sun */
       if(!sk&&!sl){ const v=Math.max(o[0],o[1],o[2])||1, sat=1.35; o=o.map(cc=>v-(v-cc)*sat); o=mixv(o,c,.3*(1-nightK)); }   /* the eft's colour is loud: saturated, and holding its brightness even in shade */
+      if(fk>0) o=[o[0]*(1+.3*fk),o[1]*(1-.02*fk),o[2]*(1-.35*fk)];   /* warmed by the fire */
       return o.map(cc=>Math.max(0,Math.min(255,cc))); };
     const body=hullLoft(SECT,pt,false);
     x.save(); x.scale(S,S); x.lineCap="round"; x.lineJoin="round";
@@ -7957,7 +7989,7 @@ const ambient=(function(){
       drawHenAll(dt,dark,L);
       if(hawkG&&(hawkG.state==="land"||hawkG.state==="sit"||hawkG.state==="lift")) L.push({y:hawkG.ty,fn:()=>drawHawkG(dt,dark,"ground")});
       turkeyQueue(dt,dark,L); tomQueue(dt,dark,L);
-      L.push({y:logC? logC.y0-Math.abs(Math.sin(logC.ang))*logC.len*.5 : -1e9,fn:()=>drawLogCrawler(dt,dark)});   /* the stick lies in the lawn, in depth order with whatever walks past it; the near leaves, the web and the tall grass all stand in front of it */
+      L.push({y:logC? 1e9 : -1e9,fn:()=>drawLogCrawler(dt,dark)});   /* the stick and its rise are the nearest ground: everything on the lawn is kept behind them, so they're drawn after it; the near leaves, the web and the tall grass still stand in front */
       steerClear([fox,skunk,cub,mom,coyote,coy2,bobcat,pheasW,dog,lab,racc,beaver,...["hog","possum","otter","porc"].map(k=>WAD[k].get()),...quails,...buns,...wcs,...sqs,...smalls,doe,doe&&doe.fawn]);
       for(const pl of PLUGS) if(pl.lawn) try{ pl.lawn(L,dt,dark); }catch(e){ if(frameErr++<3) console.warn("scenery plug:",e); }
       L.sort((a,b)=>a.y-b.y); for(const it of L){ ctx.globalAlpha=1; it.fn(); } ctx.globalAlpha=1; drawGrouse(dt,dark); ctx.globalAlpha=1; drawPheasant(dt,dark); drawCovey(dt,dark); ctx.globalAlpha=1; drawMoths(dt,dark,"field"); drawFireflies(dt,dark); drawMonarchs(dt,dark); drawBugs(dt,dark); drawChase(dt,dark); }
