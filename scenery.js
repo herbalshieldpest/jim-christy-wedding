@@ -877,11 +877,14 @@ const ambient=(function(){
   function drawSunShower(dt,dark){ if(ssA<=.01){ ssDrops=null; ssSplash.length=0; return; } const n=MOBILE()? 170 : 420, hz=gnd().vy, sp=sun(), sc=H/800;
     if(!ssDrops) ssDrops=Array.from({length:n},()=>{ const r=Math.random(), d=r<.58? Math.random()*.25 : r<.9? .25+Math.random()*.4 : .7+Math.random()*.3; return {x:Math.random()*W*1.2,y:Math.random()*H,d}; });   /* most of it far off and fine, some in the middle distance, a few big drops right in front of us */
     ctx.save(); ctx.lineCap="round";
+    const B=[0,1,2].map(()=>[new Path2D(),new Path2D()]);   /* far, middle, near; out of the sun's glare and in it */
     for(const q of ssDrops){ const d=q.d, dd=d*d, v=(380+2200*dd)*sc, L=(4+18*d+95*dd*d)*sc, yEnd=lerp(hz+8,H+20,Math.min(1,d*1.3)), wind=-.2;
       q.y+=v*dt; q.x+=v*dt*wind; if(q.y>yEnd){ if(d>.35&&ssSplash.length<60&&Math.random()<ssA) ssSplash.push({x:q.x,y:yEnd,d,t:0}); q.y=-Math.random()*H*.4; q.x=Math.random()*W*1.25; }
-      const glint=1+1.6*Math.exp(-Math.pow((q.x-sp.x)/(W*.22),2)), a=ssA*(.1+.34*d)*Math.min(1.6,glint)*(dark? .7 : 1);
-      const rc=`255,${Math.round(232-20*(glint-1))},${Math.round(196-40*(glint-1))}`; if(d>.7){ ctx.strokeStyle=`rgba(${rc},${(a*.28).toFixed(3)})`; ctx.lineWidth=(2.5+6*(d-.7))*sc; ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(q.x-L*wind,q.y-L); ctx.stroke(); }   /* the nearest drops big and soft, out of focus */
-      ctx.strokeStyle=`rgba(${rc},${a.toFixed(3)})`; ctx.lineWidth=(.35+1.1*d+1.6*dd)*sc; ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(q.x-L*wind,q.y-L); ctx.stroke(); }   /* each drop a short streak, brighter where it crosses the sun */
+      const tier=d<.25? 0 : d<.7? 1 : 2, gl=Math.abs(q.x-sp.x)<W*.2? 1 : 0, P=B[tier][gl]; P.moveTo(q.x,q.y); P.lineTo(q.x-L*wind,q.y-L); }
+    const dk=dark? .7 : 1;
+    for(let tier=0;tier<3;tier++) for(let gl=0;gl<2;gl++){ const P=B[tier][gl], d=[.12,.47,.85][tier], a=ssA*(.1+.34*d)*(gl? 1.9 : 1)*dk, rc=gl? "255,214,150" : "255,232,196";
+      if(tier===2){ ctx.strokeStyle=`rgba(${rc},${(a*.28).toFixed(3)})`; ctx.lineWidth=3.4*sc; ctx.stroke(P); }   /* the nearest drops big and soft, out of focus */
+      ctx.strokeStyle=`rgba(${rc},${Math.min(1,a).toFixed(3)})`; ctx.lineWidth=[.5,1.1,2.4][tier]*sc; ctx.stroke(P); }   /* each drop a short streak, brighter where it crosses the sun */
     for(const s2 of ssSplash){ s2.t+=dt; const k=s2.t/.28, r=(1.5+5*s2.d)*sc*(.4+k); ctx.strokeStyle=`rgba(255,240,214,${(ssA*.45*(1-k)*s2.d).toFixed(3)})`; ctx.lineWidth=.8*sc; ctx.beginPath(); ctx.ellipse(s2.x,s2.y,r,r*.3,0,Math.PI,6.283); ctx.stroke(); }   /* little crowns of spray where they land */
     ssSplash=ssSplash.filter(s2=>s2.t<.28);
     { const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,`rgba(255,236,200,${(.05*ssA).toFixed(3)})`); g.addColorStop(.55,`rgba(230,214,190,${(.035*ssA).toFixed(3)})`); g.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }   /* the sunlit haze of the shower */
@@ -900,7 +903,7 @@ const ambient=(function(){
     for(const q of gustStreaks){ q.x+=wd*q.sp*dt; const k=Math.max(.2,gustB); ctx.strokeStyle=`rgba(255,244,222,${(q.a*k).toFixed(3)})`; ctx.lineWidth=q.w*sc; ctx.beginPath(); const x0=q.x, x1=q.x-wd*q.len; ctx.moveTo(x0,q.y); ctx.bezierCurveTo(x0-wd*q.len*.33,q.y-6*sc*Math.sin(q.ph+t*4),x0-wd*q.len*.66,q.y+6*sc*Math.sin(q.ph+t*4),x1,q.y); ctx.stroke(); }   /* thin wisps of the air itself, catching the low sun as they race past */
     ctx.restore(); gustStreaks=gustStreaks.filter(q=>q.x>-q.len-100&&q.x<W+q.len+100); }
   function drawSeeds(dt,dark){ drawGustAir(dt); if(sdsA<=.01&&!seeds.length){ seedT=0; return; } if(!seedSpr) seedSpr=makeSeedSpr(); const sc=H/800, sp=sun(), hz=gnd().vy;
-    if(!seedT&&sdsA>.05){ seedT=t; try{ natureSfx.puff&&natureSfx.puff((window.__seedDir||-1)*-.4); }catch(e){} try{ for(const c of ["leaf","milk"]){ const F=FLUR[c]; F.on=true; F.t=0; F.dur=12; F.acc=0; F.rate=c==="leaf"? 3.2 : 2; } }catch(e){} }   /* the burst tears loose leaves and fluff from everything */
+    if(!seedT&&sdsA>.05){ seedT=t; try{ natureSfx.puff&&natureSfx.puff((window.__seedDir||-1)*-.4); }catch(e){} try{ for(const c of ["leaf","milk"]){ const F=FLUR[c]; F.on=true; F.t=0; F.dur=12; F.acc=0; F.rate=c==="leaf"? 1.8 : 1.2; } }catch(e){} }   /* the burst tears loose leaves and fluff from everything */
     const wind=(window.__seedDir||-1);
     if(sdsA>.2&&seeds.length<(MOBILE()? 40 : 80)&&Math.random()<dt*(MOBILE()? 4 : 8)*(.4+gustB*2.2)){ const fromField=Math.random()<.7, d=Math.pow(Math.random(),1.5), x0=fromField? W*rnd(.55,1.0) : W*rnd(0,.4), y0=lerp(hz+H*.04,H*.95,d)-rnd(0,H*.05);
       seeds.push({x:x0,y:y0,d,vx:wind*rnd(30,80)*(.4+d),vy:-rnd(20,60)*(.5+d),ph:rnd(0,6),rot:rnd(-.3,.3),life:0,max:rnd(14,24)}); }   /* lifting off the pods in the goldenrod */
@@ -914,15 +917,30 @@ const ambient=(function(){
       ctx.setTransform(T0); }
     ctx.restore(); seeds=seeds.filter(q=>!q.dead); if(sdsA<=.01&&!seeds.length) seedT=0; }
   /* ---- moonrise: a big full moon comes up orange out of the haze over the far ridge, flattened a little at first, then climbs, shrinks back to its proper size and pales to silver, lighting the field below ---- */
-  const mrC=document.createElement("canvas"), mrX=mrC.getContext("2d"); let fullMoon=null;
+  const mrC=document.createElement("canvas"), mrX=mrC.getContext("2d"), mlC=document.createElement("canvas"); let fullMoon=null;
   /* a full moon (it rises at sunset, so it's always full when it comes up like this): limb-darkened disc, the dark maria where they really lie, Tycho's bright rays */
-  function makeFullMoon(){ const S=256, c=document.createElement("canvas"); c.width=c.height=S; const x=c.getContext("2d"), r=S/2-2, cx=S/2, cy=S/2;
-    const g=x.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,"#f2eee4"); g.addColorStop(.75,"#e6e1d4"); g.addColorStop(1,"#c9c3b4"); x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,6.283); x.fill();
-    x.save(); x.beginPath(); x.arc(cx,cy,r,0,6.283); x.clip(); x.filter="blur(7px)";
-    for(const [mx,my,rx,ry,a,k] of [[-.32,-.3,.3,.26,.2,.5],[.05,-.28,.15,.14,0,.48],[.2,-.06,.2,.15,.3,.5],[.52,-.12,.12,.1,0,.55],[-.5,.1,.28,.42,.2,.42],[-.1,.22,.16,.12,.4,.4],[.18,.3,.13,.1,0,.36],[.42,.18,.09,.07,0,.32],[-.18,-.02,.12,.1,0,.3]]){ x.fillStyle=`rgba(120,116,110,${(k*.55).toFixed(3)})`; x.beginPath(); x.ellipse(cx+mx*r,cy+my*r,rx*r,ry*r,a,0,6.283); x.fill(); }   /* Imbrium, Serenitatis, Tranquillitatis, Crisium, Procellarum, Nubium, Fecunditatis, Nectaris, Vaporum */
-    x.filter="blur(1px)"; x.fillStyle="rgba(255,255,250,.7)"; x.beginPath(); x.arc(cx-.12*r,cy+.62*r,r*.035,0,6.283); x.fill(); x.strokeStyle="rgba(255,255,250,.18)"; x.lineWidth=2; for(let i=0;i<9;i++){ const a=i/9*6.283+.3; x.beginPath(); x.moveTo(cx-.12*r,cy+.62*r); x.lineTo(cx-.12*r+Math.cos(a)*r*.5,cy+.62*r+Math.sin(a)*r*.5); x.stroke(); }   /* Tycho and its rays */
-    x.filter="none"; for(let i=0;i<160;i++){ const a=Math.random()*6.283, d=Math.sqrt(Math.random())*r*.95; x.fillStyle=`rgba(${Math.random()<.5? "70,66,62" : "255,255,250"},${(.05+Math.random()*.08).toFixed(2)})`; x.beginPath(); x.arc(cx+Math.cos(a)*d,cy+Math.sin(a)*d,.6+Math.random()*2.2,0,6.283); x.fill(); }   /* the speckle of craters */
-    x.restore(); return c; }
+  function makeFullMoon(){ const S=512, c=document.createElement("canvas"); c.width=c.height=S; const x=c.getContext("2d"), r=S/2-3, cx=S/2, cy=S/2; let sd=7; const RN=()=>{ sd=(sd*1664525+1013904223)>>>0; return sd/4294967296; };
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,r); g.addColorStop(0,"#f3efe5"); g.addColorStop(.7,"#e9e4d7"); g.addColorStop(.93,"#d9d3c4"); g.addColorStop(1,"#bdb6a6"); x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,6.283); x.fill();   /* the bright highlands, a little darker toward the limb */
+    x.save(); x.beginPath(); x.arc(cx,cy,r,0,6.283); x.clip();
+    for(let i=0;i<5000;i++){ const a=RN()*6.283, d=Math.sqrt(RN())*r; x.fillStyle=RN()<.5? `rgba(150,144,134,${(.05+RN()*.08).toFixed(3)})` : `rgba(255,255,252,${(.05+RN()*.1).toFixed(3)})`; x.fillRect(cx+Math.cos(a)*d,cy+Math.sin(a)*d,1+RN()*2,1+RN()*2); }   /* the rough, cratered highland texture */
+    /* the seas, where they really lie, each a cluster of overlapping blots with ragged edges and darker floors */
+    const MARIA=[[-.4,-.12,.2,.3,.3],[-.05,-.15,.16,.12,0],[.12,.1,.14,.12,.2],[-.32,-.32,.3,.24,.2],[.07,-.3,.15,.14,0],[.22,-.06,.2,.15,.3],[.55,-.14,.12,.1,0],[-.55,.08,.3,.45,.15],[-.12,.24,.17,.12,.4],[.2,.32,.14,.11,0],[.44,.2,.09,.08,0],[-.18,-.03,.12,.09,0],[-.05,-.52,.22,.06,0],[.36,-.38,.07,.06,0],[-.42,.48,.1,.07,.3]];
+    for(const [mx,my,rx,ry,an] of MARIA){ for(let k=0;k<40;k++){ const ox=(RN()-.5)*rx*.9, oy=(RN()-.5)*ry*.9, s2=.6+RN()*.5; x.fillStyle=`rgba(104,100,96,${(.018+RN()*.02).toFixed(3)})`; x.beginPath(); x.ellipse(cx+(mx+ox)*r,cy+(my+oy)*r,rx*s2*r,ry*s2*r,an+(RN()-.5)*.6,0,6.283); x.fill(); } }
+    { const c3=document.createElement("canvas"); c3.width=c3.height=S; const x3=c3.getContext("2d"); x3.filter="blur(11px)"; x3.drawImage(c,0,0); x.clearRect(0,0,S,S); x.drawImage(c3,0,0); }   /* the seas' edges soft, the way they read from a quarter of a million miles */
+    for(const [mx,my,rx,ry,an] of MARIA){ for(let k=0;k<0;k++){ const ox=(RN()-.5)*rx*.5, oy=(RN()-.5)*ry*.5; x.fillStyle=`rgba(100,96,92,${(.03+RN()*.03).toFixed(3)})`; x.beginPath(); x.ellipse(cx+(mx+ox)*r,cy+(my+oy)*r,rx*.4*r,ry*.4*r,an,0,6.283); x.fill(); } }
+    /* craters: small bowls, a bright sunlit rim and a soft floor */
+    for(let i=0;i<260;i++){ const a=RN()*6.283, d=Math.sqrt(RN())*r*.97, rr=Math.pow(RN(),3)*4+.6, X=cx+Math.cos(a)*d, Y=cy+Math.sin(a)*d, fs=Math.sqrt(Math.max(.15,1-(d/r)**2));
+      x.save(); x.translate(X,Y); x.rotate(a); x.scale(fs,1); x.fillStyle=`rgba(120,114,106,${(.06+RN()*.06).toFixed(3)})`; x.beginPath(); x.arc(0,0,rr,0,6.283); x.fill(); x.strokeStyle=`rgba(255,255,250,${(.06+RN()*.1).toFixed(3)})`; x.lineWidth=Math.max(.6,rr*.35); x.beginPath(); x.arc(0,0,rr,0,6.283); x.stroke(); x.restore(); }
+    /* the young bright craters and their rays: Tycho, Copernicus, Kepler, Aristarchus */
+    for(const [mx,my,rr,ray,n] of [[-.12,.62,.03,.75,16],[-.24,-.05,.022,.3,0],[-.42,-.02,.016,.2,0],[-.6,-.22,.018,.1,0],[.48,.42,.014,.18,0]]){ const X=cx+mx*r, Y=cy+my*r;
+      for(let k=0;k<n;k++){ const an=k/n*6.283+RN()*.3, L=r*ray*(.6+RN()*.6); const gr=x.createLinearGradient(X,Y,X+Math.cos(an)*L,Y+Math.sin(an)*L); gr.addColorStop(0,"rgba(255,255,250,.08)"); gr.addColorStop(1,"rgba(255,255,250,0)"); x.strokeStyle=gr; x.lineWidth=4+RN()*5; x.beginPath(); x.moveTo(X,Y); x.lineTo(X+Math.cos(an)*L,Y+Math.sin(an)*L); x.stroke(); }
+      const hg=x.createRadialGradient(X,Y,0,X,Y,rr*r*2.4); hg.addColorStop(0,"rgba(255,255,252,.45)"); hg.addColorStop(.4,"rgba(255,255,250,.15)"); hg.addColorStop(1,"rgba(255,255,250,0)"); x.fillStyle=hg; x.beginPath(); x.arc(X,Y,rr*r*2.4,0,6.283); x.fill(); }
+    if(moonImg.complete&&moonImg.naturalWidth){ const tx=document.createElement("canvas"); tx.width=tx.height=S; const t2=tx.getContext("2d");
+      t2.drawImage(moonImg,cx-r,cy-r,2*r,2*r); { const g2=t2.createLinearGradient(0,cy-r,0,cy+r); g2.addColorStop(0,"#000"); g2.addColorStop(.3,"#000"); g2.addColorStop(.42,"rgba(0,0,0,0)"); t2.globalCompositeOperation="destination-in"; t2.fillStyle=g2; t2.fillRect(0,0,S,S); t2.globalCompositeOperation="source-over"; }   /* only the part well away from its terminator, where there are no long shadows */
+      const half=document.createElement("canvas"); half.width=half.height=S; half.getContext("2d").drawImage(tx,0,0); t2.save(); t2.translate(cx,cy); t2.rotate(Math.PI*.92); t2.translate(-cx,-cy); t2.globalCompositeOperation="destination-over"; t2.drawImage(half,0,0); t2.restore();
+      t2.save(); t2.translate(cx,cy); t2.rotate(Math.PI*.45); t2.translate(-cx,-cy); t2.globalCompositeOperation="destination-over"; t2.drawImage(half,0,0); t2.restore();
+      x.globalCompositeOperation="multiply"; x.globalAlpha=.45; x.drawImage(tx,0,0); x.globalCompositeOperation="overlay"; x.globalAlpha=.5; x.drawImage(tx,0,0); x.globalAlpha=1; x.globalCompositeOperation="source-over"; }   /* the real moon's own craters and texture */
+    x.restore(); x.filter="blur(.7px)"; const c2=document.createElement("canvas"); c2.width=c2.height=S; c2.getContext("2d").drawImage(c,0,0); x.clearRect(0,0,S,S); x.drawImage(c2,0,0); x.filter="none"; return c; }
   /* thin wisps of high cloud drifting across in front of the rising moon: dark grey-blue against the night, their edges silvered where the moon is behind them */
   let mrWisps=null; const mwsC=document.createElement("canvas"), mwsX=mwsC.getContext("2d");
   function makeWisp(w,h,seed){ const c=document.createElement("canvas"), pad=24; c.width=w+pad*2; c.height=h+pad*2; const x=c.getContext("2d"); let s2=seed; const RN=()=>{ s2=(s2*1664525+1013904223)>>>0; return s2/4294967296; };
@@ -934,30 +952,31 @@ const ambient=(function(){
     if(!mrWisps){ mrWisps=[0,1,2,3].map(i=>({c:makeWisp(Math.round(rnd(380,620)),Math.round(rnd(40,70)),i*977+13),y:[.015,.06,.11,.17][i]+rnd(-.01,.01),x0:i*.27+rnd(0,.1),sp:rnd(4,7),k:rnd(.7,1.05)})); }
     for(const q of mrWisps){ const ry=ridgeY(SKYL.far,.83), cy=ry-H*q.y-H*.04, cw=q.c.width*sc*q.k, ch=q.c.height*sc*q.k, span=W*.75, cx=W*.83+(((q.x0*span+t*q.sp*sc)%span)+span)%span-span*.5;   /* drifting slowly past, always some of them near the moon */
       if(cx+cw/2<0||cx-cw/2>W) continue;
-      const S2w=Math.ceil(cw), S2h=Math.ceil(ch); if(mwsC.width<S2w||mwsC.height<S2h){ mwsC.width=Math.max(mwsC.width,S2w); mwsC.height=Math.max(mwsC.height,S2h); }
-      const x=mwsX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,mwsC.width,mwsC.height); x.drawImage(q.c,0,0,cw,ch);
-      x.globalCompositeOperation="source-in"; const lx=px-(cx-cw/2), ly=py-(cy-ch/2), gl=x.createRadialGradient(lx,ly,R*.2,lx,ly,R*3.2); gl.addColorStop(0,"rgba(255,246,226,1)"); gl.addColorStop(.35,"rgba(214,206,196,.9)"); gl.addColorStop(1,"rgba(46,52,74,.85)"); x.fillStyle=gl; x.fillRect(0,0,S2w,S2h);   /* lit from behind where the moon is, dark elsewhere */
-      ctx.globalAlpha=a*.85; ctx.drawImage(mwsC,0,0,S2w,S2h,cx-cw/2,cy-ch/2,cw,ch); } ctx.globalAlpha=1; }
+      const S2w=Math.ceil(cw), S2h=Math.ceil(ch); if(!q.lit){ q.lit=document.createElement("canvas"); q.lt=-9; } if(q.lit.width!==S2w||q.lit.height!==S2h){ q.lit.width=S2w; q.lit.height=S2h; q.lt=-9; }
+      if(t-q.lt>.25){ q.lt=t; const x=q.lit.getContext("2d"); x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S2w,S2h); x.drawImage(q.c,0,0,cw,ch);
+      x.globalCompositeOperation="source-in"; const lx=px-(cx-cw/2), ly=py-(cy-ch/2), gl=x.createRadialGradient(lx,ly,R*.2,lx,ly,R*3.2); gl.addColorStop(0,"rgba(255,246,226,1)"); gl.addColorStop(.35,"rgba(214,206,196,.9)"); gl.addColorStop(1,"rgba(46,52,74,.85)"); x.fillStyle=gl; x.fillRect(0,0,S2w,S2h); }   /* lit from behind where the moon is, dark elsewhere */
+      ctx.globalAlpha=a*.85; ctx.drawImage(q.lit,cx-cw/2,cy-ch/2,cw,ch); } ctx.globalAlpha=1; }
   function drawMoonrise(a){ if(a<=.01) return; if(!fullMoon) fullMoon=makeFullMoon(); const MI=fullMoon; const e=mrP*mrP*(3-2*mrP)*.75+mrP*.25, fx=.83, ry=ridgeY(SKYL.far,fx), R0=Math.min(W,H)*.062, R=R0*(1.22-.22*e), px=IX(fx), py=ry+R*1.02-e*H*.3, sq=1-.1*(1-e);
-    const S=Math.ceil(R*2+4); if(mrC.width!==S){ mrC.width=mrC.height=S; } const x=mrX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S,S);
+    const S=Math.ceil(R*2+4), mk=S+"|"+Math.round(e*40); if(mrC._k!==mk){ mrC._k=mk; if(mrC.width!==S){ mrC.width=mrC.height=S; } const x=mrX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.clearRect(0,0,S,S);   /* redrawn only as its colour changes, not every frame */
     x.save(); x.translate(S/2,S/2); x.rotate(-.5); x.drawImage(MI,-R,-R,R*2,R*2); x.restore();
     x.globalCompositeOperation="multiply"; x.fillStyle=`rgb(255,${Math.round(168+80*e)},${Math.round(96+144*e)})`; x.fillRect(0,0,S,S);   /* deep orange through the thick air near the horizon, paling as it climbs */
     x.globalCompositeOperation="screen"; x.fillStyle=`rgba(${Math.round(255-10*e)},${Math.round(120+120*e)},${Math.round(50+180*e)},${(.3).toFixed(3)})`; x.fillRect(0,0,S,S);   /* and bright: it is the brightest thing in the sky */
     { const g=x.createLinearGradient(0,0,0,S); g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,`rgba(120,40,20,${(.35*(1-e)).toFixed(3)})`); x.globalCompositeOperation="source-atop"; x.fillStyle=g; x.fillRect(0,0,S,S); }   /* its lower limb dimmer, deeper in the haze */
-    x.globalCompositeOperation="destination-in"; x.save(); x.translate(S/2,S/2); x.rotate(-.5); x.drawImage(MI,-R,-R,R*2,R*2); x.restore(); x.globalCompositeOperation="source-over";
+    x.globalCompositeOperation="destination-in"; x.save(); x.translate(S/2,S/2); x.rotate(-.5); x.drawImage(MI,-R,-R,R*2,R*2); x.restore(); x.globalCompositeOperation="source-over"; }
     ctx.save(); ridgePath(ctx,SKYL.far,1.5); ctx.clip();   /* it comes up from behind the ridge */
     { const gr=ctx.createRadialGradient(px,py,R*.8,px,py,R*(5+3*(1-e))); gr.addColorStop(0,`rgba(255,${Math.round(170+70*e)},${Math.round(100+120*e)},${(a*(.22+.1*(1-e))).toFixed(3)})`); gr.addColorStop(1,"rgba(255,200,150,0)"); ctx.fillStyle=gr; ctx.fillRect(px-R*8,py-R*8,R*16,R*16); }   /* the glow in the air round it */
     ctx.globalAlpha=a*(.8+.2*e); ctx.translate(px,py); ctx.scale(1,sq); ctx.drawImage(mrC,-S/2,-S/2); ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*(.15+.3*e); ctx.drawImage(mrC,-S/2,-S/2); ctx.restore();   /* burning bright once it's clear of the haze */
     ctx.save(); ridgePath(ctx,SKYL.far,1.5); ctx.clip(); drawMoonWisps(a,px,py,R*sq); ctx.restore();   /* and the high cloud drifting across in front of it */
     /* its light on the land: the hills facing it catch it first, warm while it's low and silver as it climbs, the slopes toward it brightest; the field below picks it up, more on the moon's side */
-    { const lk=a*(.25+.75*e), col=[Math.round(lerp(255,196,e)),Math.round(lerp(176,206,e)),Math.round(lerp(120,236,e))], cs=(al)=>`rgba(${col[0]},${col[1]},${col[2]},${Math.max(0,al).toFixed(3)})`;
-      ctx.save(); farBelow(ctx,0); ctx.clip(); ctx.globalCompositeOperation="screen";
-      const rg=ctx.createRadialGradient(px,ry,0,px,ry,W*.75); rg.addColorStop(0,cs(.3*lk)); rg.addColorStop(.35,cs(.16*lk)); rg.addColorStop(1,cs(0)); ctx.fillStyle=rg; ctx.fillRect(0,ry-4,W,H-ry+4);   /* strongest on the hills right under it */
+    { const LK=[Math.round(a*30),Math.round(e*30),Math.round(px),W,H].join("|"); if(mlC._k!==LK){ mlC._k=LK; const hw=Math.ceil(W/2), hh=Math.ceil(H/2); if(mlC.width!==hw||mlC.height!==hh){ mlC.width=hw; mlC.height=hh; } const ctx=mlC.getContext("2d"); ctx.setTransform(.5,0,0,.5,0,0); ctx.clearRect(0,0,W,H);
+      const lk=a*(.25+.75*e), col=[Math.round(lerp(255,196,e)),Math.round(lerp(176,206,e)),Math.round(lerp(120,236,e))], cs=(al)=>`rgba(${col[0]},${col[1]},${col[2]},${Math.max(0,al).toFixed(3)})`;
+      ctx.save(); farBelow(ctx,0); ctx.clip(); ctx.globalCompositeOperation="lighter";
+      const rg=ctx.createRadialGradient(px,ry+H*.03,0,px,ry+H*.03,W*.75); rg.addColorStop(0,cs(.3*lk)); rg.addColorStop(.35,cs(.16*lk)); rg.addColorStop(1,cs(0)); ctx.fillStyle=rg; ctx.fillRect(0,ry-4,W,H-ry+4);   /* strongest on the hills right under it */
       const hg=ctx.createLinearGradient(px>W/2? W : 0,0,px>W/2? 0 : W,0); hg.addColorStop(0,cs(.12*lk)); hg.addColorStop(1,cs(.03*lk)); ctx.fillStyle=hg; ctx.fillRect(0,ry-4,W,H-ry+4);   /* the whole valley a little silvered, more on its side */
       const vg=ctx.createLinearGradient(0,ry,0,H); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(.25,cs(.05*lk)); vg.addColorStop(1,cs(.08*lk)); ctx.fillStyle=vg; ctx.fillRect(0,ry-4,W,H-ry+4); ctx.restore();   /* and the open field nearer us */
-      /* the ridgelines rimmed with it where they face the moon */
-      const m=cover(); for(const [arr,al,lw] of [[SKYL.far,.26,1.6],[SKYL.near,.14,1.3]]){ if(!arr) continue; const N=arr.length-1, w=m.iw*m.s, h=m.ih*m.s, lg=ctx.createLinearGradient(px-W*.45,0,px+W*.45,0); lg.addColorStop(0,cs(0)); lg.addColorStop(.5,cs(al*lk)); lg.addColorStop(1,cs(0));
-        ctx.save(); ctx.globalCompositeOperation="screen"; ctx.strokeStyle=lg; ctx.lineJoin="round"; for(const [wd,k2] of [[lw*2.6,.35],[lw,1]]){ ctx.globalAlpha=k2; ctx.lineWidth=wd; ctx.beginPath(); for(let i=0;i<=N;i++){ const xx=m.ox+i/N*w, yy=m.oy+arr[i]*h+1; i? ctx.lineTo(xx,yy) : ctx.moveTo(xx,yy); } ctx.stroke(); } ctx.restore(); } }
+      { const c2=document.createElement("canvas"); c2.width=mlC.width; c2.height=mlC.height; const x2=c2.getContext("2d"); x2.filter="blur(3px)"; x2.drawImage(mlC,0,0); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,mlC.width,mlC.height); ctx.drawImage(c2,0,0); }   /* its edge along the ridge feathered, so no seam of doubled light runs along the hilltops */
+    }
+      ctx.save(); ctx.globalCompositeOperation="screen"; ctx.drawImage(mlC,0,0,W,H); ctx.restore(); }   /* laid on in one go */
   }
   function ridgePath(c,arr,dy){ const m=cover(), N=arr.length-1, w=m.iw*m.s, h=m.ih*m.s; c.beginPath(); c.moveTo(m.ox-4,-H*2); for(let i=0;i<=N;i++) c.lineTo(m.ox+i/N*w,m.oy+arr[i]*h+(dy||0)); c.lineTo(m.ox+w+4,-H*2); c.closePath(); }
   function ridgeY(arr,fx){ const m=cover(), N=arr.length-1, u=Math.max(0,Math.min(N,fx*N)), i=Math.min(N-1,Math.floor(u)); return m.oy+lerp(arr[i],arr[i+1],u-i)*m.ih*m.s; }
@@ -1247,8 +1266,8 @@ const ambient=(function(){
     ctx.save(); ridgePath(ctx,SKYL.far,Math.max(2,H*.003)+1.5); if(moonAt){ ctx.moveTo(moonAt[0]+moonAt[2]*1.04,moonAt[1]); ctx.arc(moonAt[0],moonAt[1],moonAt[2]*1.04,0,6.283,true); } ctx.clip("evenodd"); ctx.globalCompositeOperation="screen"; ctx.imageSmoothingEnabled=true;   /* cut along exactly the same edge as the night sky, so no seam shows above the ridge */
     if(auB._ok){ ctx.globalAlpha=Math.min(1,a*1.3); ctx.drawImage(auG,0,0,cw*q,ch*q); ctx.globalAlpha=a*.9; ctx.drawImage(auB,0,0,cw*q,ch*q); }   /* the wide glow, then the softened body */
     ctx.globalAlpha=a*.6; ctx.drawImage(auC,0,0,cw*q,ch*q);   /* and the fine rays */
-    { const hk=W+"x"+H; if(auH._k!==hk){ auH._k=hk; auH.width=Math.ceil(W/2); auH.height=Math.ceil(H/2); const c=auHx; c.setTransform(.5,0,0,.5,0,0); c.clearRect(0,0,W,H); const x0=IX(.3), x1=IX(1), hg=c.createLinearGradient(x0,0,x1,0); for(let i=0;i<=8;i++) hg.addColorStop(i/8,`rgba(70,210,150,${(.016*Math.sin(Math.PI*i/8)).toFixed(4)})`); c.fillStyle=hg;
-      if("filter" in c) c.filter="blur(1px)"; for(let j=0;j<10;j++){ farBelow(c,-H*.07*j/10); c.fill(); } c.filter="none"; }
+    { const hk=W+"x"+H; if(auH._k!==hk){ auH._k=hk; auH.width=Math.ceil(W/2); auH.height=Math.ceil(H/2); const c=auHx; c.setTransform(.5,0,0,.5,0,0); c.clearRect(0,0,W,H); const x0=IX(.3), x1=IX(1), hg=c.createLinearGradient(x0,0,x1,0); for(let i=0;i<=8;i++) hg.addColorStop(i/8,`rgba(70,210,150,${(.008*Math.sin(Math.PI*i/8)).toFixed(4)})`); c.fillStyle=hg;
+      if("filter" in c) c.filter="blur(4px)"; for(let j=0;j<20;j++){ farBelow(c,-H*.07*j/20); c.fill(); } c.filter="none"; }
       ctx.globalAlpha=a; ctx.drawImage(auH,0,0,W,H); }   /* the faint green glow of it lying along the horizon behind the ridge, in layers that follow the ridgeline */
     ctx.restore(); }
 
@@ -1270,10 +1289,11 @@ const ambient=(function(){
     for(let i=0;i<n;i++){ const fx=(i+.5)/n, y0=ridgeY(SKYL.far,fx), yn=ridgeY(SKYL.near,fx), k=Math.max(0,Math.min(1,(yn-y0-H*.004)/(H*.03))); if(k<=0) continue; const y1=yn+2, g=ctx.createLinearGradient(0,y0,0,y1), d=1.15-fold(fx)*.5;
       g.addColorStop(0,`rgba(10,14,28,${(.12*nA*k*d).toFixed(3)})`); g.addColorStop(.3,`rgba(8,12,24,${(.34*nA*k*d).toFixed(3)})`); g.addColorStop(1,`rgba(6,9,18,${(.46*nA*k*d).toFixed(3)})`); ctx.fillStyle=g; const l=Math.round(x0+i*sw), r=Math.round(x0+(i+1)*sw); ctx.fillRect(l,y0-4,r-l,y1-y0+4); }
     ctx.restore();
-    { if(!fmC||fmC.width!==Math.ceil(W)){ fmC=document.createElement("canvas"); fmC.width=Math.ceil(W); fmC.height=Math.ceil(H*.16); const x=fmC.getContext("2d");   /* treetops: thousands of small crowns, mostly dark, a few with moonlight on them */
+    { if(!fmC||fmC.width!==Math.ceil(W)){ fmC=document.createElement("canvas"); fmC.width=Math.ceil(W); fmC.height=Math.ceil(H*.34); const x=fmC.getContext("2d");   /* treetops: thousands of small crowns, mostly dark, a few with moonlight on them */
         for(let j=0;j<fmC.width*fmC.height/26;j++){ const px=Math.random()*fmC.width, py=Math.random()*fmC.height, r=.6+Math.random()*1.8, lt=Math.random()<.16;
-          x.fillStyle=lt? `rgba(150,166,204,${(.05+Math.random()*.08).toFixed(2)})` : `rgba(6,9,16,${(.16+Math.random()*.26).toFixed(2)})`; x.beginPath(); x.ellipse(px,py,r*1.15,r,0,0,6.283); x.fill(); } fmC.getContext("2d").filter="none"; }
-      const top=IY(.38); ctx.save(); ctx.translate(0,Math.max(2,H*.004)); farBelow(ctx); ctx.translate(0,-Math.max(2,H*.004)); ctx.clip(); ctx.globalAlpha=.5*nA; if("filter" in ctx) ctx.filter="blur(.6px)"; ctx.drawImage(fmC,0,top,W,fmC.height); ctx.drawImage(fmC,0,top+fmC.height,W,fmC.height); ctx.filter="none"; ctx.restore(); }
+          x.fillStyle=lt? `rgba(150,166,204,${(.05+Math.random()*.08).toFixed(2)})` : `rgba(6,9,16,${(.16+Math.random()*.26).toFixed(2)})`; x.beginPath(); x.ellipse(px,py,r*1.15,r,0,0,6.283); x.fill(); }
+        { const g=x.createLinearGradient(0,0,0,fmC.height); g.addColorStop(0,"#000"); g.addColorStop(.6,"#000"); g.addColorStop(1,"rgba(0,0,0,0)"); x.globalCompositeOperation="destination-in"; x.fillStyle=g; x.fillRect(0,0,fmC.width,fmC.height); x.globalCompositeOperation="source-over"; } }   /* fading out at the bottom, so it never ends in a hard line across the hills */
+      const top=IY(.38); ctx.save(); ctx.translate(0,Math.max(2,H*.004)); farBelow(ctx); ctx.translate(0,-Math.max(2,H*.004)); ctx.clip(); ctx.globalAlpha=.5*nA; if("filter" in ctx) ctx.filter="blur(.6px)"; ctx.drawImage(fmC,0,top,W,fmC.height); ctx.filter="none"; ctx.restore(); }
     ctx.globalCompositeOperation="screen"; farBelow(ctx); ctx.clip();
     for(let i=0;i<n;i++){ const fx=(i+.5)/n, y0=ridgeY(SKYL.far,fx), yn=ridgeY(SKYL.near,fx), k=Math.max(0,Math.min(1,(yn-y0-H*.004)/(H*.03))); if(k<=0) continue; const y1=yn+2, g=ctx.createLinearGradient(0,y0,0,y1), f=fold(fx);
       g.addColorStop(0,`rgba(84,106,156,${(.24*nA*nA*nA*k*f).toFixed(3)})`); g.addColorStop(.22,`rgba(66,86,132,${(.08*nA*nA*nA*k*f).toFixed(3)})`);   /* the crest's haze only comes in once it's truly dark, so no pale line flashes along the ridge as night comes and goes */ g.addColorStop(.55,"rgba(60,80,126,0)"); ctx.fillStyle=g; const l=Math.round(x0+i*sw), r=Math.round(x0+(i+1)*sw); ctx.fillRect(l,y0-3,r-l,y1-y0+3); }   /* edge to edge, no overlaps, so no seams */
