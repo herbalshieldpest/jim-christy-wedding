@@ -4764,20 +4764,20 @@ const ambient=(function(){
     if(!async){ rows(0,Ht); M.done=true; return M; }
     let y=0; const step=()=>{ if(barkMap!==M) return; if(M.done) return; rows(y,Math.min(Ht,y+24)); y+=24; if(y>=Ht) M.done=true; else setTimeout(step,30); }; setTimeout(step,30); M.finish=()=>{ if(!M.done){ rows(y,Ht); y=Ht; M.done=true; } }; return M; }
   setTimeout(()=>{ if(!barkMap) barkMap=makeBarkMap(true); },9000);   /* the bark is grown quietly in the background a little after the page opens, so calling the skink never stalls */
-  function startLogCrawler(kind){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const side=Math.random()<.5? -1 : 1, len=W*rnd(.6,.68)*Math.max(.9,Math.min(1.3,1100/W)), R0=H*.085;
+  function startLogCrawler(kind){ if(!barkMap) barkMap=makeBarkMap(false); else if(!barkMap.done) barkMap.finish(); const side=Math.random()<.5? -1 : 1, len=W*rnd(.5,.58)*Math.max(.9,Math.min(1.3,1100/W)), R0=H*.034;
     const knob=rnd(.3,.6), s1=rnd(0,6), s2=rnd(0,6);
     const L={kind,side,t:0,u:.1,state:"go",st:0,dur:rnd(1.8,2.8),ph:0,head:0,look:0,tongue:0,a:0,life:rnd(28,36),dir:1,
       ang:side<0? -rnd(.16,.22) : rnd(.16,.22), x0:side<0? -W*.05 : W*1.05, y0:H*rnd(.97,1.0), len, R0, seed:Math.floor(rnd(0,9999)),
-      splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
+      splint:Array.from({length:5},()=>({a:rnd(-.85,.85),w:rnd(.06,.16),h:rnd(.15,.55)})), twigs:[{u:rnd(.45,.55),a:-rnd(.17,.26),l:rnd(.2,.24),b:rnd(.04,.1),fork:1},{u:rnd(.74,.82),a:-rnd(.12,.2),l:rnd(.09,.12),b:rnd(.02,.08)}], knots:Array.from({length:3},()=>({u:rnd(.15,.85),ph:rnd(-1.2,.6),s:rnd(.7,1.3)})),
       blades:Array.from({length:520},()=>({u:Math.random()*1.06-.03,h:rnd(.12,.75),l:rnd(-.4,.4),c:Math.random(),w:rnd(.6,1.3),bend:rnd(-.3,.3)}))};
     /* a real limb is never a tube: it thickens at an old branch joint, wavers, and tapers to the break */
-    L.Rf=xl=>{ const u=xl/len; return R0*lerp(1,.56,u)*(1+.045*Math.sin(u*9+s1)+.03*Math.sin(u*23+s2)+.16*Math.exp(-Math.pow((u-knob)/.06,2))); };
-    L.sag=xl=>Math.sin(xl/len*Math.PI)*H*.008+Math.sin(xl/len*5+s2)*H*.003;
+    L.Rf=xl=>{ const u=xl/len; return R0*lerp(1,.42,Math.pow(u,.85))*(1+.03*Math.sin(u*9+s1)+.02*Math.sin(u*23+s2)+.1*Math.exp(-Math.pow((u-knob)/.04,2))); };   /* a slender stick, tapering, a slight swelling where a twig once grew */
+    L.sag=xl=>Math.sin(xl/len*Math.PI)*H*.012+Math.sin(xl/len*4.2+s2)*H*.009;   /* a gentle, graceful bow along its length */
     logC=L; }
   const logR=(L,xl)=>L.Rf(Math.max(0,Math.min(L.len,xl)));
   /* render the limb once per change of light into its own canvas: every pixel is a point on the round of the limb, with the bark's own normal,
      lit by the low sun, the sky's fill from above and the warm-green bounce off the lawn; shadows in the furrows, moss on top, the broken end showing pale torn wood */
-  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9, yT=-R0*1.35-H*.012, yB=R0*1.25;
+  function renderLimb(L,lg){ const B=barkMap, Ln=L.len, R0=L.R0, k=Math.min(2,window.devicePixelRatio||1)*.75+.25, padL=4, x1=Ln+R0*.9, yT=-R0*1.35-H*.03, yB=R0*1.25+H*.022;
     const cw=Math.ceil((x1+padL)*k), chh=Math.ceil((yB-yT)*k); let c=L.img; if(!c){ c=L.img=document.createElement("canvas"); } if(c.width!==cw||c.height!==chh){ c.width=cw; c.height=chh; }
     const x=c.getContext("2d"), id=x.createImageData(cw,chh), d=id.data; L.imgX=-padL; L.imgY=yT; L.imgK=k;
     const toneMap=v=>{ const q=v/(1+v*.6)*1.6; return Math.max(0,Math.min(255,Math.pow(Math.max(0,q),1/2.2)*255)); };   /* light adds in linear, shown through a soft shoulder like film */
@@ -4842,18 +4842,28 @@ const ambient=(function(){
     ctx.lineCap="round"; for(let i=0;i<L.blades.length;i+=3){ const b2=L.blades[i], xl=b2.u*Ln, r=R(Math.max(0,Math.min(Ln,xl))), base=-r*.55-sag(xl), hgt=r*b2.h*.8, sw=Math.sin(t*1.3+b2.u*30)*H*.002;
       const col=mulv(mixv(grass,[70,80,36],b2.c*.4),lt*(.5+b2.c*.35)*(1-nightK*.5)); ctx.strokeStyle=rgb(col,.9); ctx.lineWidth=Math.max(.8,H*.0018*b2.w); ctx.beginPath(); ctx.moveTo(xl,base); ctx.quadraticCurveTo(xl+b2.l*hgt*.3,base-hgt*.6,xl+b2.l*hgt+sw,base-hgt); ctx.stroke(); }
     ctx.drawImage(L.img,L.imgX,L.imgY,L.img.width/L.imgK,L.img.height/L.imgK);
+    /* a couple of slender side twigs, rising from the upper side, tapering to fine tips; lit along the top by the low sun, dark beneath */
+    for(const tw of L.twigs){ const xl=tw.u*Ln, r=R(xl), bx=xl, by=-sag(xl)-r*.55, ln=Ln*tw.l, N2=14, pts=[];
+      for(let i=0;i<=N2;i++){ const q=i/N2, ang=tw.a+tw.b*q*q; pts.push([bx+Math.cos(ang)*ln*q, by+Math.sin(ang)*ln*q, r*.2*Math.pow(1-q*.85,1.1)+.35]); }
+      const tp=[], bt=[]; for(let i=0;i<=N2;i++){ const a=pts[Math.max(0,i-1)], b=pts[Math.min(N2,i+1)], dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1, nx=-dy/l, ny=dx/l, w=pts[i][2]; tp.push([pts[i][0]-nx*w,pts[i][1]-ny*w]); bt.push([pts[i][0]+nx*w,pts[i][1]+ny*w]); }
+      const path=new Path2D(); tp.forEach((q,i)=>i? path.lineTo(q[0],q[1]) : path.moveTo(q[0],q[1])); bt.slice().reverse().forEach(q=>path.lineTo(q[0],q[1])); path.closePath();
+      const day=1-nightK, m=pts[N2>>1], g=ctx.createLinearGradient(m[0],m[1]-r*.4,m[0],m[1]+r*.4);
+      g.addColorStop(0,rgb(mulv([150,120,86],lt*(.25+.75*day)))); g.addColorStop(.35,rgb(mulv([78,66,54],lt*(.3+.7*day)))); g.addColorStop(1,rgb(mulv([26,22,18],lt*(.5+.5*day))));
+      ctx.fillStyle=g; ctx.fill(path); ctx.strokeStyle=`rgba(255,190,120,${(.16*day).toFixed(2)})`; ctx.lineWidth=.6; ctx.beginPath(); tp.slice(1).forEach((q,i)=>i? ctx.lineTo(q[0],q[1]) : ctx.moveTo(q[0],q[1])); ctx.stroke();
+      if(tw.fork){ const f0=pts[Math.round(N2*.55)], fa=tw.a-.6, fl=ln*.38; ctx.strokeStyle=rgb(mulv([58,48,40],lt*(.35+.65*day))); ctx.lineCap="round"; ctx.lineWidth=Math.max(.7,f0[2]*1.3); ctx.beginPath(); ctx.moveTo(f0[0],f0[1]); ctx.quadraticCurveTo(f0[0]+Math.cos(fa)*fl*.5,f0[1]+Math.sin(fa)*fl*.5,f0[0]+Math.cos(fa+.15)*fl,f0[1]+Math.sin(fa+.15)*fl); ctx.lineWidth=Math.max(.5,f0[2]*.6); ctx.stroke(); }   /* a small fork off the longer twig */
+    }
     ctx.restore();
     /* the animal, in the limb's frame */
     stepLogAnimal(L,dt);
     { ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1);
       const xl=L.u*Ln, r=R(xl);
       ctx.translate(xl,-sag(xl)); ctx.scale(L.dir,1);   /* on the limb's axis; the animal sits on the round of it, seen from a little above */
-      const S=H*.0027*(L.kind==="skink"? 1 : 1.3);
+      const S=H*.0023*(L.kind==="skink"? 1 : 1.3);
       drawLogAnimal(L,S,dark,lt,nightK,(L.side<0? 1 : -1)*sunS*L.dir,r/S,.5);
       ctx.restore(); }
     /* the lawn growing up in front of the limb, seating it in the grass: fine blades in the photo's own greens, lit at the tips by the low sun */
     ctx.save(); ctx.globalAlpha=L.a; ctx.translate(L.x0,L.y0); ctx.rotate(L.ang); if(L.side>0) ctx.scale(-1,1); ctx.lineCap="round";
-    for(const b2 of L.blades){ const xl=b2.u*Ln, r=R(Math.max(0,Math.min(Ln,xl))), base=r*1.15-sag(xl)+H*.02, hgt=r*b2.h*1.35, sw=Math.sin(t*1.4+b2.u*30)*H*.003;
+    for(const b2 of L.blades){ const xl=b2.u*Ln, r=R(Math.max(0,Math.min(Ln,xl))), base=r*1.1-sag(xl)+H*.007, hgt=r*b2.h*1.6, sw=Math.sin(t*1.4+b2.u*30)*H*.003;
       const col=mulv(mixv(grass,[52,62,24],b2.c*.55),lt*(.55+b2.c*.5)*(1-nightK*.45)), w0=Math.max(.7,H*.0026*b2.w*(1.2-b2.c*.5)), tx=xl+b2.l*hgt+sw, ty=base-hgt*(.9-Math.abs(b2.bend)*.3);
       ctx.fillStyle=rgb(col,.96); ctx.beginPath(); ctx.moveTo(xl-w0,base); ctx.quadraticCurveTo(xl+b2.l*hgt*.3+b2.bend*hgt*.3-w0*.4,base-hgt*.55,tx,ty); ctx.quadraticCurveTo(xl+b2.l*hgt*.3+b2.bend*hgt*.3+w0*.4,base-hgt*.55,xl+w0,base); ctx.closePath(); ctx.fill();
       if(!dark&&b2.c>.55){ ctx.strokeStyle=`rgba(255,214,140,${(.25*(1-nightK)).toFixed(2)})`; ctx.lineWidth=w0*.5; ctx.beginPath(); ctx.moveTo(lerp(xl,tx,.6),lerp(base,ty,.6)); ctx.lineTo(tx,ty); ctx.stroke(); } }
