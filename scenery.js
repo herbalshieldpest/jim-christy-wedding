@@ -902,22 +902,32 @@ const ambient=(function(){
         const leafy=Math.max(0,Math.min(1,(g-bl+12)/36)), hi=Math.max(0,Math.min(1,(l-lb)/14+.45)), fade=Math.min(1,(bot-fy)/.012), a=leafy*hi*fade*(1-hazy); if(a<.06) continue;
         o[i]=255; o[i+1]=255; o[i+2]=255; o[i+3]=Math.round(255*a); near[yy*w+xx]=Math.max(0,Math.min(1,(fy-.42)/.16)); } }
     x.clearRect(0,0,w,h); x.putImageData(out,0,0);
-    const lay=[], pts=[]; for(let i=0;i<w*h;i++) if(o[i*4+3]>60) pts.push(i);
+    const lay=[], pts=[]; for(let i=0;i<w*h;i++) if(o[i*4+3]>60) pts.push(i); let ya=h, yb=0; for(const q of pts){ const yq=(q/w)|0; if(yq<ya) ya=yq; if(yq>yb) yb=yq; } lay.y0=Math.max(0,ya-6); lay.y1=Math.min(h,yb+6);
     for(let n=0;n<4;n++){ const L=document.createElement("canvas"); L.width=w; L.height=h; const lx=L.getContext("2d"); lx.fillStyle="#fff";
       const sc=Math.max(.7,W/1600), cnt=Math.min(260,Math.round(pts.length/220)); for(let j=0;j<cnt;j++){ const p=pts[(Math.random()*pts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(2.2+nr*5.5)*sc*(.7+Math.random()*.6);
         const sub=3+((Math.random()*4)|0); for(let q=0;q<sub;q++){ const cx=px+(Math.random()-.5)*R*1.8, cy=py+(Math.random()-.5)*R*1.1, r=R*(.45+Math.random()*.45), gg=lx.createRadialGradient(cx,cy,0,cx,cy,r);
           gg.addColorStop(0,"rgba(255,255,255,.75)"); gg.addColorStop(.55,"rgba(255,255,255,.4)"); gg.addColorStop(1,"rgba(255,255,255,0)"); lx.fillStyle=gg; lx.beginPath(); lx.ellipse(cx,cy,r,r*.75,0,0,6.283); lx.fill(); } }   /* a soft patch of a crown, the leaves in it all turning together; the photo's own leaf texture comes through it below */
       lx.globalAlpha=1; lx.globalCompositeOperation="destination-in"; lx.drawImage(c,0,0); lay.push({c:L,f:1.6+Math.random()*1.4,ph:Math.random()*6.283}); }   /* only where there's a crown of leaves to catch it */
     return lay; }
-  const svT=document.createElement("canvas"), svX=svT.getContext("2d");
+  const svT=document.createElement("canvas"), svX=svT.getContext("2d"), svW=document.createElement("canvas"), svWX=svW.getContext("2d"), svM=document.createElement("canvas"), svMX=svM.getContext("2d");
+  const svP=(()=>{ const c=document.createElement("canvas"); c.width=256; c.height=1; const x=c.getContext("2d"), d=x.createImageData(256,1);   /* the gust's profile: a quick leading edge, the leaves flipping, then a long settling tail behind */
+    for(let i=0;i<256;i++){ const u=i/255*1.3-1, a=u>0? Math.exp(-Math.pow(u/.07,2)) : Math.exp(-Math.pow(u/.42,2))*(.75+.25*Math.exp(-Math.pow((u+.08)/.12,2))); d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=255; d.data[i*4+3]=Math.round(255*a); }
+    x.putImageData(d,0,0); return c; })();
   function drawSilver(){ if(svA<=.01||!photo) return; const key=W+"x"+H; if(svKey!==key){ svKey=key; svLay=makeSvLayers(); } if(!svLay||!svLay.length) return;
-    const w=svLay[0].c.width, h=svLay[0].c.height; if(svT.width!==w||svT.height!==h){ svT.width=w; svT.height=h; } const dir=(window.__seedDir||-1)>0? 1 : -1, ts=skyEv&&skyEv.k==="silver"? t-skyEv.t0 : 30;
-    const x=svX; x.setTransform(1,0,0,1,0,0); x.globalCompositeOperation="source-over"; x.globalAlpha=1; x.clearRect(0,0,w,h);
-    for(const l of svLay){ const v=Math.max(0,Math.sin(t*l.f*6.283*.5+l.ph)); if(v<.05) continue; x.globalAlpha=v; x.drawImage(l.c,0,0); }   /* the clumps flicking over and back, never all at once */
-    x.globalAlpha=1; x.globalCompositeOperation="source-in";
-    const bands=[(ts*.07)%1.7-.35,((ts*.07)+.85)%1.7-.35].map(c0=>dir>0? c0 : 1-c0), g=x.createLinearGradient(0,0,w,0);
-    for(let i=0;i<=24;i++){ const u=i/24; let v=0; for(const c0 of bands) v=Math.max(v,Math.exp(-Math.pow((u-c0)/.16,2))); g.addColorStop(u,`rgba(204,222,200,${(v*.95).toFixed(3)})`); }   /* the gust carrying it along the woods */
-    x.fillStyle=g; x.fillRect(0,0,w,h);
+    const w=svLay[0].c.width, h=svLay[0].c.height; for(const c of [svT,svW,svM]) if(c.width!==w||c.height!==h){ c.width=w; c.height=h; }
+    const dir=(window.__seedDir||-1)>0? 1 : -1, ts=skyEv&&skyEv.k==="silver"? t-skyEv.t0 : 99, y0=svLay.y0||0, y1=svLay.y1||h, N=Math.max(12,Math.round((y1-y0)/2.5)), sh=(y1-y0)/N;
+    const GU=[{s:.4,v:.105,wd:.36,a:1,ph:0},{s:8.5,v:.085,wd:.28,a:.75,ph:2.1},{s:15,v:.12,wd:.4,a:.95,ph:4.3}];   /* three gusts, one after another, each its own speed and size */
+    const T=svX; T.setTransform(1,0,0,1,0,0); T.globalCompositeOperation="source-over"; T.globalAlpha=1; T.clearRect(0,0,w,h); let any=false;
+    svLay.forEach((l,li)=>{ const W2=svWX; W2.globalCompositeOperation="source-over"; W2.globalAlpha=1; W2.clearRect(0,0,w,h); let drew=false;
+      for(const g of GU){ const tg=ts-g.s; if(tg<0||tg>16) continue; const fr=-.25+tg*g.v-li*.025, ww=g.wd*w;
+        for(let j=0;j<N;j++){ const yy=y0+j*sh, v=(yy-y0)/(y1-y0);
+          const off=.07*Math.sin(v*5.5+tg*.7+g.ph)+.045*Math.sin(v*13-tg*1.4+g.ph*2)+.025*Math.sin(v*29+li*1.7+tg*2.1);   /* a ragged, rolling front: the gust reaching some trees before others */
+          const st=g.a*(.55+.45*Math.sin(v*9+g.ph+tg*.4))*(.8+.2*Math.sin(v*21-tg*1.1+li));   /* stronger through some stretches of the woods than others */
+          if(st<.04) continue; let fx=(fr+off)*w; W2.globalAlpha=Math.min(1,st);
+          if(dir>0) W2.drawImage(svP,0,0,256,1,fx-ww/1.3,yy,ww,sh+.6); else W2.drawImage(svP,0,0,256,1,w-fx+ww/1.3,yy,-ww,sh+.6); drew=true; } }
+      if(!drew) return; const M=svMX; M.globalCompositeOperation="source-over"; M.globalAlpha=1; M.clearRect(0,0,w,h); M.drawImage(l.c,0,0); M.globalCompositeOperation="destination-in"; M.drawImage(svW,0,0);
+      T.globalCompositeOperation="lighter"; T.globalAlpha=.8+.2*Math.sin(t*l.f*4+l.ph); T.drawImage(svM,0,0); any=true; });   /* each little crown patch turning as the gust gets to it */
+    if(!any) return; T.globalAlpha=1; T.globalCompositeOperation="source-in"; T.fillStyle="rgba(204,222,200,.95)"; T.fillRect(0,0,w,h);
     ctx.save(); ctx.globalAlpha=svA*(nA>.3? .25 : 1); ctx.globalCompositeOperation="screen"; ctx.drawImage(svT,0,0,W,H); ctx.restore(); }
   /* ---- a sun shower: rain falling while the sun is still out, every drop lit gold, splashing on the lawn ---- */
   let ssDrops=null, ssSplash=[];
@@ -1056,7 +1066,7 @@ const ambient=(function(){
     if(!NIGHT_EV.includes(k)&&duskHold) duskHold.t1=Math.min(duskHold.t1,t);
     if(k==="rainbow") startRainbow(forced);
     else if(k==="storm") startStorm();
-    else { skyEv={k,t0:t,t1:t+(k==="shower"? 50 : k==="sunburst"? 40 : k==="sunshower"? 50 : k==="seeds"? 45 : k==="silver"? 30 : k==="moonrise"? 85 : k==="balloon"? 75 : k==="aurora"&&auroraLong? 110 : 60)}; if(k==="aurora") auroraLong=false; if(k==="balloon") balloon=newBalloon(); else if(balloon) balloon.dur=Math.min(balloon.dur,balloon.t+3); if(k==="shadows") clouds=null; if(k==="comet"){ comet={x:rnd(.44,.56),y:rnd(.1,.16)}; } if(k==="shower"){ skyEv.ang=(Math.random()<.5? rnd(.5,.75) : Math.PI-rnd(.5,.75)); skyEv.nm=t+2.5; } }
+    else { skyEv={k,t0:t,t1:t+(k==="shower"? 50 : k==="sunburst"? 40 : k==="sunshower"? 50 : k==="seeds"? 45 : k==="silver"? 34 : k==="moonrise"? 85 : k==="balloon"? 75 : k==="aurora"&&auroraLong? 110 : 60)}; if(k==="aurora") auroraLong=false; if(k==="balloon") balloon=newBalloon(); else if(balloon) balloon.dur=Math.min(balloon.dur,balloon.t+3); if(k==="shadows") clouds=null; if(k==="comet"){ comet={x:rnd(.44,.56),y:rnd(.1,.16)}; } if(k==="shower"){ skyEv.ang=(Math.random()<.5? rnd(.5,.75) : Math.PI-rnd(.5,.75)); skyEv.nm=t+2.5; } }
   }
   /* ---- the sky's timeline: the day's events (storm, rainbow, sun dogs, sunburst) come in a run with clear sky between them, then dusk gathers
      and night falls for a run of the night's (Milky Way, meteor shower, comet, northern lights) back to back, then morning again; round and round.
