@@ -1205,7 +1205,7 @@ const ambient=(function(){ let heavy=false;
      Anything called from the menu takes the sky for its spell and then the timeline picks up where it makes sense ---- */
   const DAY_EV=["storm","rainbow","sundogs","sunburst","sunshower","seeds","silver","gossamer"], NIGHT_Q=["milkyway","shower","comet","aurora","moonrise"];
   let tl={ph:"day",n:0,max:2,next:rnd(60,95),last:null};
-  const newDay=()=>({ph:"day",n:0,max:Math.random()<.6? 2 : 3,next:rnd(40,70),last:tl.last});
+  const newDay=()=>({ph:"day",n:0,max:Math.random()<.5? 3 : 4,next:rnd(30,55),last:tl.last});   /* three or four of the day's events between nights, so the whole set comes round in a couple of days */
   /* every event gets its turn: each comes out of a shuffled bag, and the bag is only refilled once all of them have been seen */
   const dayBag=[], nightBag=[]; function fromBag(bag,ALL,last){ if(!bag.length){ bag.push(...ALL.slice().sort(()=>Math.random()-.5)); if(bag[0]===last&&bag.length>1) bag.push(bag.shift()); } return bag.shift(); }
   function beginNight(){ const q=[]; for(let i=Math.random()<.5? 2 : 3;i>0;i--){ const k=fromBag(nightBag,NIGHT_Q,q[q.length-1]); if(!q.includes(k)) q.push(k); } tl={ph:"night",q,last:tl.last}; skyStart("night"); skyEv.t1=t+3.5+30; }   /* the northern lights come out about half a minute after it goes dark (the fall itself takes ~3.5 s) */
@@ -1227,7 +1227,7 @@ const ambient=(function(){ let heavy=false;
       return; }
     if(!on||skyActive()||lull>0) return;
     tl.next-=dt; if(tl.next>0) return;
-    if(tl.n<tl.max){ const k=fromBag(dayBag,DAY_EV,tl.last); tl.last=k; tl.n++; tl.next=rnd(35,70); skyStart(k); }
+    if(tl.n<tl.max){ const k=fromBag(dayBag,DAY_EV,tl.last); tl.last=k; tl.n++; tl.next=rnd(30,55); skyStart(k); }
     else { beginNight(); try{ if(window.Campfire&&!Campfire.on){ nightCalledAt=performance.now(); Campfire.set(true); } }catch(e){} } }   /* when the day's round comes to the dark, it's a campfire night */
   /* the menu: the called event runs its spell; a night one called by day hands the day back after, a day one ends any night */
   function skyMenu(k){ for(const b of [dayBag,nightBag]){ const i=b.indexOf(k); if(i>=0) b.splice(i,1); }   /* called up from the menu counts as its turn */
@@ -1520,11 +1520,44 @@ const ambient=(function(){ let heavy=false;
     x.globalCompositeOperation="destination-in"; x.filter=`blur(${(1.2+(1-nA)*Math.max(3,H*.008)).toFixed(1)}px)`; x.fillStyle="#000"; ridgePath(x,SKYL.far,Math.max(2,H*.003)); x.fill(); x.filter="none";   /* the cut along the ridge softens as the night thins, so the line melts away rather than hangs there */
     x.globalCompositeOperation="source-over";
     ctx.save(); ctx.globalAlpha=nA; ctx.drawImage(nsC,0,0); ctx.restore(); }
+  /* ---- a few wildflowers in the mown grass: late asters, a white heath aster spray, clover, a dandelion gone to seed, a Queen Anne's lace umbel
+     by the field edge. Painted once into the photo, small and sparse, coloured from the photo around each one so they sit in its light: dimmer in
+     the shadowed band of lawn, glowing a little where the low sun comes through the petals from behind ---- */
+  let flC=null, flKey="";
+  function buildFlowers(){ if(!photo) return null; const m=cover(), k=Math.min(2,window.devicePixelRatio||1), c=document.createElement("canvas"); c.width=Math.ceil(W*k); c.height=Math.ceil(H*k); const x=c.getContext("2d"); x.scale(k,k);
+    const sc0=document.createElement("canvas"); sc0.width=Math.ceil(W/2); sc0.height=Math.ceil(H/2); const sx0=sc0.getContext("2d",{willReadFrequently:true}); sx0.filter="blur(2px)"; sx0.drawImage(photo,m.ox/2,m.oy/2,m.iw*m.s/2,m.ih*m.s/2); let pd; try{ pd=sx0.getImageData(0,0,sc0.width,sc0.height).data; }catch(e){ return null; }
+    const at=(px,py)=>{ const i=(Math.max(0,Math.min(sc0.height-1,Math.round(py/2)))*sc0.width+Math.max(0,Math.min(sc0.width-1,Math.round(px/2))))*4; return [pd[i],pd[i+1],pd[i+2]]; };
+    const EDGE=[[0,.62],[.25,.625],[.32,.645],[.5,.68],[.75,.735],[1,.78]], edge=fx=>{ for(let i=1;i<EDGE.length;i++) if(fx<=EDGE[i][0]){ const [a,b]=EDGE[i-1], [c2,d]=EDGE[i]; return b+(d-b)*(fx-a)/(c2-a); } return .78; };   /* where the mown lawn meets the goldenrod, in the photo */
+    let sd=7; const R=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; }, sp=sun();
+    const items=[]; const add=(kind,fx,fy)=>{ const X=m.ox+fx*m.iw*m.s, Y=m.oy+fy*m.ih*m.s; if(Y>H*.995||X<0||X>W) return; items.push({kind,X,Y}); };
+    for(let i=0;i<34;i++){ const fx=R(), e=edge(fx), fy=e+.012+Math.pow(R(),1.5)*(1-e-.02); const r=R(), kind=r<.3? "clover" : r<.52? "heath" : r<.72? "aster" : r<.84? "dandy" : "yellow"; add(kind,fx,fy); }
+    for(let i=0;i<7;i++){ const fx=R(); add(R()<.6? "lace" : "aster",fx,edge(fx)+.006+R()*.012); }   /* the taller ones that grow up along the unmown edge */
+    items.sort((a,b)=>a.Y-b.Y);
+    const lawnTop=m.oy+.6*m.ih*m.s;
+    for(const it of items){ const d=Math.max(0,Math.min(1,(it.Y-lawnTop)/(H-lawnTop))), S=(.8+7.5*d*d+1.6*d)*Math.max(.7,W/1400), loc=at(it.X,it.Y), ll=(loc[0]*.3+loc[1]*.59+loc[2]*.11);
+      const lit=Math.max(.42,Math.min(1.15,ll/95)), toward=it.X<sp.x? 1 : -1, back=Math.max(0,1-Math.abs(it.X-sp.x)/(W*.6));   /* how much light is on the grass there, and how backlit */
+      const col=c=>{ const v=mixv(mulv(c,lit),loc,.32+.25*(1-d)); return v; };   /* every colour pulled toward the photo's own colour there, more so the farther off it is */
+      const stemC=rgb(mixv(mulv(loc,.8),[70,80,40],.25),.9), Y=it.Y, X=it.X;
+      const stem=(x0,y0,x1,y1,w)=>{ x.strokeStyle=stemC; x.lineWidth=Math.max(.4,w); x.beginPath(); x.moveTo(x0,y0); x.quadraticCurveTo((x0+x1)/2+(R()-.5)*S*.6,(y0+y1)/2,x1,y1); x.stroke(); };
+      const disc=(cx,cy,r,c,a)=>{ x.fillStyle=rgb(c,a==null? 1 : a); x.beginPath(); x.arc(cx,cy,Math.max(.35,r),0,6.283); x.fill(); };
+      const glow=(cx,cy,r)=>{ if(back<.15) return; x.save(); x.globalCompositeOperation="lighter"; x.globalAlpha=back*.35; disc(cx+toward*r*.3,cy-r*.2,r*.8,[255,226,170]); x.restore(); };   /* the sun coming through the petals */
+      x.lineCap="round";
+      if(it.kind==="clover"){ for(let j=0;j<2+(R()*3|0);j++){ const hx=X+(R()-.5)*S*4, hy=Y-S*(.6+R()*1.2); stem(hx,Y,hx,hy,S*.12); disc(hx,hy,S*.55,col([226,222,212])); disc(hx,hy+S*.18,S*.4,col([196,186,190]),.7); glow(hx,hy,S*.5); } }
+      else if(it.kind==="heath"){ const n=8+(R()*10|0); for(let j=0;j<n;j++){ const a=-Math.PI/2+(R()-.5)*1.6, l=S*(2+R()*3), hx=X+Math.cos(a)*l*.8, hy=Y+Math.sin(a)*l; stem(X,Y,hx,hy,S*.07); disc(hx,hy,S*.3,col([236,232,222])); disc(hx,hy,S*.11,col([214,186,90])); } glow(X,Y-S*3,S*1.5); }   /* a little spray of tiny white daisies */
+      else if(it.kind==="aster"){ const n=2+(R()*3|0); for(let j=0;j<n;j++){ const hx=X+(R()-.5)*S*3, hy=Y-S*(2+R()*3.5); stem(X+(R()-.5)*S,Y,hx,hy,S*.1);
+          const pc=col([150,110,190]); for(let q=0;q<12;q++){ const a=q/12*6.283; x.strokeStyle=rgb(pc,.9); x.lineWidth=Math.max(.35,S*.16); x.beginPath(); x.moveTo(hx,hy); x.lineTo(hx+Math.cos(a)*S*.75,hy+Math.sin(a)*S*.5); x.stroke(); }
+          disc(hx,hy,S*.24,col([218,170,60])); glow(hx,hy,S*.7); } }   /* the late purple asters, a ray of thin petals round a gold eye */
+      else if(it.kind==="dandy"){ const hy=Y-S*(2.5+R()*2); stem(X,Y,X+(R()-.5)*S,hy,S*.1); x.fillStyle=rgb(col([232,228,218]),.55); x.beginPath(); x.arc(X,hy,S*.9,0,6.283); x.fill(); disc(X,hy,S*.25,col([170,160,140])); glow(X,hy,S*1.1); }   /* a dandelion clock */
+      else if(it.kind==="yellow"){ for(let j=0;j<1+(R()*2|0);j++){ const hx=X+(R()-.5)*S*2.5, hy=Y-S*(.5+R()*.8); disc(hx,hy,S*.45,col([226,186,52])); disc(hx-S*.1,hy-S*.1,S*.2,col([246,214,96]),.8); } }   /* a low yellow dandelion or hawkweed */
+      else if(it.kind==="lace"){ const hy=Y-S*(5+R()*4), hx=X+(R()-.5)*S*1.5; stem(X,Y,hx,hy,S*.12);
+        for(let q=0;q<9;q++){ const a=Math.PI+q/8*Math.PI, ux=hx+Math.cos(a)*S*1.3, uy=hy+Math.sin(a)*S*.45+S*.35; x.strokeStyle=stemC; x.lineWidth=Math.max(.3,S*.05); x.beginPath(); x.moveTo(hx,hy+S*.9); x.lineTo(ux,uy); x.stroke(); disc(ux,uy,S*.32,col([224,218,200]),.85); }
+        glow(hx,hy,S*1.4); } }   /* Queen Anne's lace, its flat white umbel gone a little tawny with the season */
+    return c; }
   function drawScene(dark){
     if(!getPhoto()) return;
     const key=W+"x"+H+"|"+tint().k; if(key!==tileKey){ tileKey=key; buildTiles(); }
     const welcome=SC.dim();
-    { const m=cover(); ctx.drawImage(photo,m.ox,m.oy,m.iw*m.s,m.ih*m.s); const tn=tint(); if(!welcome&&tn.a>0){ ctx.globalAlpha=tn.a; ctx.fillStyle=tn.c; ctx.fillRect(m.ox,m.oy,m.iw*m.s,m.ih*m.s); ctx.globalAlpha=1; } }   /* the photo itself, so it sways with the camera */
+    { const m=cover(); ctx.drawImage(photo,m.ox,m.oy,m.iw*m.s,m.ih*m.s); if(flKey!==key){ flKey=key; flC=buildFlowers(); } if(flC&&!welcome) ctx.drawImage(flC,0,0,W,H); const tn=tint(); if(!welcome&&tn.a>0){ ctx.globalAlpha=tn.a; ctx.fillStyle=tn.c; ctx.fillRect(m.ox,m.oy,m.iw*m.s,m.ih*m.s); ctx.globalAlpha=1; } }   /* the photo itself, so it sways with the camera */
     /* clouds: the whole sky drifts slowly, fading out above the hills so the sun and horizon stay put */
     if(skyTile){ const T=skyTile, span=T.c.width, off=(t*3.2)%span;
       ctx.save(); ctx.globalAlpha=1;
