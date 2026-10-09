@@ -397,7 +397,7 @@ const ambient=(function(){ let heavy=false;
   const ef2=document.createElement("canvas"), ef2X=ef2.getContext("2d");
   /* stepping back from the near rise, the way a camera dollying back sees it: the sky and the far hills hardly move, while the ground nearer us
      slides away toward the horizon, the nearer the more; the rise is then drawn over it at full size, the nearest thing of all. One pass, in strips down the frame */
-  function dollyBack(c){ const st=moundZ*.2; if(st<.002) return; const cvv=c.canvas, CW=cvv.width, CH=cvv.height, k=CH/H, N=MOBILE()? 12 : 24;
+  function dollyBack(c){ const st=moundZ*.2; if(st<.002) return; if(window.Campfire&&(Campfire.on||Campfire.leaving)) return;   /* not with the campfire party on the lawn: they're drawn in two passes, and only one of them would get stepped back with the ground, leaving a double of them */ const cvv=c.canvas, CW=cvv.width, CH=cvv.height, k=CH/H, N=MOBILE()? 12 : 24;
     if(efC.width!==CW||efC.height!==CH){ efC.width=CW; efC.height=CH; } efX.setTransform(1,0,0,1,0,0); efX.clearRect(0,0,CW,CH); efX.drawImage(cvv,0,0);
     const hz=Math.max(0,Math.min(CH*.9,(gnd().vy-H*.03)*k)), f=y=>{ if(y<=hz) return y; const v=(y-hz)/(CH-hz), d=v*(1-st)+st*v*v*v; return hz+d*(CH-hz); };   /* above the horizon: still; below: compressed toward it most in the middle distance, the frame's bottom edge pinned */
     c.save(); c.setTransform(1,0,0,1,0,0); c.globalAlpha=1; c.globalCompositeOperation="source-over"; c.filter="none";
@@ -1199,7 +1199,9 @@ const ambient=(function(){ let heavy=false;
   const DAY_EV=["storm","rainbow","sundogs","sunburst","sunshower","seeds","silver","gossamer"], NIGHT_Q=["milkyway","shower","comet","aurora","moonrise"];
   let tl={ph:"day",n:0,max:2,next:rnd(60,95),last:null};
   const newDay=()=>({ph:"day",n:0,max:Math.random()<.6? 2 : 3,next:rnd(40,70),last:tl.last});
-  function beginNight(){ const q=["aurora"].concat(NIGHT_Q.filter(e=>e!=="aurora").sort(()=>Math.random()-.5).slice(0,Math.random()<.5? 1 : 2)); tl={ph:"night",q,last:tl.last}; skyStart("night"); skyEv.t1=t+3.5+30; }   /* the northern lights come out about half a minute after it goes dark (the fall itself takes ~3.5 s) */
+  /* every event gets its turn: each comes out of a shuffled bag, and the bag is only refilled once all of them have been seen */
+  const dayBag=[], nightBag=[]; function fromBag(bag,ALL,last){ if(!bag.length){ bag.push(...ALL.slice().sort(()=>Math.random()-.5)); if(bag[0]===last&&bag.length>1) bag.push(bag.shift()); } return bag.shift(); }
+  function beginNight(){ const q=[]; for(let i=Math.random()<.5? 2 : 3;i>0;i--){ const k=fromBag(nightBag,NIGHT_Q,q[q.length-1]); if(!q.includes(k)) q.push(k); } tl={ph:"night",q,last:tl.last}; skyStart("night"); skyEv.t1=t+3.5+30; }   /* the northern lights come out about half a minute after it goes dark (the fall itself takes ~3.5 s) */
   /* the page's day/night switch: while night is held, the night's events keep coming round and it never turns back to day on its own */
   let nightHold=false, dayFast=0, auroraLong=false, dawnSlow=0, pendingDay=null, nightCalledAt=-1;
   function holdNight(v){ v=!!v; if(v===nightHold) return; nightHold=v;
@@ -1218,10 +1220,11 @@ const ambient=(function(){ let heavy=false;
       return; }
     if(!on||skyActive()||lull>0) return;
     tl.next-=dt; if(tl.next>0) return;
-    if(tl.n<tl.max){ const k=pick(DAY_EV.filter(e=>e!==tl.last)); tl.last=k; tl.n++; tl.next=rnd(35,70); skyStart(k); }
+    if(tl.n<tl.max){ const k=fromBag(dayBag,DAY_EV,tl.last); tl.last=k; tl.n++; tl.next=rnd(35,70); skyStart(k); }
     else { beginNight(); try{ if(window.Campfire&&!Campfire.on){ nightCalledAt=performance.now(); Campfire.set(true); } }catch(e){} } }   /* when the day's round comes to the dark, it's a campfire night */
   /* the menu: the called event runs its spell; a night one called by day hands the day back after, a day one ends any night */
-  function skyMenu(k){ if(NIGHT_EV.includes(k)){ if(tl.ph==="night") tl.q=tl.q.filter(e=>e!==k); skyStart(k,false); } else { if(tl.ph==="night") tl=newDay(); else tl.next=Math.max(tl.next,40); tl.last=k; skyStart(k,k==="rainbow"); } }
+  function skyMenu(k){ for(const b of [dayBag,nightBag]){ const i=b.indexOf(k); if(i>=0) b.splice(i,1); }   /* called up from the menu counts as its turn */
+    if(NIGHT_EV.includes(k)){ if(tl.ph==="night") tl.q=tl.q.filter(e=>e!==k); skyStart(k,false); } else { if(tl.ph==="night") tl=newDay(); else tl.next=Math.max(tl.next,40); tl.last=k; skyStart(k,k==="rainbow"); } }
   let duskUntil=-1;
   function duskGoal(){ if(duskUntil>t) return .5; if(tl.ph==="night"||nA>.5) return .62; if(tl.ph==="day"&&tl.n>=tl.max&&!skyActive()) return .45; return 0; }   /* the sun going down ahead of a night, back up after */
   function stepSky(dt,on){
