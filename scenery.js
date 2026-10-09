@@ -929,19 +929,26 @@ const ambient=(function(){ let heavy=false;
     const [cc,cx]=mk(), ci=cx.createImageData(w,h); for(let i=0;i<w*h*4;i+=4){ if(sd[i+3]<128) continue; const v=Math.max(0,Math.min(1,(lum(d22,i)-lum(d4,i)-3)/9))*Math.max(0,Math.min(1,((d22[i]-d22[i+1])-(d4[i]-d4[i+1])+1)/7)); ci.data[i+3]=Math.round(255*v); }
     cx.putImageData(ci,0,0); const [cb,cbx]=mk(); cbx.filter=`blur(${Math.max(.5,2*ps).toFixed(2)}px)`; cbx.drawImage(cc,0,0); const cf=cbx.getImageData(0,0,w,h).data;
     const out=x.createImageData(w,h), o=out.data, near=new Float32Array(w*h), pts=[];
+    /* how much sun each bit of the slope is getting: the photo's own light and shade, broad (from the 22-px blur) so whole sunlit faces and shaded hollows count, scaled between the region's darkest and brightest */
+    const LV=[]; for(let i=0;i<w*h*4;i+=16) if(sd[i+3]>128) LV.push(lum(d22,i)*.6+lum(d4,i)*.4); LV.sort((a,b)=>a-b); const lo=LV[Math.floor(LV.length*.08)]||0, hiL=LV[Math.floor(LV.length*.96)]||255, litAt=i=>Math.max(0,Math.min(1,((lum(d22,i)*.6+lum(d4,i)*.4)-lo)/Math.max(8,hiL-lo)));
     for(let yy=0;yy<h;yy++) for(let xx=0;xx<w;xx++){ const i=(yy*w+xx)*4; if(sd[i+3]<20) continue; const r=sd[i], g=sd[i+1], bl=sd[i+2], l=r*.3+g*.59+bl*.11; if(l>150&&!far) continue;
       const fx=(xx/k-m.ox)/(m.iw*m.s), fy=((yy+oy)/k-m.oy)/(m.ih*m.s), bot=svBot(Math.max(0,Math.min(1,fx))), conif=Math.min(1,cf[i+3]/255*1.7);
-      if(far){ const a=Math.max(0,Math.min(1,(l-lum(d4,i))/4+.7))*(sd[i+3]/255); if(a<.05) continue; o[i]=o[i+1]=o[i+2]=255; o[i+3]=Math.round(255*a); if(a>.3) pts.push(yy*w+xx); continue; }
-      const leafy=Math.max(0,Math.min(1,(g-bl+12)/36)), hi=Math.max(0,Math.min(1,(l-lum(d2,i))/6+.35)), a=leafy*hi*(1-conif)*Math.min(1,(bot-fy)/.012)*(sd[i+3]/255); if(a<.05) continue;
+      if(far){ const a=Math.max(0,Math.min(1,(l-lum(d4,i))/4+.55))*Math.pow(litAt(i),1.6)*(sd[i+3]/255);   /* the sheen only shows on the slopes the sun is on; in the shaded folds the turned leaves are barely seen */ if(a<.05) continue; o[i]=o[i+1]=o[i+2]=255; o[i+3]=Math.round(255*a); if(a>.3) pts.push(yy*w+xx); continue; }
+      const leafy=Math.max(0,Math.min(1,(g-bl+12)/36)), hi=Math.max(0,Math.min(1,(l-lum(d2,i))/6+.35)), a=leafy*hi*(1-conif)*Math.min(1,(bot-fy)/.012)*(.25+.75*Math.pow(litAt(i),1.2))*(sd[i+3]/255); if(a<.05) continue;
       o[i]=o[i+1]=o[i+2]=255; o[i+3]=Math.round(255*a); near[yy*w+xx]=Math.max(0,Math.min(1,(fy-.42)/.14)); if(a>.3) pts.push(yy*w+xx); }
     x.clearRect(0,0,w,h); x.putImageData(out,0,0);
     const lay=[]; lay.oy=oy; lay.k=k; let qa=h, qb=0; for(const q of pts){ const yq=(q/w)|0; if(yq<qa) qa=yq; if(yq>qb) qb=yq; } lay.y0=Math.max(0,qa-4); lay.y1=Math.min(h,qb+4);
-    const sc=w/1280; for(let n=0;n<4;n++){ const [Lc,lx]=mk(); lx.fillStyle="#fff";
-      const cnt=Math.min(1600,Math.round(pts.length/(far? 28 : 90))); for(let j=0;j<cnt;j++){ const p=pts[(Math.random()*pts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(far? 3.6 : 1.6+nr*4.2)*sc*(.6+Math.random()*.7);
+    const sc=w/1280;
+    /* only some trees turn: the exposed crowns, the poplars and maples catching it, scattered through the woods, while most of the forest just stirs.
+       So the patches gather on a handful of chosen trees rather than spreading over everything */
+    const TR=[]; for(let i=0;i<(far? 26 : 34);i++){ const p=pts[(Math.random()*pts.length)|0]; if(p!=null) TR.push([p%w,(p/w)|0,(far? 14 : 10+near[p]*30)*sc*(.6+Math.random()*.8)]); }
+    const inTree=p=>{ const px=p%w, py=(p/w)|0; for(const [tx,ty,tr] of TR) if(Math.hypot(px-tx,(py-ty)*1.3)<tr) return true; return false; };
+    const tpts=pts.filter(inTree);
+    for(let n=0;n<3;n++){ const [Lc,lx]=mk(); lx.fillStyle="#fff";
+      const cnt=Math.min(900,Math.round(tpts.length/(far? 30 : 40))); for(let j=0;j<cnt;j++){ const p=tpts[(Math.random()*tpts.length)|0], px=p%w, py=(p/w)|0, nr=near[p], R=(far? 3.6 : 1.6+nr*4.2)*sc*(.6+Math.random()*.7);
         const sub=2+((Math.random()*4)|0); for(let q=0;q<sub;q++){ const ex=px+(Math.random()-.5)*R*2, ey=py+(Math.random()-.5)*R*1.2, r=R*(.4+Math.random()*.5), gg=lx.createRadialGradient(ex,ey,0,ex,ey,r);
           gg.addColorStop(0,"rgba(255,255,255,.8)"); gg.addColorStop(.5,"rgba(255,255,255,.45)"); gg.addColorStop(1,"rgba(255,255,255,0)"); lx.fillStyle=gg; lx.beginPath(); lx.ellipse(ex,ey,r,r*.7,0,0,6.283); lx.fill(); } }   /* a sprig of a crown, the leaves in it turning together; the photo's own leaf texture shows through it */
       lx.globalAlpha=1; lx.globalCompositeOperation="destination-in"; lx.drawImage(c,0,0); lay.push({c:Lc,f:1.6+Math.random()*1.4,ph:Math.random()*6.283}); }
-    if(far){ const [Lc,lx]=mk(); lx.globalAlpha=.55; lx.drawImage(c,0,0); lay.push({c:Lc,f:.7,ph:0}); }   /* and a soft sheen over the whole slope, the haze turning paler as the gust crosses it */
     return lay; }
   const SV_GU=[{s:.4,v:.105,wd:.36,a:1,ph:0},{s:8.5,v:.085,wd:.28,a:.75,ph:2.1},{s:15,v:.12,wd:.4,a:.95,ph:4.3}];   /* three gusts, one after another, each its own speed and size */
   function svGustAt(sx){ if(!(skyEv&&skyEv.k==="silver")) return 0; const ts=t-skyEv.t0, dir=(window.__seedDir||-1)>0? 1 : -1, xf=dir>0? sx/W : 1-sx/W; let v=0;   /* how hard the gust is blowing at this spot on the screen right now */
@@ -969,8 +976,8 @@ const ambient=(function(){ let heavy=false;
     ctx.save(); ctx.globalAlpha=alpha; ctx.globalCompositeOperation=op||"screen"; ctx.drawImage(lay.T,0,0,w,h,0,lay.oy/lay.k,w/lay.k,h/lay.k); ctx.restore(); }
   function drawSilver(dt){ if(svA<=.01||!photo){ svDeb.length=0; return; } const key=W+"x"+H; if(svKey!==key){ svKey=key; svLay=makeSvLayers(false); svFar=makeSvLayers(true); }
     const dir=(window.__seedDir||-1)>0? 1 : -1, ts=skyEv&&skyEv.k==="silver"? t-skyEv.t0 : 99, A=svA*(nA>.3? .25 : 1);
-    if(svFar&&svFar.length) svSet(svFar,SV_GF,"rgba(196,206,206,.95)",A*.42,ts,dir,"source-over");   /* the far mountain first, softer and hazier */
-    if(svLay&&svLay.length) svSet(svLay,SV_GU,"rgba(204,222,200,.95)",A,ts,dir);
+    if(svFar&&svFar.length) svSet(svFar,SV_GF,"rgba(214,224,222,.95)",A*.55,ts,dir,"soft-light"); svSet(svFar,SV_GF,"rgba(214,224,222,.95)",A*.16,ts,dir,"screen");   /* the far mountain first, softer and hazier */
+    if(svLay&&svLay.length) svSet(svLay,SV_GU,"rgba(204,222,200,.95)",A*.8,ts,dir);
     drawSvDebris(dt||1/30,dir,ts,A); }
   /* debris on the wind: torn leaves, bits of seed and chaff whipped up off the trees and the field as each gust goes through, tumbling and spinning past.
      Plain little flecks, cheap to draw, the near ones bigger and faster */
