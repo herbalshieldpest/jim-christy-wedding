@@ -1056,7 +1056,13 @@ const ambient=(function(){ let heavy=false;
     { const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,`rgba(255,236,200,${(.05*ssA).toFixed(3)})`); g.addColorStop(.55,`rgba(230,214,190,${(.035*ssA).toFixed(3)})`); g.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }   /* the sunlit haze of the shower */
     ctx.restore(); }
   /* ---- milkweed seeds: a gust out of the goldenrod lifts the split pods' silk, and the seeds sail off across the whole scene, glowing where the low sun shines through them ---- */
-  let seedSpr=null, seeds=[], seedT=0;
+  let seedSpr=null, seeds=[], seedT=0, seedFx=null;
+  /* the seed's looks at different distances: far off, small and soft and washed into the haze; right in front of the lens, a big out-of-focus puff; and a soft
+     glow to lay behind any that the sun is shining through. Made once from the sharp sprite */
+  function makeSeedFx(){ const S=seedSpr, n=S.width, mk=(blur,tint)=>{ const c=document.createElement("canvas"), pad=Math.ceil(blur*3); c.width=n+pad*2; c.height=n+pad*2; const x=c.getContext("2d"); if(blur) x.filter=`blur(${blur}px)`; x.drawImage(S,pad,pad); x.filter="none";
+      if(tint){ x.globalCompositeOperation="source-atop"; x.fillStyle=tint; x.fillRect(0,0,c.width,c.height); } c.pad=pad; return c; };
+    const g=document.createElement("canvas"); g.width=g.height=128; const gx=g.getContext("2d"), rg=gx.createRadialGradient(64,64,0,64,64,64); rg.addColorStop(0,"rgba(255,236,190,.9)"); rg.addColorStop(.25,"rgba(255,220,160,.35)"); rg.addColorStop(1,"rgba(255,210,150,0)"); gx.fillStyle=rg; gx.fillRect(0,0,128,128);
+    return {far:mk(1.2,"rgba(214,196,170,.55)"),soft:mk(n*.05),bok:mk(n*.12),glow:g}; }
   function makeSeedSpr(){ const S=96, c=document.createElement("canvas"); c.width=c.height=S; const x=c.getContext("2d"), cx=S/2, cy=S*.62;
     for(let i=0;i<70;i++){ const a=-Math.PI*.5+(Math.random()-.5)*Math.PI*1.25, L=S*(.3+Math.random()*.14), bend=(Math.random()-.5)*.25; x.strokeStyle=`rgba(255,252,244,${(.22+Math.random()*.3).toFixed(2)})`; x.lineWidth=.6+Math.random()*.5; x.beginPath(); x.moveTo(cx,cy); x.quadraticCurveTo(cx+Math.cos(a+bend)*L*.55,cy+Math.sin(a+bend)*L*.55,cx+Math.cos(a)*L,cy+Math.sin(a)*L); x.stroke(); }   /* the silk: fine filaments fanning up and out like a parasol */
     const g=x.createRadialGradient(cx,cy-S*.12,0,cx,cy-S*.12,S*.3); g.addColorStop(0,"rgba(255,250,236,.35)"); g.addColorStop(1,"rgba(255,250,236,0)"); x.fillStyle=g; x.fillRect(0,0,S,S);
@@ -1071,15 +1077,25 @@ const ambient=(function(){ let heavy=false;
   function drawSeeds(dt,dark){ drawGustAir(dt); if(sdsA<=.01&&!seeds.length){ seedT=0; return; } if(!seedSpr) seedSpr=makeSeedSpr(); const sc=H/800, sp=sun(), hz=gnd().vy;
     if(!seedT&&sdsA>.05){ seedT=t; try{ natureSfx.puff&&natureSfx.puff((window.__seedDir||-1)*-.4); }catch(e){} try{ for(const c of ["leaf","milk"]){ const F=FLUR[c]; F.on=true; F.t=0; F.dur=12; F.acc=0; F.rate=c==="leaf"? 1.8 : 1.2; } }catch(e){} }   /* the burst tears loose leaves and fluff from everything */
     const wind=(window.__seedDir||-1);
-    if(sdsA>.2&&seeds.length<(MOBILE()? 40 : 80)&&Math.random()<dt*(MOBILE()? 4 : 8)*(.4+gustB*2.2)){ const fromField=Math.random()<.7, d=Math.pow(Math.random(),1.5), x0=fromField? W*rnd(.55,1.0) : W*rnd(0,.4), y0=lerp(hz+H*.04,H*.95,d)-rnd(0,H*.05);
-      seeds.push({x:x0,y:y0,d,vx:wind*rnd(30,80)*(.4+d),vy:-rnd(20,60)*(.5+d),ph:rnd(0,6),rot:rnd(-.3,.3),life:0,max:rnd(14,24)}); }   /* lifting off the pods in the goldenrod */
+    if(!seedFx) seedFx=makeSeedFx();
+    if(sdsA>.2&&seeds.length<(MOBILE()? 50 : 110)&&Math.random()<dt*(MOBILE()? 5 : 11)*(.4+gustB*2.2)){ const r=Math.random();
+      if(r<.3){ const d=rnd(0,.22); seeds.push({x:W*rnd(-.05,1.05),y:lerp(hz-H*.16,hz+H*.03,Math.random()),d,vx:wind*rnd(20,40),vy:-rnd(4,14),ph:rnd(0,6),rot:rnd(-.3,.3),life:0,max:rnd(16,26)}); }   /* far out over the field and the woods, tiny and hazy */
+      else if(r<.92){ const fromField=Math.random()<.7, d=.2+Math.pow(Math.random(),1.5)*.75, x0=fromField? W*rnd(.55,1.0) : W*rnd(0,.4), y0=lerp(hz+H*.04,H*.95,d)-rnd(0,H*.05);
+        seeds.push({x:x0,y:y0,d,vx:wind*rnd(30,80)*(.4+d),vy:-rnd(20,60)*(.5+d),ph:rnd(0,6),rot:rnd(-.3,.3),life:0,max:rnd(14,24)}); }   /* lifting off the pods in the goldenrod */
+      else if(seeds.filter(z=>z.d>1).length<2){ const d=rnd(1.08,1.4); seeds.push({x:wind>0? -W*.08 : W*1.08,y:H*rnd(.3,.9),d,vx:wind*rnd(140,240),vy:-rnd(10,50),ph:rnd(0,6),rot:rnd(-.3,.3),life:.8,max:rnd(5,8)}); } }   /* and now and then one sails right past the lens, a big soft blur */
+    if(sdsA>.02){ const k=sdsA*(dark? .4 : 1)*(.6+.4*Math.min(1,gustB*2)); ctx.save(); ctx.globalCompositeOperation="screen";   /* the air full of fluff and dust in the low sun: a warm glowing haze, thickest toward the sun and over the field */
+      const g=ctx.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,Math.max(W,H)*.9); g.addColorStop(0,`rgba(255,214,150,${(.22*k).toFixed(3)})`); g.addColorStop(.45,`rgba(255,206,140,${(.1*k).toFixed(3)})`); g.addColorStop(1,"rgba(255,200,130,0)"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      const g2=ctx.createLinearGradient(0,hz-H*.12,0,hz+H*.2); g2.addColorStop(0,"rgba(255,220,170,0)"); g2.addColorStop(.5,`rgba(255,220,170,${(.08*k).toFixed(3)})`); g2.addColorStop(1,"rgba(255,220,170,0)"); ctx.fillStyle=g2; ctx.fillRect(0,hz-H*.12,W,H*.32); ctx.restore(); }
+    seeds.sort((a,b)=>a.d-b.d);
     ctx.save(); const T0=ctx.getTransform();
-    for(const q of seeds){ q.life+=dt; const sz=(5+26*q.d)*sc, gust=1+.6*Math.sin(t*.7+q.ph*.3); q.vx+=(wind*(40+70*q.d)*gust*(1+gustB*3)-q.vx)*Math.min(1,dt*(.6+gustB*1.5)); q.vy+=((Math.sin(t*.9+q.ph)*14-8)*sc*(.5+q.d)-q.vy)*Math.min(1,dt*.8);
+    for(const q of seeds){ q.life+=dt; const sz=(5+26*q.d)*sc*(q.d>1? 1+(q.d-1)*9 : 1), gust=1+.6*Math.sin(t*.7+q.ph*.3); q.vx+=(wind*(40+70*q.d)*gust*(1+gustB*3)-q.vx)*Math.min(1,dt*(.6+gustB*1.5)); q.vy+=((Math.sin(t*.9+q.ph)*14-8)*sc*(.5+q.d)-q.vy)*Math.min(1,dt*.8);
       q.x+=q.vx*sc*dt; q.y+=q.vy*dt; const a=Math.min(1,q.life/1.2)*Math.min(1,(q.max-q.life)/2)*(.55+.45*q.d)*(dark? .7 : 1);
       if(q.x<-60||q.x>W+60||q.life>q.max) { q.dead=true; continue; }
       const back=Math.exp(-Math.pow((q.x-sp.x)/(W*.3),2))*Math.exp(-Math.pow((q.y-sp.y)/(H*.45),2)), tilt=q.rot+Math.sin(t*1.3+q.ph)*.25+q.vx*.002;
-      ctx.globalAlpha=a; ctx.translate(q.x,q.y); ctx.rotate(tilt); ctx.drawImage(seedSpr,-sz,-sz*1.24,sz*2,sz*2); 
-      if(back>.05){ ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*back*.55; ctx.drawImage(seedSpr,-sz,-sz*1.24,sz*2,sz*2); ctx.globalCompositeOperation="source-over"; }   /* lit from behind, the silk glows gold-white */
+      const F=seedFx, spr=q.d<.25? F.far : q.d>1.12? F.bok : q.d>.95? F.soft : seedSpr, pf=(spr.pad||0)/seedSpr.width, ex=sz*2*(1+2*pf), haze=q.d<.25? .45+q.d*1.6 : 1;
+      if(back>.08){ ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*back*(.35+.25*Math.min(1,q.d)); const gr=sz*(2.2+2.5*back); ctx.drawImage(F.glow,q.x-gr,q.y-gr*1.05,gr*2,gr*2); ctx.globalCompositeOperation="source-over"; }   /* a halo of light around the ones the sun shines through */
+      ctx.globalAlpha=a*haze*(q.d>1.12? .7 : 1); ctx.translate(q.x,q.y); ctx.rotate(tilt); ctx.drawImage(spr,-sz-sz*2*pf,-sz*1.24-sz*2*pf,ex,ex);
+      if(back>.05){ ctx.globalCompositeOperation="lighter"; ctx.globalAlpha=a*back*.55*haze; ctx.drawImage(spr,-sz-sz*2*pf,-sz*1.24-sz*2*pf,ex,ex); ctx.globalCompositeOperation="source-over"; }   /* lit from behind, the silk glows gold-white */
       ctx.setTransform(T0); }
     ctx.restore(); seeds=seeds.filter(q=>!q.dead); if(sdsA<=.01&&!seeds.length) seedT=0; }
   /* ---- moonrise: a big full moon comes up orange out of the haze over the far ridge, flattened a little at first, then climbs, shrinks back to its proper size and pales to silver, lighting the field below ---- */
